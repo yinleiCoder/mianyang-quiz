@@ -1,0 +1,41 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    - build/**
+    - android/**
+    - ios/**
+    - web/**
+    - windows/**
+    - macos/**
+    - linux/**
+    # 生成物不参与分析
+    - "**/*.freezed.dart"
+    - "**/*.g.dart"
+  errors:
+    # 生成物里的注解常触发该告警
+    invalid_annotation_target: ignore
+    # 未使用的 import 视为错误：本项目靠 import 表达分层，残留 import 即设计漂移的信号
+    unused_import: error
+
+linter:
+  rules:
+    # --- 正确性（这几条最值钱）---
+    avoid_print: true                    # 用 debugPrint 或项目 logger
+    unawaited_futures: true              # 漏 await 是异步代码最常见的事故
+    use_build_context_synchronously: true # await 之后再用 context 必须判 mounted
+    cancel_subscriptions: true
+    close_sinks: true
+    avoid_void_async: true
+
+    # --- 一致性 ---
+    prefer_single_quotes: true
+    prefer_const_constructors: true      # Flutter 性能，也顺带表达"这里不该变"
+    prefer_final_locals: true
+    use_super_parameters: true
+    avoid_relative_lib_imports: true     # 一律用 package: 绝对导入，依赖方向才看得见
+    avoid_unnecessary_containers: true
+    sized_box_for_whitespace: true
+    use_colored_box: true
+    use_decorated_box: true
+    use_full_hex_values_for_flutter_colors: true

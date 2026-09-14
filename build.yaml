@@ -1,0 +1,12 @@
+# 代码生成配置（freezed 4 + json_serializable 6）
+targets:
+  $default:
+    builders:
+      json_serializable:
+        options:
+          # 必须为 true：否则嵌套对象会被原样塞进 toJson()（输出 Dart 对象而非 JSON map），
+          # 提交作答时服务端收到的是不可解析的结构，且失败是静默的。
+          explicit_to_json: true
+          # 生成 fromJson 时忽略未知字段：DB 端 content 结构未来可能加键，
+          # 客户端不应因为多一个字段就整体解析失败。
+          checked: true

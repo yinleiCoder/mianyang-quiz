@@ -1,0 +1,82 @@
+// 依赖装配：把 SupabaseClient 展开成仓储、服务与 Store，供 MultiProvider 注册。
+//
+// 为什么单独一个文件而不是塞进 main.dart 或 app.dart：
+//   · main.dart 要保持极短（入口一旦开始长东西就说明有依赖没归位）
+//   · app.dart 只该关心"怎么渲染"
+//   装配是第三件事，放这里。
+//
+// 依赖方向：仓储/服务只依赖 client，Store 依赖仓储/服务。
+// 页面通过 context.read<Xxx>() 取，**不在 widget 里 new**（AGENTS.md 约定）。
+
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import 'package:mianyang_quiz/data/repositories/favorite_repository.dart';
+import 'package:mianyang_quiz/data/repositories/feedback_repository.dart';
+import 'package:mianyang_quiz/data/repositories/list_repository.dart';
+import 'package:mianyang_quiz/data/repositories/practice_repository.dart';
+import 'package:mianyang_quiz/data/repositories/question_repository.dart';
+import 'package:mianyang_quiz/data/repositories/stats_repository.dart';
+import 'package:mianyang_quiz/data/repositories/subject_repository.dart';
+import 'package:mianyang_quiz/data/repositories/user_repository.dart';
+import 'package:mianyang_quiz/data/services/auth_service.dart';
+import 'package:mianyang_quiz/data/services/oss_upload_service.dart';
+import 'package:mianyang_quiz/state/auth_store.dart';
+import 'package:mianyang_quiz/state/dashboard_store.dart';
+import 'package:mianyang_quiz/state/favorite_store.dart';
+import 'package:mianyang_quiz/state/practice_draft_store.dart';
+
+class AppDependencies {
+  AppDependencies._(this.client)
+    : authService = AuthService(client),
+      userRepository = UserRepository(client),
+      subjectRepository = SubjectRepository(client),
+      questionRepository = QuestionRepository(client),
+      practiceRepository = PracticeRepository(client),
+      statsRepository = StatsRepository(client),
+      listRepository = ListRepository(client),
+      favoriteRepository = FavoriteRepository(client),
+      feedbackRepository = FeedbackRepository(client),
+      ossUploadService = OssUploadService(client);
+
+  /// 由 bootstrap() 在 Supabase.initialize 之后调用。
+  factory AppDependencies.create(SupabaseClient client) {
+    final deps = AppDependencies._(client);
+    deps.authStore = AuthStore(deps.authService, deps.userRepository);
+    deps.dashboardStore = DashboardStore(deps.statsRepository);
+    deps.favoriteStore = FavoriteStore(deps.favoriteRepository);
+    deps.practiceDraftStore = PracticeDraftStore();
+    return deps;
+  }
+
+  final SupabaseClient client;
+
+  final AuthService authService;
+  final UserRepository userRepository;
+  final SubjectRepository subjectRepository;
+  final QuestionRepository questionRepository;
+  final PracticeRepository practiceRepository;
+  final StatsRepository statsRepository;
+  final ListRepository listRepository;
+  final FavoriteRepository favoriteRepository;
+  final FeedbackRepository feedbackRepository;
+  final OssUploadService ossUploadService;
+
+  /// 四个跨页 Store。赋值在 create() 里完成（它们彼此之间与仓储有依赖顺序）。
+  late final AuthStore authStore;
+  late final DashboardStore dashboardStore;
+  late final FavoriteStore favoriteStore;
+  late final PracticeDraftStore practiceDraftStore;
+
+  /// 启动会话恢复。**不 await**：拉档案要走网络，等它会让首屏白屏；
+  /// 路由守卫已经在 isReady 为 false 时挂起，页面自己显示加载态即可。
+  void startSession() {
+    authStore.bootstrap();
+  }
+
+  void dispose() {
+    authStore.dispose();
+    dashboardStore.dispose();
+    favoriteStore.dispose();
+    practiceDraftStore.dispose();
+  }
+}
