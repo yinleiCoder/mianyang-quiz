@@ -119,8 +119,10 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    final auth = context.watch<AuthStore>();
-    final profile = auth.profile;
+    // select 而不是 watch：AuthStore 每次登录/登出/保存资料都会通知两次
+    // （_busy 置位一次、复位一次）。watch 整店会让整张资料 ListView 跟着重建，
+    // 而这里真正依赖的只有 profile 本身。
+    final profile = context.select<AuthStore, Profile?>((auth) => auth.profile);
 
     return Scaffold(
       body: SafeArea(

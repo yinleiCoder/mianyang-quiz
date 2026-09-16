@@ -15,8 +15,7 @@ import 'package:mianyang_quiz/core/utils/async_value.dart';
 import 'package:mianyang_quiz/data/models/practice/practice_results.dart';
 import 'package:mianyang_quiz/data/repositories/practice_repository.dart';
 import 'package:mianyang_quiz/state/dashboard_store.dart';
-import 'package:mianyang_quiz/ui/core/feedback/error_state.dart';
-import 'package:mianyang_quiz/ui/core/feedback/loading_state.dart';
+import 'package:mianyang_quiz/ui/core/feedback/async_view.dart';
 import 'package:mianyang_quiz/ui/features/practice/widgets/result_body.dart';
 import 'package:provider/provider.dart';
 
@@ -81,17 +80,15 @@ class _PracticeResultPageState extends State<PracticeResultPage> {
     return Scaffold(
       appBar: AppBar(title: const Text('练习结果')),
       body: SafeArea(
-        child: switch (_state) {
-                    AsyncLoading() => const LoadingState(message: '正在结算…'),
-                    AsyncFailure(:final error) => ErrorState(
-                      message: error.message,
-                      onRetry: _load,
-                    ),
-                    AsyncData(:final value) => ResultBody(
-                      summary: value,
-                      sessionId: widget.sessionId,
-                    ),
-                  },
+        child: AsyncView<FinishSummary>(
+          state: _state,
+          loadingMessage: '正在结算…',
+          onRetry: _load,
+          builder: (summary) => ResultBody(
+            summary: summary,
+            sessionId: widget.sessionId,
+          ),
+        ),
       ),
     );
   }

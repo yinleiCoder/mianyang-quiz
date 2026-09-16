@@ -16,6 +16,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/core/theme/app_theme.dart';
+import 'package:mianyang_quiz/data/repositories/subject_repository.dart';
 import 'package:mianyang_quiz/data/repositories/user_repository.dart';
 import 'package:mianyang_quiz/data/services/auth_service.dart';
 import 'package:mianyang_quiz/state/auth_store.dart';
@@ -125,6 +126,8 @@ Future<void> _pump(WidgetTester tester, String location) async {
             create: (_) => AuthStore(AuthService(client), UserRepository(client)),
           ),
           Provider<UserRepository>(create: (_) => UserRepository(client)),
+          // 注册页的专业大类/专业下拉要读科目树（迁移 0039 对 anon 开放只读）
+          Provider<SubjectRepository>(create: (_) => SubjectRepository(client)),
         ],
         // 必须用 MaterialApp.router：三页都靠 context.go 跳转。
         child: MaterialApp.router(theme: AppTheme.light(), routerConfig: router),

@@ -39,6 +39,14 @@ class DailyTrendChart extends StatelessWidget {
       );
     }
 
+    /// tooltip 里显示 MM-DD（库里是 YYYY-MM-DD）；越界（浮点取整到边界外）时留空。
+    String shortDate(double x) {
+      final index = x.round();
+      if (index < 0 || index >= daily.length) return '';
+      final date = daily[index].date;
+      return date.length >= 10 ? date.substring(5) : date;
+    }
+
     final maxCount = daily.fold<int>(0, (max, d) => d.count > max ? d.count : max);
     // 全为 0 时也要给出一个有意义的纵轴上限，否则图表会退化成一个点
     final maxY = (maxCount == 0 ? 1 : maxCount).toDouble() * 1.2;
@@ -99,6 +107,25 @@ class DailyTrendChart extends StatelessWidget {
                   );
                 },
               ),
+            ),
+          ),
+          // fl_chart 的默认 tooltip 把**折线色**当文字色（紫字压在深灰气泡上，糊成一团），
+          // 底色也是写死的 blueGrey。按 M3 的 tooltip 配色显式指定：inverseSurface 底 +
+          // onInverseSurface 字，亮暗两套主题都跟着变。
+          lineTouchData: LineTouchData(
+            touchTooltipData: LineTouchTooltipData(
+              getTooltipColor: (_) => scheme.inverseSurface,
+              getTooltipItems: (spots) => [
+                for (final spot in spots)
+                  LineTooltipItem(
+                    '${shortDate(spot.x)} · ${spot.y.toInt()} 题',
+                    TextStyle(
+                      color: scheme.onInverseSurface,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12.sp,
+                    ),
+                  ),
+              ],
             ),
           ),
           lineBarsData: [

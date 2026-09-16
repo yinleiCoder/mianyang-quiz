@@ -7,6 +7,8 @@
 // 乐观更新：点击立刻改本地状态并通知界面，请求失败再回滚 + 抛错给调用方提示。
 // 收藏是低风险高频操作，等一个网络往返会让按钮有明显延迟感。
 
+import 'dart:collection';
+
 import 'package:flutter/foundation.dart';
 import 'package:mianyang_quiz/core/error/error_mapper.dart';
 import 'package:mianyang_quiz/data/repositories/favorite_repository.dart';
@@ -27,6 +29,13 @@ class FavoriteStore extends ChangeNotifier {
 
   /// 正在请求中（按钮可显示 loading 但**不要**禁用，禁用会让人以为点漏了）。
   bool isToggling(String questionId) => _pending.containsKey(questionId);
+
+  /// 已知被收藏的 id 快照（只读）。
+  ///
+  /// 收藏列表页靠它发现"别处新收藏/取消了哪几道"：那一页是 keepAlive 的
+  /// （StatefulShellRoute.indexedStack 不会销毁分支），不监听就永远停在打开时的样子。
+  /// 注意口径：只覆盖**喂进来过**的 id（seed 的来源），不代表全量收藏。
+  Set<String> get knownIds => UnmodifiableSetView(_favorited);
 
   /// 把一批"确定已收藏"的 id 并入本地状态。
   ///

@@ -16,18 +16,16 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/core/error/app_exception.dart';
 import 'package:mianyang_quiz/core/router/routes.dart';
 import 'package:mianyang_quiz/core/theme/app_metrics.dart';
-import 'package:mianyang_quiz/core/theme/app_text_styles.dart';
 import 'package:mianyang_quiz/core/utils/async_value.dart';
 import 'package:mianyang_quiz/data/models/bank/question_filter.dart';
 import 'package:mianyang_quiz/data/models/bank/question_tag.dart';
 import 'package:mianyang_quiz/data/models/bank/subject_node.dart';
 import 'package:mianyang_quiz/data/repositories/question_repository.dart';
 import 'package:mianyang_quiz/data/repositories/subject_repository.dart';
-import 'package:mianyang_quiz/domain/subject_tree.dart';
 import 'package:mianyang_quiz/state/favorite_store.dart';
-import 'package:mianyang_quiz/ui/features/bank/favorite_action.dart';
+import 'package:mianyang_quiz/ui/core/feedback/favorite_toggle.dart';
 import 'package:mianyang_quiz/ui/features/bank/widgets/bank_body.dart';
-import 'package:mianyang_quiz/ui/features/bank/widgets/bank_filter_bar.dart';
+import 'package:mianyang_quiz/ui/features/bank/widgets/bank_header.dart';
 import 'package:mianyang_quiz/ui/features/bank/widgets/bank_filter_sheet.dart';
 import 'package:mianyang_quiz/ui/features/bank/widgets/bank_pager.dart';
 import 'package:provider/provider.dart';
@@ -90,6 +88,29 @@ class _BankPageState extends State<BankPage> {
     }
   }
 
+  /// 下拉刷新：重查当前这一页，**不切到加载态**。
+  ///
+  /// RefreshIndicator 自己会转圈；这里再 setState(AsyncLoading) 会把列表换成居中转圈，
+  /// 用户正看着的内容整块消失——下拉刷新最不该有的表现。
+  /// 失败也只提示、保留原内容（与 PagedListState.loadMore 同一口径）。
+  Future<void> _refresh() async {
+    try {
+      final page = await context.read<QuestionRepository>().listQuestions(
+        filter: _filter,
+        page: _page,
+        pageSize: _pageSize,
+        nodes: _nodes.isEmpty ? null : _nodes,
+      );
+      if (!mounted) return;
+      setState(() => _state = AsyncData(page));
+    } on AppException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
+    }
+  }
+
   void _applyFilter(QuestionFilter filter) {
     setState(() {
       _filter = filter;
@@ -115,16 +136,6 @@ class _BankPageState extends State<BankPage> {
     _applyFilter(picked);
   }
 
-  /// 已选科目的名称链；科目树未就绪时退化为空串（chip 不显示）。
-  String get _nodePath => buildNodeIndex(_nodes)(_filter.nodeId);
-
-  String get _tagName {
-    for (final tag in _tags) {
-      if (tag.id == _filter.tagId) return tag.name;
-    }
-    return '';
-  }
-
   @override
   Widget build(BuildContext context) {
     final favorites = context.watch<FavoriteStore>();
@@ -138,26 +149,11 @@ class _BankPageState extends State<BankPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Expanded(
-                  child: Text('题库', style: AppTextStyles.pageTitle(context)),
-                ),
-                if (total > 0)
-                  Text(
-                    '共 $total 题',
-                    style: AppTextStyles.caption(context).copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-              ],
-            ),
-            SizedBox(height: AppMetrics.gapMd.r),
-            BankFilterBar(
+            BankHeader(
+              total: total,
               filter: _filter,
-              nodePath: _nodePath,
-              tagName: _tagName,
+              nodes: _nodes,
+              tags: _tags,
               onOpenSheet: _openSheet,
               onClear: _clearFilter,
             ),
@@ -168,11 +164,15 @@ class _BankPageState extends State<BankPage> {
                 filtered: _filter.hasAny,
                 onClear: _clearFilter,
                 onRetry: _load,
+                onRefresh: _refresh,
                 isFavorite: favorites.isFavorite,
                 onOpen: (brief) =>
                     context.push(AppRoutes.questionDetailOf(brief.questionId)),
-                onToggleFavorite: (brief) =>
-                    toggleFavoriteWithToast(context, brief.questionId),
+                onToggleFavorite: (brief) => toggleFavoriteWithToast(
+                  context,
+                  questionId: brief.questionId,
+                  toggle: context.read<FavoriteStore>().toggle,
+                ),
               ),
             ),
             if (total > 0)

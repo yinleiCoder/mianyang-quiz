@@ -113,10 +113,11 @@ class _TrueFalseButton extends StatelessWidget {
         scheme.primaryContainer,
         scheme.onPrimaryContainer,
       ),
+      // 同族配对：浅绿底配 onSuccessContainer（不是 onTertiaryContainer，那是粉红）
       OptionState.correct => (
         context.semantic.success,
         context.semantic.successContainer,
-        scheme.onTertiaryContainer,
+        context.semantic.onSuccessContainer,
       ),
       OptionState.wrong => (
         scheme.error,

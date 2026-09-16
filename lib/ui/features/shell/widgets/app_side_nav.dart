@@ -9,7 +9,7 @@
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/core/theme/app_metrics.dart';
-import 'package:mianyang_quiz/ui/core/design/duo_icon_badge.dart';
+import 'package:mianyang_quiz/ui/core/design/brand_mark.dart';
 import 'package:mianyang_quiz/ui/features/shell/widgets/nav_destinations.dart';
 
 class AppSideNav extends StatelessWidget {
@@ -73,11 +73,12 @@ class _Brand extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const DuoIconBadge(icon: Icons.school_outlined, size: 36),
+          // 品牌标识直接用矢量图（与网页端侧栏同一张），不再用 Material 图标示意
+          const BrandMark(size: 36),
           const SizedBox(width: AppMetrics.gapMd),
           Expanded(
             child: Text(
-              '绵阳题库',
+              '绵阳市中职共建题库',
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w700,
               ),

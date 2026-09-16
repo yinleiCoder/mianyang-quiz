@@ -1,14 +1,21 @@
-// 底部导航条。
+// 底部导航条（窄屏形态）。
 //
 // 只画，不管路由——切换由 AppShell 通过 StatefulNavigationShell 完成。
 // 这样本组件可以脱离路由单独预览与测试。
 //
-// 形态学多邻国：选中项图标加粗、未选中项弱化；整体是圆角浮起的一条，
-// 而不是贴着屏幕底边的通栏。
+// **直接用 Material 的 NavigationBar，不自己画。** 之前是自己拼的圆角浮起条
+// （左右留 gapLg、上下留 gapMd、外加描边），窄屏上看着像个卡片而不是系统导航。
+// 换成框架实现后有四个好处：
+//   · 通栏到底、无左右留白，与 Android/桌面平台的底部导航一致；
+//   · 底部安全区由 NavigationBar **内部的 SafeArea** 处理（见其 build），
+//     所以这里**不能再包一层 SafeArea**，否则底部内边距会翻倍；
+//   · 选中指示器、水波纹、无障碍语义都由框架给，不必自己维护；
+//   · 高度、标签行为有 M3 默认值，不再散落魔法数。
+//
+// 本项目的两处定制（配色对齐侧栏、字重只用 w400/w700）统一放在
+// AppTheme.navigationBarTheme 里，**不写在这个组件上**——组件只负责结构。
 
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:mianyang_quiz/core/theme/app_metrics.dart';
 import 'package:mianyang_quiz/ui/features/shell/widgets/nav_destinations.dart';
 
 class AppBottomNav extends StatelessWidget {
@@ -23,88 +30,17 @@ class AppBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppMetrics.gapLg,
-          0,
-          AppMetrics.gapLg,
-          AppMetrics.gapMd,
-        ),
-        child: Container(
-          decoration: BoxDecoration(
-            color: scheme.surfaceContainer,
-            borderRadius: BorderRadius.circular(AppMetrics.radiusCard.r),
-            border: Border.all(color: scheme.outlineVariant),
+    return NavigationBar(
+      selectedIndex: currentIndex,
+      onDestinationSelected: onSelect,
+      destinations: [
+        for (final destination in kNavDestinations)
+          NavigationDestination(
+            icon: Icon(destination.icon),
+            selectedIcon: Icon(destination.activeIcon),
+            label: destination.label,
           ),
-          padding: const EdgeInsets.symmetric(vertical: AppMetrics.gapSm),
-          child: Row(
-            children: [
-              for (var i = 0; i < kNavDestinations.length; i++)
-                Expanded(
-                  child: _NavButton(
-                    destination: kNavDestinations[i],
-                    selected: i == currentIndex,
-                    onTap: () => onSelect(i),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _NavButton extends StatelessWidget {
-  const _NavButton({
-    required this.destination,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final NavDestination destination;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final color = selected ? scheme.primary : scheme.onSurfaceVariant;
-
-    return Semantics(
-      button: true,
-      selected: selected,
-      label: destination.label,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppMetrics.radiusChip.r),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: AppMetrics.gapXs),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                selected ? destination.activeIcon : destination.icon,
-                size: (selected ? 26.0 : 24.0).r,
-                color: color,
-              ),
-              SizedBox(height: 2.r),
-              Text(
-                destination.label,
-                style: TextStyle(
-                  fontSize: 11.sp,
-                  color: color,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+      ],
     );
   }
 }

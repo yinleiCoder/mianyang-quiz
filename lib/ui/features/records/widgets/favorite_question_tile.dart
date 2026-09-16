@@ -16,7 +16,7 @@ import 'package:mianyang_quiz/ui/core/design/duo_button.dart';
 import 'package:mianyang_quiz/ui/core/design/duo_card.dart';
 import 'package:mianyang_quiz/ui/core/design/duo_chip.dart';
 import 'package:mianyang_quiz/ui/core/design/duo_icon_badge.dart';
-import 'package:mianyang_quiz/ui/features/records/widgets/difficulty_chip.dart';
+import 'package:mianyang_quiz/ui/core/design/difficulty_chip.dart';
 
 class FavoriteQuestionTile extends StatelessWidget {
   const FavoriteQuestionTile({

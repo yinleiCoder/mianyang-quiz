@@ -12,6 +12,7 @@
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/core/theme/app_metrics.dart';
+import 'package:mianyang_quiz/core/theme/app_navigation_bar_theme.dart';
 import 'package:mianyang_quiz/core/theme/semantic_colors.dart';
 
 abstract final class AppTheme {
@@ -148,6 +149,8 @@ abstract final class AppTheme {
           vertical: AppMetrics.gapXs.r,
         ),
       ),
+      // 底部导航的定制在 app_navigation_bar_theme.dart（理由比配置长，拆开了）
+      navigationBarTheme: AppNavigationBarTheme.build(scheme),
       progressIndicatorTheme: ProgressIndicatorThemeData(
         color: scheme.primary,
         linearTrackColor: scheme.surfaceContainerHighest,

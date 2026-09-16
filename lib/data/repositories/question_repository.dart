@@ -15,6 +15,7 @@ import 'package:mianyang_quiz/data/models/bank/question_brief.dart';
 import 'package:mianyang_quiz/data/models/bank/question_filter.dart';
 import 'package:mianyang_quiz/data/models/bank/subject_node.dart';
 import 'package:mianyang_quiz/data/models/content/question_content.dart';
+import 'package:mianyang_quiz/data/repositories/query/question_credits.dart';
 import 'package:mianyang_quiz/data/repositories/query/question_enricher.dart';
 import 'package:mianyang_quiz/data/repositories/subject_repository.dart';
 import 'package:mianyang_quiz/domain/subject_tree.dart';
@@ -23,8 +24,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 /// 一页题目 + 总数（分页需要总数才能算页数）。
 typedef QuestionPage = ({List<QuestionBrief> rows, int total});
 
-/// 题目详情：展示用的元信息 + 作答/展示用的内容，一次取回。
-typedef QuestionDetail = ({QuestionBrief brief, QuestionContent content});
+/// 题目详情：展示用的元信息 + 作答/展示用的内容 + 署名（作者/审核人），一次取回。
+typedef QuestionDetail = ({
+  QuestionBrief brief,
+  QuestionContent content,
+  List<QuestionCredit> credits,
+});
 
 class QuestionRepository {
   const QuestionRepository(this._client);
@@ -127,7 +132,7 @@ class QuestionRepository {
           .select(
             'id, school_id, course_node_id, state, '
             'version:question_versions!fk_questions_current_version!inner('
-            'id, version_no, qtype, difficulty, content, published_at, status)',
+            'id, version_no, qtype, difficulty, content, published_at, status, created_by)',
           )
           .eq('id', questionId)
           .eq('state', 'live')
@@ -155,9 +160,26 @@ class QuestionRepository {
         content: QuestionContent.fromJson(
           Map<String, dynamic>.from(version['content'] as Map? ?? const {}),
         ),
+        credits: await _credits(version),
       );
     } catch (error) {
       throw mapError(error);
+    }
+  }
+
+  /// 署名（作者 + 两级审核通过人）。
+  ///
+  /// **失败不抛**：这是详情页的附加信息，题库里的一次读取失败不该把整页变成错误态——
+  /// 题干、选项、答案才是用户点进来的目的。查不到就少一行署名。
+  /// （网页端在这里是抛错的，因为它的错误边界只会替换内容区；客户端没这层缓冲。）
+  Future<List<QuestionCredit>> _credits(Map<String, dynamic> version) async {
+    try {
+      return await QuestionCreditLoader(_client).load(
+        versionId: version['id'] as String,
+        createdBy: version['created_by'] as String?,
+      );
+    } catch (_) {
+      return const [];
     }
   }
 }

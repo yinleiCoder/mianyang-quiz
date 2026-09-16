@@ -28,7 +28,10 @@
 
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:mianyang_quiz/ui/core/layout/breakpoints.dart';
 import 'package:mianyang_quiz/ui/features/shell/widgets/app_bottom_nav.dart';
+import 'package:mianyang_quiz/ui/features/shell/widgets/clipboard_link_listener.dart';
+import 'package:mianyang_quiz/ui/features/shell/widgets/update_checker.dart';
 import 'package:mianyang_quiz/ui/features/shell/widgets/app_side_nav.dart';
 
 class AppShell extends StatelessWidget {
@@ -37,17 +40,11 @@ class AppShell extends StatelessWidget {
   /// go_router 注入的分支导航器。**它的位置必须跨断点保持不变**——见文件头说明。
   final StatefulNavigationShell navigationShell;
 
-  /// 宽屏阈值。
-  ///
-  /// 取 900 而不是常见的 768：侧栏本身占 232px，768 宽的窗口扣掉侧栏后
-  /// 内容区只剩 536px，三列统计卡这类布局会开始挤。
-  static const double wideBreakpoint = 900;
-
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final wide = constraints.maxWidth >= wideBreakpoint;
+        final wide = constraints.maxWidth >= kWideBreakpoint;
 
         // initialLocation: true 让"再次点击当前项"回到该分支的根，
         // 这是移动端的通用预期（相当于"回到首页"）
@@ -56,27 +53,34 @@ class AppShell extends StatelessWidget {
           initialLocation: index == navigationShell.currentIndex,
         );
 
-        return Scaffold(
-          body: Row(
-            children: [
-              // 导航槽：始终占据 index 0。两种形态的元素个数一致，
-              // 所以 index 1 的 navigationShell 不会因切换而重建。
-              if (wide)
-                AppSideNav(
-                  currentIndex: navigationShell.currentIndex,
-                  onSelect: select,
-                )
-              else
-                const SizedBox.shrink(),
-              Expanded(child: navigationShell),
-            ],
+        // 两件与页面无关的"全局监听"都挂在外壳上（登录后的所有页面都在它们下面）：
+        //   · 剪贴板识别：回到前台时读一次，认出题目分享链接就问要不要打开；
+        //   · 检查更新：冷启动后查一次 GitHub 的 latest，有新版本弹一次。
+        return UpdateChecker(
+          child: ClipboardLinkListener(
+            child: Scaffold(
+              body: Row(
+                children: [
+                  // 导航槽：始终占据 index 0。两种形态的元素个数一致，
+                  // 所以 index 1 的 navigationShell 不会因切换而重建。
+                  if (wide)
+                    AppSideNav(
+                      currentIndex: navigationShell.currentIndex,
+                      onSelect: select,
+                    )
+                  else
+                    const SizedBox.shrink(),
+                  Expanded(child: navigationShell),
+                ],
+              ),
+              bottomNavigationBar: wide
+                  ? null
+                  : AppBottomNav(
+                      currentIndex: navigationShell.currentIndex,
+                      onSelect: select,
+                    ),
+            ),
           ),
-          bottomNavigationBar: wide
-              ? null
-              : AppBottomNav(
-                  currentIndex: navigationShell.currentIndex,
-                  onSelect: select,
-                ),
         );
       },
     );

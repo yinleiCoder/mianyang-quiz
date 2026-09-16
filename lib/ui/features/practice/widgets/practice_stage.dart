@@ -14,14 +14,12 @@ import 'dart:async';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/core/constants/qtype_meta.dart';
+import 'package:mianyang_quiz/core/error/error_mapper.dart';
 import 'package:mianyang_quiz/core/router/routes.dart';
-import 'package:mianyang_quiz/core/theme/app_metrics.dart';
 import 'package:mianyang_quiz/domain/submitted_answer.dart';
 import 'package:mianyang_quiz/state/practice_mode.dart';
-import 'package:mianyang_quiz/ui/core/question/question_view.dart';
 import 'package:mianyang_quiz/ui/features/practice/state/practice_runner.dart';
-import 'package:mianyang_quiz/ui/features/practice/widgets/practice_bottom_bar.dart';
-import 'package:mianyang_quiz/ui/features/practice/widgets/practice_top_bar.dart';
+import 'package:mianyang_quiz/ui/features/practice/widgets/practice_layout.dart';
 import 'package:mianyang_quiz/ui/features/practice/widgets/quit_confirm_sheet.dart';
 
 class PracticeStage extends StatefulWidget {
@@ -80,7 +78,9 @@ class _PracticeStageState extends State<PracticeStage> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('提交失败：$error')),
+        // 用 mapError 取文案，不要插值原始异常：AppException.toString() 是
+        // '$runtimeType: $message'，用户会看到「ServerException: …」。
+        SnackBar(content: Text('提交失败：${mapError(error).message}')),
       );
     } finally {
       if (mounted) setState(() => _checking = false);
@@ -115,7 +115,7 @@ class _PracticeStageState extends State<PracticeStage> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('交卷失败：$error')),
+        SnackBar(content: Text('交卷失败：${mapError(error).message}')),
       );
     }
   }
@@ -136,54 +136,17 @@ class _PracticeStageState extends State<PracticeStage> {
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: _runner,
-      builder: (context, _) {
-        final runtime = _runner.current;
-        final graded = runtime.isGraded;
-        final instant = _runner.mode == PracticeMode.instant;
-
-        return Column(
-          children: [
-            PracticeTopBar(
-              index: _runner.index + 1,
-              total: _runner.total,
-              progress: _runner.progress,
-              onExit: _confirmQuit,
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppMetrics.pagePadding,
-                  vertical: AppMetrics.gapLg,
-                ),
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 180),
-                  // key 用题号：切题时整块重建，避免上一题的输入焦点残留
-                  key: ValueKey('${_runner.index}-${runtime.item.questionId}'),
-                  child: QuestionView(
-                    qtype: runtime.item.qtype,
-                    content: runtime.item.content,
-                    answer: runtime.draft,
-                    onAnswerChanged: _onAnswerChanged,
-                    shuffledKeys: runtime.displayOrder,
-                    reveal: graded ? AnswerReveal.graded : AnswerReveal.none,
-                    readOnly: instant && graded,
-                    selfMastered: runtime.selfMastered,
-                    onSelfAssessed: _runner.setSelfMastered,
-                  ),
-                ),
-              ),
-            ),
-            // 底部操作区的四种形态由 PracticeBottomBar 内部选择
-            PracticeBottomBar(
-              runner: _runner,
-              checking: _checking,
-              onCheck: _check,
-              onContinue: _continue,
-              onFinish: _finish,
-            ),
-          ],
-        );
-      },
+      builder: (context, _) => PracticeLayout(
+        runner: _runner,
+        graded: _runner.current.isGraded,
+        instant: _runner.mode == PracticeMode.instant,
+        checking: _checking,
+        onAnswerChanged: _onAnswerChanged,
+        onExit: _confirmQuit,
+        onCheck: _check,
+        onContinue: _continue,
+        onFinish: _finish,
+      ),
     );
   }
 }

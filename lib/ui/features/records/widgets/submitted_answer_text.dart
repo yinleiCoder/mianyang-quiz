@@ -34,9 +34,8 @@ String _answerText(Map<String, dynamic> answer) {
       if (values.isEmpty) return '未作答';
       if (values.length == 1) return values.first;
       // 多个空时标上空位序号，否则一串答案看不出谁对应哪个空。
-      return [
-        for (var i = 0; i < values.length; i++) '第 ${i + 1} 空 ${values[i]}',
-      ].join('；');
+      return [for (var i = 0; i < values.length; i++) '第 ${i + 1} 空 ${values[i]}']
+          .join('；');
     case 'unknown':
       return '标记为「不会」';
     case 'composite':
@@ -45,9 +44,7 @@ String _answerText(Map<String, dynamic> answer) {
       final parts = <String>[];
       for (var i = 0; i < subs.length; i++) {
         final sub = subs[i];
-        final text = sub is Map
-            ? _answerText(Map<String, dynamic>.from(sub))
-            : '未作答';
+        final text = sub is Map ? _answerText(Map<String, dynamic>.from(sub)) : '未作答';
         parts.add('第 ${i + 1} 题 $text');
       }
       return parts.join('\n');

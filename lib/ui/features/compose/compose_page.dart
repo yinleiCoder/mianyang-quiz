@@ -7,8 +7,11 @@
 // 本页最要紧的一件事：**开始新练习会静默作废进行中的会话**。
 // 所以进页面先看有没有 active_session，非空时必须让用户选「继续 / 重新开始」。
 
+import 'dart:async';
+
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:mianyang_quiz/core/error/error_mapper.dart';
 import 'package:mianyang_quiz/core/router/routes.dart';
 import 'package:mianyang_quiz/core/theme/app_metrics.dart';
 import 'package:mianyang_quiz/data/models/bank/question_filter.dart';
@@ -64,8 +67,10 @@ class _ComposePageState extends State<ComposePage> {
         source: draft.source,
       );
       if (!mounted) return;
-      await context.read<DashboardStore>().refresh(silent: true);
-      if (!mounted) return;
+      // 看板刷新不 await：练习页根本不显示看板，交卷后的结果页还会再刷一次。
+      // 等它等于把一次 practice_dashboard RPC 塞进「开始练习」的等待路径，
+      // 用户多等一个往返才进题。refresh 自己吞掉异常，这里不会产生未处理的错误。
+      unawaited(context.read<DashboardStore>().refresh(silent: true));
       context.pushReplacement(
         AppRoutes.practiceOf(snapshot.sessionId),
         extra: (mode: draft.mode, shuffle: draft.shuffleOptions),
@@ -74,7 +79,9 @@ class _ComposePageState extends State<ComposePage> {
       if (!mounted) return;
       setState(() => _starting = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$error')),
+        // 不要插值原始异常：AppException.toString() 是 '$runtimeType: $message'，
+        // 用户会看到「ServerException: …」而不是给用户看的那句中文。
+        SnackBar(content: Text(mapError(error).message)),
       );
     }
   }

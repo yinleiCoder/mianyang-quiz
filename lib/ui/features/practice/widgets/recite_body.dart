@@ -7,8 +7,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/core/theme/app_metrics.dart';
 import 'package:mianyang_quiz/core/utils/async_value.dart';
 import 'package:mianyang_quiz/data/models/content/question_content.dart';
-import 'package:mianyang_quiz/ui/core/feedback/error_state.dart';
-import 'package:mianyang_quiz/ui/core/feedback/loading_state.dart';
+import 'package:mianyang_quiz/ui/core/feedback/async_view.dart';
 import 'package:mianyang_quiz/ui/core/question/analysis_view.dart';
 import 'package:mianyang_quiz/ui/core/question/question_view.dart';
 import 'package:mianyang_quiz/ui/features/practice/recite_entry.dart';
@@ -22,6 +21,7 @@ class ReciteBody extends StatelessWidget {
     required this.content,
     required this.onPrev,
     required this.onNext,
+    required this.onRetryContent,
   });
 
   final List<ReciteEntry> entries;
@@ -29,6 +29,9 @@ class ReciteBody extends StatelessWidget {
   final AsyncValue<QuestionContent> content;
   final VoidCallback onPrev;
   final VoidCallback onNext;
+
+  /// 题干拉取失败时重试（只重拉本题，不重拉整个队列）。
+  final VoidCallback onRetryContent;
 
   @override
   Widget build(BuildContext context) {
@@ -43,10 +46,10 @@ class ReciteBody extends StatelessWidget {
           onNext: index < entries.length - 1 ? onNext : null,
         ),
         Expanded(
-          child: switch (content) {
-            AsyncLoading() => const LoadingState(),
-            AsyncFailure(:final error) => ErrorState(message: error.message),
-            AsyncData(:final value) => SingleChildScrollView(
+          child: AsyncView<QuestionContent>(
+            state: content,
+            onRetry: onRetryContent,
+            builder: (value) => SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(
                 AppMetrics.pagePadding,
                 0,
@@ -72,7 +75,7 @@ class ReciteBody extends StatelessWidget {
                 ],
               ),
             ),
-          },
+          ),
         ),
       ],
     );

@@ -17,6 +17,7 @@ class QuestionListView extends StatelessWidget {
     required this.isFavorite,
     required this.onOpen,
     required this.onToggleFavorite,
+    required this.onRefresh,
   });
 
   final List<QuestionBrief> rows;
@@ -27,21 +28,29 @@ class QuestionListView extends StatelessWidget {
   final ValueChanged<QuestionBrief> onOpen;
   final ValueChanged<QuestionBrief> onToggleFavorite;
 
+  /// 下拉刷新：重查当前这一页。返回的 Future 由 RefreshIndicator 等待。
+  final Future<void> Function() onRefresh;
+
   @override
   Widget build(BuildContext context) {
-    return ListView.separated(
-      padding: EdgeInsets.only(bottom: AppMetrics.gapLg.r),
-      itemCount: rows.length,
-      separatorBuilder: (_, _) => SizedBox(height: AppMetrics.gapMd.r),
-      itemBuilder: (context, index) {
-        final brief = rows[index];
-        return QuestionListTile(
-          brief: brief,
-          isFavorite: isFavorite(brief.questionId),
-          onTap: () => onOpen(brief),
-          onToggleFavorite: () => onToggleFavorite(brief),
-        );
-      },
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      child: ListView.separated(
+        // 列表短于一屏时也要能下拉（否则只有一两条数据就刷不动了）
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.only(bottom: AppMetrics.gapLg.r),
+        itemCount: rows.length,
+        separatorBuilder: (_, _) => SizedBox(height: AppMetrics.gapMd.r),
+        itemBuilder: (context, index) {
+          final brief = rows[index];
+          return QuestionListTile(
+            brief: brief,
+            isFavorite: isFavorite(brief.questionId),
+            onTap: () => onOpen(brief),
+            onToggleFavorite: () => onToggleFavorite(brief),
+          );
+        },
+      ),
     );
   }
 }

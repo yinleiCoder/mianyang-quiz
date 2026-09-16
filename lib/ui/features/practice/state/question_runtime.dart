@@ -42,7 +42,11 @@ class QuestionRuntime {
   /// 正在提交中（即时模式）。
   final bool submitting;
 
-  bool get isAnswered => draft != null;
+  /// 这道题**有答案了**：本次刚选的（draft）或续练时从服务端还原的（已判过）。
+  ///
+  /// 只认 draft 会让续练的进度条从 0 开始、答题卡把已答的题画成"未作答"、
+  /// 批量模式还会提示"还有 N 道题没作答"——那几道明明答过了。
+  bool get isAnswered => draft != null || isGraded;
 
   bool get isGraded => verdict != null || selfMastered != null;
 

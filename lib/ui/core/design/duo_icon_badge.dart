@@ -55,9 +55,11 @@ class DuoIconBadge extends StatelessWidget {
         scheme.onPrimaryContainer,
         scheme.primary,
       ),
+      // 底色取 successContainer，前景就必须是同族的 onSuccessContainer
+      // （onTertiaryContainer 是粉红色，压在浅绿底上看不清，见 duo_chip 同处注释）
       DuoIconBadgeTone.success => (
         context.semantic.successContainer,
-        scheme.onTertiaryContainer,
+        context.semantic.onSuccessContainer,
         context.semantic.success,
       ),
       DuoIconBadgeTone.warning => (

@@ -8,8 +8,10 @@
 // 依赖方向：仓储/服务只依赖 client，Store 依赖仓储/服务。
 // 页面通过 context.read<Xxx>() 取，**不在 widget 里 new**（AGENTS.md 约定）。
 
+import 'package:dio/dio.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:mianyang_quiz/data/repositories/app_update_repository.dart';
 import 'package:mianyang_quiz/data/repositories/favorite_repository.dart';
 import 'package:mianyang_quiz/data/repositories/feedback_repository.dart';
 import 'package:mianyang_quiz/data/repositories/list_repository.dart';
@@ -36,6 +38,7 @@ class AppDependencies {
       listRepository = ListRepository(client),
       favoriteRepository = FavoriteRepository(client),
       feedbackRepository = FeedbackRepository(client),
+      appUpdateRepository = AppUpdateRepository(Dio()),
       ossUploadService = OssUploadService(client);
 
   /// 由 bootstrap() 在 Supabase.initialize 之后调用。
@@ -59,6 +62,7 @@ class AppDependencies {
   final ListRepository listRepository;
   final FavoriteRepository favoriteRepository;
   final FeedbackRepository feedbackRepository;
+  final AppUpdateRepository appUpdateRepository;
   final OssUploadService ossUploadService;
 
   /// 四个跨页 Store。赋值在 create() 里完成（它们彼此之间与仓储有依赖顺序）。

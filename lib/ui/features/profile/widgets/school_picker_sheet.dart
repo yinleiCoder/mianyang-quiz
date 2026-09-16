@@ -52,22 +52,30 @@ class _SchoolSheet extends StatelessWidget {
             child: Text('选择学校', style: AppTextStyles.sectionTitle(context)),
           ),
           // Flexible + shrinkWrap：学校数量不多时按内容高度收，多了才滚动。
+          //
+          // 用 .builder 而不是 children 列表：`_SchoolOption` 内部是 ListTile，
+          // 比一个 Text 贵得多。全市学校一次铺开时，children 写法会在**打开面板的
+          // 那一帧**把它们全部构建并布局完；builder 只建可见的几行。
+          // 第 0 项固定是「暂不绑定学校」，所以下标要错开一位。
           Flexible(
-            child: ListView(
+            child: ListView.builder(
               shrinkWrap: true,
-              children: [
-                _SchoolOption(
-                  label: '暂不绑定学校',
-                  selected: selectedId == null,
-                  onTap: () => Navigator.of(context).pop(''),
-                ),
-                for (final school in schools)
-                  _SchoolOption(
-                    label: school.name,
-                    selected: school.id == selectedId,
-                    onTap: () => Navigator.of(context).pop(school.id),
-                  ),
-              ],
+              itemCount: schools.length + 1,
+              itemBuilder: (context, index) {
+                if (index == 0) {
+                  return _SchoolOption(
+                    label: '暂不绑定学校',
+                    selected: selectedId == null,
+                    onTap: () => Navigator.of(context).pop(''),
+                  );
+                }
+                final school = schools[index - 1];
+                return _SchoolOption(
+                  label: school.name,
+                  selected: school.id == selectedId,
+                  onTap: () => Navigator.of(context).pop(school.id),
+                );
+              },
             ),
           ),
         ],

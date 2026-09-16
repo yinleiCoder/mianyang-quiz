@@ -9,10 +9,10 @@
 
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:mianyang_quiz/core/constants/difficulty_meta.dart';
 import 'package:mianyang_quiz/core/theme/app_metrics.dart';
 import 'package:mianyang_quiz/core/theme/app_text_styles.dart';
 import 'package:mianyang_quiz/data/models/bank/question_brief.dart';
+import 'package:mianyang_quiz/ui/core/design/difficulty_chip.dart';
 import 'package:mianyang_quiz/ui/core/design/duo_card.dart';
 import 'package:mianyang_quiz/ui/core/design/duo_chip.dart';
 import 'package:mianyang_quiz/ui/core/design/duo_icon_badge.dart';
@@ -79,13 +79,9 @@ class QuestionListTile extends StatelessWidget {
                       tone: DuoChipTone.brand,
                       dense: true,
                     ),
-                    if (brief.difficulty != null)
-                      DuoChip(
-                        // 带上前缀：孤零零一个「中」字看不出是难度还是别的
-                        label: '难度 ${difficultyLabel(brief.difficulty)}',
-                        tone: _toneOf(brief.difficulty),
-                        dense: true,
-                      ),
+                    // 与错题本/收藏/复盘卡片共用同一个标签：以前这里自带一份
+                    // 映射，结果「中」在本页是橙色、在其它三处是灰色。
+                    DifficultyChip(difficulty: brief.difficulty),
                     for (final tag in tags) DuoChip(label: tag, dense: true),
                   ],
                 ),
@@ -111,13 +107,6 @@ class QuestionListTile extends StatelessWidget {
     );
   }
 }
-
-/// 难度语气：易=成功、中=警告、难=危险。与 DuoChip 的语气语义一一对应。
-DuoChipTone _toneOf(int? difficulty) => switch (difficultyTone(difficulty)) {
-  DifficultyTone.easy => DuoChipTone.success,
-  DifficultyTone.medium => DuoChipTone.warning,
-  DifficultyTone.hard => DuoChipTone.danger,
-};
 
 /// 收藏心形。
 ///

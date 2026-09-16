@@ -24,6 +24,20 @@ abstract final class Formatters {
     return restMinutes == 0 ? '$hours 小时' : '$hours 小时 $restMinutes 分';
   }
 
+  /// 时长 → 计时钟「12:34」/ 超过一小时「1:02:03」。
+  ///
+  /// 与 [duration] 的分工：那个是**结算文案**（"1 分 23 秒"，读着自然），
+  /// 这个是**每秒都在跳的计时器**——中文单位每秒都在变宽变窄，看着晃眼；
+  /// 纯数字还天然对齐（tabular 数字），扫一眼就知道练了多久。
+  static String clock(Duration elapsed) {
+    final total = elapsed.isNegative ? 0 : elapsed.inSeconds;
+    final hours = total ~/ 3600;
+    final minutes = (total % 3600) ~/ 60;
+    final seconds = total % 60;
+    final mmss = '${_two(minutes)}:${_two(seconds)}';
+    return hours == 0 ? mmss : '$hours:$mmss';
+  }
+
   /// 0~1 的小数 → 「85%」。null 视为 0。
   static String percent(num? ratio, {int fractionDigits = 0}) {
     final value = (ratio ?? 0) * 100;

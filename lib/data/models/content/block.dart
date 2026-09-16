@@ -41,6 +41,11 @@ extension BlockListX on List<Block> {
   bool get isBlank => plainText.trim().isEmpty;
 }
 
+/// 空位判定。**提为文件级常量**：RegExp 的构造要编译模式，而 countBlanks 会被
+/// FillBlankInputView 在每次按键（didUpdateWidget）里调到 —— 写成字面量等于
+/// 每敲一个字符就重新编译一次正则。
+final _blankPattern = RegExp(r'_{3,}');
+
 /// 填空题空位数量：与数据库一致，只认**连续 3 个以上**下划线。
 /// 少于此数的下划线是普通文本，不是空位。
-int countBlanks(String text) => RegExp(r'_{3,}').allMatches(text).length;
+int countBlanks(String text) => _blankPattern.allMatches(text).length;

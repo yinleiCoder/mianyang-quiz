@@ -19,8 +19,7 @@ import 'package:mianyang_quiz/ui/core/charts/daily_trend_chart.dart';
 import 'package:mianyang_quiz/ui/core/design/duo_button.dart';
 import 'package:mianyang_quiz/ui/core/design/duo_card.dart';
 import 'package:mianyang_quiz/ui/core/design/duo_stat_tile.dart';
-import 'package:mianyang_quiz/ui/core/feedback/error_state.dart';
-import 'package:mianyang_quiz/ui/core/feedback/loading_state.dart';
+import 'package:mianyang_quiz/ui/core/feedback/async_view.dart';
 import 'package:mianyang_quiz/ui/core/layout/section_header.dart';
 import 'package:mianyang_quiz/ui/features/home/widgets/active_session_card.dart';
 import 'package:mianyang_quiz/ui/features/home/widgets/recent_answers_section.dart';
@@ -46,25 +45,25 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<DashboardStore>().state;
-    final name = context.watch<AuthStore>().displayName;
+    // select 而不是 watch：两个 Store 都是全局的。watch 整店会让首页——连同里面的
+    // 趋势图（fl_chart 是带 150ms 隐式动画的组件）——因为无关的状态变化重建一次，
+    // 比如 AuthStore 每次 _run 都会通知两次（busy 置位、复位）。
+    final state = context.select<DashboardStore, AsyncValue<PracticeDashboard>>(
+      (store) => store.state,
+    );
+    final name = context.select<AuthStore, String>((auth) => auth.displayName);
 
     return Scaffold(
       body: SafeArea(
         // **不套 MaxWidthBox**：数据页要铺满窗口宽度。
         // 套上之后滚动视图只剩限宽那一条，滚动条就跑到内容区右边而不是窗口侧边，
         // 窗口越宽越明显。（专注型页面如刷题/背题仍限宽——1920px 宽的单道题更难读。）
-        child: switch (state) {
-          AsyncLoading() => const LoadingState(message: '正在加载学情…'),
-          AsyncFailure(:final error) => ErrorState(
-            message: error.message,
-            onRetry: () => context.read<DashboardStore>().refresh(),
-          ),
-          AsyncData(:final value) => _DashboardBody(
-            name: name,
-            dashboard: value,
-          ),
-        },
+        child: AsyncView<PracticeDashboard>(
+          state: state,
+          loadingMessage: '正在加载学情…',
+          onRetry: () => context.read<DashboardStore>().refresh(),
+          builder: (dashboard) => _DashboardBody(name: name, dashboard: dashboard),
+        ),
       ),
     );
   }
@@ -88,26 +87,14 @@ class _DashboardBody extends StatelessWidget {
           const SizedBox(height: AppMetrics.gapLg),
           ActiveSessionCard(session: active),
         ],
+        // 两个按钮紧跟今日练习卡，排在统计卡**之前**：新用户首页三项统计全是 0，
+        // 趋势图也是空的，把入口压在下面等于让他先滚过两块空内容才找得到按钮。
+        // 先给动作，再给数据。
+        //
+        // 但必须排在 ActiveSessionCard **之后**：那张卡是护栏，不是便利入口——
+        // 服务端每人只允许一套进行中的会话，用户无视它去点「开始一次练习」，
+        // 这次的进度会被静默作废。
         const SizedBox(height: AppMetrics.gapLg),
-        _StatGrid(dashboard: dashboard),
-        const SizedBox(height: AppMetrics.gapXl),
-        const SectionHeader(
-          title: '近两周练习',
-          subtitle: '每天答对的题数越多，说明手感越稳',
-        ),
-        DuoCard(
-          padding: const EdgeInsets.fromLTRB(
-            AppMetrics.gapMd,
-            AppMetrics.gapLg,
-            AppMetrics.gapLg,
-            AppMetrics.gapMd,
-          ),
-          child: DailyTrendChart(daily: dashboard.daily),
-        ),
-        const SizedBox(height: AppMetrics.gapXl),
-        const SectionHeader(title: '最近做过的题'),
-        RecentAnswersSection(answers: dashboard.recent),
-        const SizedBox(height: AppMetrics.gapXl),
         DuoButton(
           label: '开始一次练习',
           icon: Icons.play_arrow,
@@ -122,6 +109,25 @@ class _DashboardBody extends StatelessWidget {
           onPressed: () => context.go(
             AppRoutes.recordsOf(AppRoutes.recordsTabWrong),
           ),
+        ),
+        const SizedBox(height: AppMetrics.gapXl),
+        _StatGrid(dashboard: dashboard),
+        const SizedBox(height: AppMetrics.gapXl),
+        const SectionHeader(title: '最近做过的题'),
+        RecentAnswersSection(answers: dashboard.recent),
+        const SizedBox(height: AppMetrics.gapXl),
+        const SectionHeader(
+          title: '近两周练习',
+          subtitle: '每天答对的题数越多，说明手感越稳',
+        ),
+        DuoCard(
+          padding: const EdgeInsets.fromLTRB(
+            AppMetrics.gapMd,
+            AppMetrics.gapLg,
+            AppMetrics.gapLg,
+            AppMetrics.gapMd,
+          ),
+          child: DailyTrendChart(daily: dashboard.daily),
         ),
       ],
     );

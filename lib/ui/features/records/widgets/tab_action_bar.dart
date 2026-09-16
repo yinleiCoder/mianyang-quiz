@@ -39,9 +39,8 @@ class TabActionBar extends StatelessWidget {
           Expanded(
             child: Text(
               hint,
-              style: AppTextStyles.caption(
-                context,
-              ).copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+              style: AppTextStyles.caption(context)
+                  .copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
           ),
           DuoButton(

@@ -14,8 +14,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/core/theme/app_metrics.dart';
 import 'package:mianyang_quiz/core/theme/app_text_styles.dart';
+import 'package:mianyang_quiz/ui/core/design/brand_mark.dart';
 import 'package:mianyang_quiz/ui/core/design/duo_card.dart';
-import 'package:mianyang_quiz/ui/core/design/duo_icon_badge.dart';
 import 'package:mianyang_quiz/ui/core/layout/max_width_box.dart';
 
 class AuthScaffold extends StatelessWidget {
@@ -130,7 +130,7 @@ class _Brand extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const DuoIconBadge(icon: Icons.school_outlined, size: 56),
+        const BrandMark(size: 56),
         SizedBox(height: AppMetrics.gapMd.r),
         Text(
           '绵阳市中职共建题库',

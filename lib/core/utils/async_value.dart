@@ -11,6 +11,7 @@
 // 函数式辅助——Dart 3 的 switch 模式匹配已经足够，多一层抽象只会让调用点更难读。
 
 import 'package:mianyang_quiz/core/error/app_exception.dart';
+import 'package:mianyang_quiz/core/error/error_mapper.dart';
 
 sealed class AsyncValue<T> {
   const AsyncValue();
@@ -36,4 +37,16 @@ final class AsyncData<T> extends AsyncValue<T> {
 final class AsyncFailure<T> extends AsyncValue<T> {
   const AsyncFailure(this.error);
   final AppException error;
+}
+
+/// 把可能失败的取数包成 AsyncValue。
+///
+/// 用途：页面上有多份互不依赖的参考数据（注册页的学校名单 + 专业目录），
+/// 一份拉不到不该让另一份也变成失败态，也不该中断主流程。
+Future<AsyncValue<T>> asAsyncValue<T>(Future<T> Function() run) async {
+  try {
+    return AsyncData(await run());
+  } catch (error) {
+    return AsyncFailure(mapError(error));
+  }
 }

@@ -20,9 +20,8 @@ import 'package:mianyang_quiz/data/models/content/question_content.dart';
 import 'package:mianyang_quiz/data/models/practice/practice_session.dart';
 import 'package:mianyang_quiz/data/repositories/list_repository.dart';
 import 'package:mianyang_quiz/data/repositories/question_repository.dart';
+import 'package:mianyang_quiz/ui/core/feedback/async_view.dart';
 import 'package:mianyang_quiz/ui/core/feedback/empty_state.dart';
-import 'package:mianyang_quiz/ui/core/feedback/error_state.dart';
-import 'package:mianyang_quiz/ui/core/feedback/loading_state.dart';
 import 'package:mianyang_quiz/ui/features/practice/recite_entry.dart';
 import 'package:mianyang_quiz/ui/features/practice/widgets/recite_body.dart';
 import 'package:provider/provider.dart';
@@ -153,25 +152,28 @@ class _RecitePageState extends State<RecitePage> {
     return Scaffold(
       appBar: AppBar(title: Text(widget.title)),
       body: SafeArea(
-        child: switch (_queue) {
-                    AsyncLoading() => const LoadingState(message: '正在准备题目…'),
-                    AsyncFailure(:final error) => ErrorState(
-                      message: error.message,
-                      onRetry: _loadQueue,
-                    ),
-                    AsyncData(:final value) when value.isEmpty => const EmptyState(
-                      icon: Icons.menu_book_outlined,
-                      title: '这里还没有可背的题',
-                      message: '换个来源，或先去题库里找几道题。',
-                    ),
-                    AsyncData(:final value) => ReciteBody(
-                      entries: value,
-                      index: _index,
-                      content: _current,
-                      onPrev: () => _go(-1),
-                      onNext: () => _go(1),
-                    ),
-                  },
+        child: AsyncView<List<ReciteEntry>>(
+          state: _queue,
+          loadingMessage: '正在准备题目…',
+          onRetry: _loadQueue,
+          builder: (entries) => entries.isEmpty
+              ? const EmptyState(
+                  icon: Icons.menu_book_outlined,
+                  title: '这里还没有可背的题',
+                  message: '换个来源，或先去题库里找几道题。',
+                )
+              : ReciteBody(
+                  entries: entries,
+                  index: _index,
+                  content: _current,
+                  onPrev: () => _go(-1),
+                  onNext: () => _go(1),
+                  // 题干拉取失败时给一次重试：否则用户卡在空白的这一题上，
+                  // 只能靠反复翻页绕过去
+                  onRetryContent: () =>
+                      _loadContent(entries[_index].questionId),
+                ),
+        ),
       ),
     );
   }

@@ -10,10 +10,11 @@ import 'package:mianyang_quiz/data/models/practice/practice_session.dart';
 import 'package:mianyang_quiz/state/practice_mode.dart';
 
 class PracticeDraftStore extends ChangeNotifier {
-  /// 题量上下限由服务端 start_practice_session 决定（1~50）。
-  /// 客户端先挡一道，避免用户选了 100 再被服务端拒绝。
+  /// 题量上下限由服务端 start_practice_session 决定（1~100，见 0043）。
+  /// 客户端先挡一道：滑杆拖到底也是 100，越界由这里的 clamp 兜住。
+  /// 申请量大于题库现有题数不算错——服务端有多少给多少。
   static const int minLimit = 1;
-  static const int maxLimit = 50;
+  static const int maxLimit = 100;
   static const int defaultLimit = 20;
 
   QuestionFilter _filter = const QuestionFilter();

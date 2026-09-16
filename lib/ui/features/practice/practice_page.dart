@@ -11,8 +11,7 @@ import 'package:mianyang_quiz/core/error/error_mapper.dart';
 import 'package:mianyang_quiz/core/utils/async_value.dart';
 import 'package:mianyang_quiz/data/repositories/practice_repository.dart';
 import 'package:mianyang_quiz/state/practice_mode.dart';
-import 'package:mianyang_quiz/ui/core/feedback/error_state.dart';
-import 'package:mianyang_quiz/ui/core/feedback/loading_state.dart';
+import 'package:mianyang_quiz/ui/core/feedback/async_view.dart';
 import 'package:mianyang_quiz/ui/features/practice/state/practice_runner.dart';
 import 'package:mianyang_quiz/ui/features/practice/widgets/practice_stage.dart';
 import 'package:provider/provider.dart';
@@ -77,14 +76,14 @@ class _PracticePageState extends State<PracticePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: switch (_load) {
-                    AsyncLoading() => const LoadingState(message: '正在准备练习…'),
-                    AsyncFailure(:final error) => ErrorState(
-                      message: error.message,
-                      onRetry: _loadSession,
-                    ),
-                    AsyncData() => PracticeStage(runner: _runner!),
-                  },
+        child: AsyncView<void>(
+          state: _load,
+          loadingMessage: '正在准备练习…',
+          onRetry: _loadSession,
+          // AsyncView<void> 的 value 没有信息量，真正要用的是 _loadSession
+          // 成功时建好的 runner（AsyncData 分支必然已有它）。
+          builder: (_) => PracticeStage(runner: _runner!),
+        ),
       ),
     );
   }

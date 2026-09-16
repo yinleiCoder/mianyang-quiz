@@ -20,6 +20,11 @@ const _maxPublicClassesPerDataFile = 3;
 const _lineLimitExemptions = <String, String>{
   'lib/core/constants/strings.dart': '全站中文文案唯一出口，按页面分节；拆开反而难查漏',
   'lib/core/router/app_router.dart': '所有路由的登记处，集中才看得出全貌',
+  'lib/ui/features/practice/state/practice_runner.dart':
+      '练习会话状态机：题目运行时列表、当前题号、计时起点都是私有字段，'
+      '而 Dart 的私有是**库级**——换一个文件就再也改不动它们。'
+      '真要拆只能把状态机改成"协作者 + 回调"的间接层，为行数换架构不划算；'
+      '可拆的部分（题目运行时的构造、答题卡、版式）都已经拆出去了。',
 };
 
 /// 禁止出现的 import（精确匹配）。

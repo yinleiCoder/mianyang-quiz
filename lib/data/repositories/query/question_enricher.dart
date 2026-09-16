@@ -35,11 +35,25 @@ class QuestionEnricher {
       }
     }
 
-    final nodeList = nodes ?? await SubjectRepository(_client).fetchNodes();
+    // 三次查询互不依赖，先一起发出再统一等待：串行 await 会把三个网络往返
+    // 叠加进同一次列表加载，页面等的是它们的和而不是最大值。
+    //
+    // 用 Future.wait 而不是 Dart 3 record 的 `.wait`：后者任一失败时抛
+    // ParallelWaitError，会把仓储边界的 mapError 挡在外面 —— 原始的网络/数据库
+    // 异常认不出来，用户看到的从「网络连接失败，请检查网络后重试」退化成
+    // 「操作失败，请稍后重试」。Future.wait 保留原始异常，也会替我们接住其余
+    // future 的错误（逐个 await 则可能在第一个失败后留下无人处理的异步异常）。
+    final results = await Future.wait<Object>([
+      nodes != null
+          ? Future<List<SubjectNode>>.value(nodes)
+          : SubjectRepository(_client).fetchNodes(),
+      _tagsOf(versionIds),
+      _schoolNames(schoolIds),
+    ]);
+    final nodeList = results[0] as List<SubjectNode>;
+    final tagsByVersion = results[1] as Map<String, List<String>>;
+    final schoolNames = results[2] as Map<String, String>;
     final pathOf = buildNodeIndex(nodeList);
-
-    final tagsByVersion = await _tagsOf(versionIds);
-    final schoolNames = await _schoolNames(schoolIds);
 
     return versions.map((version) {
       final question = Map<String, dynamic>.from(version['question'] as Map);

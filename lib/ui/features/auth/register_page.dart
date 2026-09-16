@@ -21,14 +21,16 @@ import 'package:mianyang_quiz/core/error/error_mapper.dart';
 import 'package:mianyang_quiz/core/router/routes.dart';
 import 'package:mianyang_quiz/core/theme/app_metrics.dart';
 import 'package:mianyang_quiz/core/utils/async_value.dart';
+import 'package:mianyang_quiz/data/models/bank/subject_node.dart';
 import 'package:mianyang_quiz/data/models/user/school.dart';
+import 'package:mianyang_quiz/data/repositories/subject_repository.dart';
 import 'package:mianyang_quiz/data/repositories/user_repository.dart';
 import 'package:mianyang_quiz/state/auth_store.dart';
 import 'package:mianyang_quiz/ui/core/design/duo_button.dart';
 import 'package:mianyang_quiz/ui/core/layout/section_header.dart';
 import 'package:mianyang_quiz/ui/features/auth/widgets/auth_scaffold.dart';
 import 'package:mianyang_quiz/ui/features/auth/widgets/basic_info_fields.dart';
-import 'package:mianyang_quiz/ui/features/auth/widgets/enrollment_fields.dart';
+import 'package:mianyang_quiz/ui/core/form/enrollment_fields.dart';
 import 'package:mianyang_quiz/ui/features/auth/widgets/identity_selector.dart';
 import 'package:mianyang_quiz/ui/features/auth/widgets/school_picker_field.dart';
 import 'package:provider/provider.dart';
@@ -45,14 +47,17 @@ class _RegisterPageState extends State<RegisterPage> {
   final _name = TextEditingController();
   final _email = TextEditingController();
   final _password = TextEditingController();
-  final _majorCategory = TextEditingController();
-  final _major = TextEditingController();
   final _className = TextEditingController();
+  // 专业大类/专业改成从科目树里选，所以是值而不是控制器
+  String? _majorCategory;
+  String? _major;
 
   Identity _identity = Identity.student;
   String? _schoolId;
   int? _enrollYear;
   AsyncValue<List<School>> _schools = const AsyncLoading<List<School>>();
+  // 专业目录（subject_nodes 的专业树）：注册时还没登录，靠迁移 0039 对 anon 开的只读
+  AsyncValue<List<SubjectNode>> _nodes = const AsyncLoading<List<SubjectNode>>();
   bool _busy = false;
   String? _error;
 
@@ -61,34 +66,34 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   void initState() {
     super.initState();
-    _loadSchools();
+    _loadReferenceData();
   }
 
   @override
   void dispose() {
-    for (final controller in [
-      _name,
-      _email,
-      _password,
-      _majorCategory,
-      _major,
-      _className,
-    ]) {
+    for (final controller in [_name, _email, _password, _className]) {
       controller.dispose();
     }
     super.dispose();
   }
 
-  Future<void> _loadSchools() async {
-    setState(() => _schools = const AsyncLoading<List<School>>());
-    try {
-      final schools = await context.read<UserRepository>().fetchSchools();
-      if (!mounted) return;
-      setState(() => _schools = AsyncData(schools));
-    } catch (error) {
-      if (!mounted) return;
-      setState(() => _schools = AsyncFailure(mapError(error)));
-    }
+  /// 注册要用的两份参考数据：学校名单 + 专业目录（后者供专业大类/专业下拉）。
+  /// 两份并行拉、各自独立失败——任何一份拉不到都不该阻断注册（对应的选择项禁用即可）。
+  Future<void> _loadReferenceData() async {
+    setState(() {
+      _schools = const AsyncLoading<List<School>>();
+      _nodes = const AsyncLoading<List<SubjectNode>>();
+    });
+    // 两个 future 同时起，再依次 await：并行取数、类型清晰、任一失败都不影响另一个
+    final schoolsFuture = asAsyncValue(context.read<UserRepository>().fetchSchools);
+    final nodesFuture = asAsyncValue(context.read<SubjectRepository>().fetchNodes);
+    final schools = await schoolsFuture;
+    final nodes = await nodesFuture;
+    if (!mounted) return;
+    setState(() {
+      _schools = schools;
+      _nodes = nodes;
+    });
   }
 
   Future<void> _submit() async {
@@ -108,9 +113,9 @@ class _RegisterPageState extends State<RegisterPage> {
         identity: _identity,
         schoolId: _schoolId,
         enrollYear: _isStudent ? _enrollYear : null,
-        majorCategory: _isStudent ? _filled(_majorCategory) : null,
-        major: _isStudent ? _filled(_major) : null,
-        className: _isStudent ? _filled(_className) : null,
+        majorCategory: _isStudent ? _majorCategory : null,
+        major: _isStudent ? _major : null,
+        className: _isStudent ? optionalText(_className.text) : null,
       );
       if (!mounted) return;
       if (needsVerify) {
@@ -136,7 +141,11 @@ class _RegisterPageState extends State<RegisterPage> {
       title: '注册',
       subtitle: '填好基本信息就能开始刷题',
       error: _error,
-      footer: _footer(context),
+      // 底部次要动作：主按钮只有一个，这里要的是「顺手点一下」，所以用文字按钮
+      footer: TextButton(
+        onPressed: _busy ? null : () => context.go(AppRoutes.loginPath),
+        child: const Text('已有账号？去登录'),
+      ),
       child: Form(
         key: _formKey,
         child: Column(
@@ -161,7 +170,7 @@ class _RegisterPageState extends State<RegisterPage> {
               schools: _schools,
               value: _schoolId,
               enabled: !_busy,
-              onRetry: _loadSchools,
+              onRetry: _loadReferenceData,
               onChanged: (schoolId) => setState(() => _schoolId = schoolId),
             ),
             if (_isStudent) ...[
@@ -170,9 +179,14 @@ class _RegisterPageState extends State<RegisterPage> {
                 enrollYear: _enrollYear,
                 onEnrollYearChanged: (year) =>
                     setState(() => _enrollYear = year),
-                majorCategoryController: _majorCategory,
-                majorController: _major,
+                majorCategory: _majorCategory,
+                onMajorCategoryChanged: (v) =>
+                    setState(() => _majorCategory = v),
+                major: _major,
+                onMajorChanged: (v) => setState(() => _major = v),
                 classNameController: _className,
+                nodes: _nodes.valueOrNull ?? const [],
+                nodesLoading: _nodes.isLoading,
                 enabled: !_busy,
               ),
             ],
@@ -183,17 +197,4 @@ class _RegisterPageState extends State<RegisterPage> {
       ),
     );
   }
-
-  /// 底部次要动作。主按钮只有一个，这里要的是「顺手点一下」，所以用文字按钮。
-  Widget _footer(BuildContext context) => TextButton(
-    onPressed: _busy ? null : () => context.go(AppRoutes.loginPath),
-    child: const Text('已有账号？去登录'),
-  );
-}
-
-/// 控制器里的可选文本：只有空白当成「没填」，其余去掉首尾空白再传。
-/// 服务端对空串与 null 的处理一致，但少传几个空值能让 metadata 干净些。
-String? _filled(TextEditingController controller) {
-  final value = controller.text.trim();
-  return value.isEmpty ? null : value;
 }

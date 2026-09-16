@@ -42,6 +42,8 @@ dependencies:
   # 题目里的音视频与附件用系统默认程序打开（本项目不做内嵌播放器：
   # 目标平台里的 Windows 没有官方 video_player/just_audio 支持）
   url_launcher: ^6.3.2
+  share_plus: ^13.3.0
+  flutter_svg: ^2.3.0
 
 dev_dependencies:
   flutter_test:
@@ -51,6 +53,23 @@ dev_dependencies:
   freezed: ^4.0.1
   json_serializable: ^6.14.1
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
 
 flutter:
   uses-material-design: true
+
+  assets:
+    # 品牌标识：与网页端 public/mianyang.svg 同一张图（两端一致），
+    # 用矢量是因为它在 36~56px 之间变化，不必按尺寸各出一档位图。
+    - assets/mianyang.svg
+
+# 应用图标：源图 assets/app_icon.png（由 assets/mianyang.svg 渲染而来，见 AGENTS.md 第七节）。
+# 改图标 = 换源图 + `dart run flutter_launcher_icons`，Windows 的 .ico 与 Android 的各档
+# mipmap 都会被重新生成，不要手改那些产物。
+flutter_launcher_icons:
+  image_path: "assets/app_icon.png"
+  android: true
+  windows:
+    generate: true
+    image_path: "assets/app_icon.png"
+    icon_size: 256

@@ -16,7 +16,7 @@ import 'package:mianyang_quiz/data/models/list/question_row.dart';
 import 'package:mianyang_quiz/ui/core/design/duo_card.dart';
 import 'package:mianyang_quiz/ui/core/design/duo_chip.dart';
 import 'package:mianyang_quiz/ui/core/design/duo_icon_badge.dart';
-import 'package:mianyang_quiz/ui/features/records/widgets/difficulty_chip.dart';
+import 'package:mianyang_quiz/ui/core/design/difficulty_chip.dart';
 
 class WrongQuestionTile extends StatelessWidget {
   const WrongQuestionTile({super.key, required this.row, this.onTap});
@@ -29,8 +29,7 @@ class WrongQuestionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final muted = AppTextStyles.caption(context)
-        .copyWith(color: scheme.onSurfaceVariant);
+    final muted = AppTextStyles.caption(context).copyWith(color: scheme.onSurfaceVariant);
     final available = row.available;
 
     return DuoCard(
@@ -79,11 +78,7 @@ class WrongQuestionTile extends StatelessWidget {
             ),
           ),
           if (available)
-            Icon(
-              Icons.chevron_right_rounded,
-              size: 20.r,
-              color: scheme.onSurfaceVariant,
-            ),
+            Icon(Icons.chevron_right_rounded, size: 20.r, color: scheme.onSurfaceVariant),
         ],
       ),
     );

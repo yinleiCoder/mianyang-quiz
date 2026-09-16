@@ -27,7 +27,8 @@ import 'package:supabase_flutter/supabase_flutter.dart'
 /// 多一个字面量服务端就回「未知的用途类型」，而**大小与 MIME 白名单也在服务端**，
 /// 客户端不重复校验（端上校验只是为了少跑一趟网络）。
 abstract final class OssPurpose {
-  /// 题目媒体（图片/音视频/附件），≤50MB。
+  /// 题目媒体（图片/音视频/附件）。上限按类型分档，真源在服务端 lib/media-spec.js：
+  /// 图片 ≤20MB、音频 ≤200MB、视频 ≤1GB、文档 ≤200MB。
   static const String questionMedia = 'question_media';
 
   /// 头像，≤5MB，仅 image/png、image/jpeg、image/webp。

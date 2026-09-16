@@ -10,6 +10,8 @@ import 'package:mianyang_quiz/core/router/routes.dart';
 import 'package:mianyang_quiz/core/theme/app_metrics.dart';
 import 'package:mianyang_quiz/core/utils/formatters.dart';
 import 'package:mianyang_quiz/data/models/practice/practice_results.dart';
+import 'package:mianyang_quiz/data/models/practice/practice_session.dart';
+import 'package:mianyang_quiz/state/practice_entry.dart';
 import 'package:mianyang_quiz/ui/core/design/duo_button.dart';
 import 'package:mianyang_quiz/ui/core/design/duo_card.dart';
 
@@ -80,7 +82,9 @@ class ResultBody extends StatelessWidget {
           DuoButton(
             label: '练这些错题',
             icon: Icons.replay,
-            onPressed: () => context.push(AppRoutes.composePath),
+            // 必须走 startPracticeFrom：直接 push 组卷页会漏掉"写来源"这一步，
+            // 组卷页于是拿着上一次的来源抽题（想练错题，抽出来的是题库）。
+            onPressed: () => startPracticeFrom(context, PracticeSource.wrong),
           ),
         const SizedBox(height: AppMetrics.gapMd),
         DuoButton(

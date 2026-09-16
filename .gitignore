@@ -51,3 +51,12 @@ app.*.map.json
 # 模板见 config/dev.example.json
 config/dev.json
 config/*.local.json
+
+# 混淆构建的调试符号（--split-debug-info 的落点）：体积大、且能反解混淆，不入库。
+# 崩溃排查要用它，请另行归档（发布步骤见 AGENTS.md 第七节）。
+symbols/
+
+# Android 正式签名：私钥与其口令**绝不入库**（CI 从仓库 secret 解码到本地后即用即弃）
+android/key.properties
+*.keystore
+*.jks

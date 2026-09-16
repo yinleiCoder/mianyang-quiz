@@ -16,13 +16,13 @@ import 'package:mianyang_quiz/core/utils/async_value.dart';
 import 'package:mianyang_quiz/data/repositories/question_repository.dart';
 import 'package:mianyang_quiz/state/favorite_store.dart';
 import 'package:mianyang_quiz/ui/core/design/duo_card.dart';
+import 'package:mianyang_quiz/ui/core/feedback/async_view.dart';
 import 'package:mianyang_quiz/ui/core/feedback/empty_state.dart';
-import 'package:mianyang_quiz/ui/core/feedback/error_state.dart';
-import 'package:mianyang_quiz/ui/core/feedback/loading_state.dart';
+import 'package:mianyang_quiz/ui/core/feedback/favorite_toggle.dart';
 import 'package:mianyang_quiz/ui/core/question/analysis_view.dart';
 import 'package:mianyang_quiz/ui/core/question/question_view.dart';
-import 'package:mianyang_quiz/ui/features/bank/favorite_action.dart';
 import 'package:mianyang_quiz/ui/features/bank/widgets/question_meta_header.dart';
+import 'package:mianyang_quiz/ui/features/bank/widgets/share_question_sheet.dart';
 import 'package:provider/provider.dart';
 
 class QuestionDetailPage extends StatefulWidget {
@@ -59,19 +59,35 @@ class _QuestionDetailPageState extends State<QuestionDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    final favorite = context
-        .watch<FavoriteStore>()
-        .isFavorite(widget.questionId);
+    // select 而不是 watch：FavoriteStore 是全局共享的，任何一处收藏切换都会通知。
+    // watch 整店会让本题的题干、全部选项与解析跟着重建一遍。
+    final favorite = context.select<FavoriteStore, bool>(
+      (store) => store.isFavorite(widget.questionId),
+    );
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('题目详情'),
         actions: [
+          // 分享：把这道题发给别人（系统分享 / 复制链接）。题干摘要一并传下去，
+          // 让分享文案和弹层预览都能看出是哪道题
+          IconButton(
+            onPressed: () => showShareQuestionSheet(
+              context,
+              questionId: widget.questionId,
+              stem: _state.valueOrNull?.brief.stemText,
+            ),
+            tooltip: '分享',
+            icon: const Icon(Icons.ios_share),
+          ),
           IconButton(
             // 与题库列表共用同一个动作：切换 + toast，文案必须一致
-            onPressed: () =>
-                toggleFavoriteWithToast(context, widget.questionId),
+            onPressed: () => toggleFavoriteWithToast(
+              context,
+              questionId: widget.questionId,
+              toggle: context.read<FavoriteStore>().toggle,
+            ),
             tooltip: favorite ? '取消收藏' : '收藏',
             icon: Icon(
               favorite ? Icons.favorite : Icons.favorite_border,
@@ -81,16 +97,13 @@ class _QuestionDetailPageState extends State<QuestionDetailPage> {
         ],
       ),
       body: SafeArea(
-        child: switch (_state) {
-          AsyncLoading() => const LoadingState(),
-          AsyncFailure(:final error) => ErrorState(
-            message: error.message,
-            onRetry: _load,
-          ),
-          AsyncData(:final value) => value == null
-              ? const _Invisible()
-              : _Body(detail: value),
-        },
+        child: AsyncView<QuestionDetail?>(
+          state: _state,
+          onRetry: _load,
+          // null 是"题目已下线或不可见"——它不是错误，所以不走错误态
+          builder: (detail) =>
+              detail == null ? const _Invisible() : _Body(detail: detail),
+        ),
       ),
     );
   }
@@ -123,7 +136,8 @@ class _Body extends StatelessWidget {
         Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      QuestionMetaHeader(brief: brief),
+                      // 署名交给元信息条：标签与署名同一行两端对齐（见该组件注释）
+                      QuestionMetaHeader(brief: brief, credits: detail.credits),
                       SizedBox(height: AppMetrics.gapMd.r),
                       DuoCard(
                         child: QuestionView(

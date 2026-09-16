@@ -188,4 +188,79 @@ flutter run -d windows --dart-define-from-file=config/dev.json
 ```
 
 配置项：`SUPABASE_URL` / `SUPABASE_ANON_KEY`（取值见网页端 `.env.local`，key 是 `sb_publishable_…` 格式）
-/ `OSS_PUBLIC_HOST` / `API_BASE_URL`。
+/ `OSS_PUBLIC_HOST` / `API_BASE_URL` / `SHARE_BASE_URL`。
+
+---
+
+## 七、发布（Windows）
+
+发布配置与开发配置只差站点地址（都要指向线上），另存一份带 `.local` 的文件即可
+（`.gitignore` 只忽略 `config/dev.json` 与 `config/*.local.json`）：
+
+```bash
+cp config/dev.example.json config/prod.local.json   # 把 API_BASE_URL / SHARE_BASE_URL 改成 https://myquiz.cn
+```
+
+混淆构建（`--obfuscate` 与 `--split-debug-info` **必须成对给**，只给前者会报错）：
+
+```bash
+flutter build windows --release \
+  --obfuscate \
+  --split-debug-info=symbols/windows \
+  --extra-gen-snapshot-options=--save-obfuscation-map=symbols/windows/obfuscation-map.json \
+  --dart-define-from-file=config/prod.local.json
+```
+
+**产物与分发**：整包在 `build\windows\x64\runner\Release\`，**必须整个目录一起发**——
+exe 只是入口，同目录下的全部 `.dll`（`flutter_windows.dll` + 各插件）与 `data\` 缺一不可。
+目标机器还需要 MSVC 运行时（`msvcp140.dll` / `vcruntime140.dll` / `vcruntime140_1.dll`）：
+Release 目录里没有就装 Microsoft Visual C++ Redistributable，或把这三个 dll 拷进同目录。
+分发形态三选一：zip 整包（最省事）、MSIX（`msix` pub 包）、传统安装器（Inno Setup / WiX）。
+
+**调试符号别丢**：`symbols/windows/` 下的 `app.windows-x64.symbols` 与 `obfuscation-map.json`
+是反解混淆堆栈的唯一凭据（`.gitignore` 已忽略，需另行归档，每个发布版本一份）。
+实测本项目的 Windows 构建给的就是 `.symbols`，`flutter symbolize -i <trace> -d <symbols>` 直接认
+（官方文档说 Windows x64 出 PDB、那种要用 WinDbg——按实际拿到的文件类型选工具）。
+
+**混淆的边界**（官方文档明说）：它只把符号名改成不可读的名字，**不加密资源、也挡不住逆向**，
+依赖类名/函数名的代码（如 `runtimeType.toString()`）会失效，枚举名不混淆。
+所以密码、密钥一律不许进客户端——本仓的 OSS/AI 密钥都在服务端（见第一条硬约束）。
+
+### 发布流水线与检查更新
+
+打一个 tag 就出包（**客户端仓库**里的 `.github/workflows/release.yml` —— 网页端仓库只把本目录记成
+一个 gitlink，工作流放那边构建不了）：
+
+```bash
+git tag v1.0.1 && git push origin v1.0.1
+```
+
+跑完在 GitHub Releases 上得到两个资产，**名字固定不带版本号**（这样
+`/releases/latest/download/<名字>` 永远指向最新版，产品页与客户端都能写死链接）：
+
+- `mianyang_quiz-android.apk` —— Android 直接装（未配 `ANDROID_KEYSTORE_BASE64` 时是 debug 签名，仅适合内测）
+- `mianyang_quiz-windows-x64.zip` —— 整个目录解压后运行
+
+符号文件（`app.*.symbols` + `obfuscation-map.json`）只作为 Actions artifact 上传，**不进 Release**：
+它们能反解混淆，公开挂出去等于白混淆。
+
+**检查更新**（`lib/ui/features/shell/widgets/update_checker.dart`）读的就是上面那个 Release 的
+`tag_name`，与本机 `Env.appVersion` 比大小（比较逻辑在 `lib/domain/app_version.dart`，纯函数可单测）。
+所以 `APP_VERSION` 由流水线按 tag 注入 —— 两边同源才不会误报。调试构建（`kDebugMode`）与
+`APP_VERSION` 带 `-` 的包不检查；同一个版本「稍后再说」过就不再弹。
+
+### 应用图标
+
+品牌的唯一源是 `assets/mianyang.svg`；喂给构建的是它渲染出来的 `assets/app_icon.png`
+（1024×1024、透明底、四周留 10% 边距——贴边的图形在 16px 的任务栏上会糊成一团）。
+换图标 = 换这两张图，然后：
+
+```bash
+dart run flutter_launcher_icons    # 重新生成 windows 的 .ico 与 android 五档 mipmap
+```
+
+生成物（`windows\runner\resources\app_icon.ico`、`android\app\src\main\res\mipmap-*\ic_launcher.png`）
+**不要手改**，它们下次生成时会被覆盖。
+SVG → PNG 这一步是**离线**做的（与网页端 favicon 同例，不往仓库塞生成脚本）：
+headless Chrome 打开一个把 `<img>` 撑满的 html 截图即可，
+`--default-background-color=00000000` 保住透明底、`--window-size=1024,1024` 定尺寸。

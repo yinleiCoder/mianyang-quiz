@@ -12,6 +12,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/core/theme/app_theme.dart';
+import 'package:mianyang_quiz/data/repositories/subject_repository.dart';
 import 'package:mianyang_quiz/data/repositories/user_repository.dart';
 import 'package:mianyang_quiz/data/services/auth_service.dart';
 import 'package:mianyang_quiz/data/services/oss_upload_service.dart';
@@ -67,6 +68,8 @@ Future<void> _pump(WidgetTester tester, String location) async {
           ),
           Provider<UserRepository>.value(value: users),
           Provider<OssUploadService>(create: (_) => OssUploadService(client)),
+          // 就读信息的专业大类/专业下拉要读科目树
+          Provider<SubjectRepository>(create: (_) => SubjectRepository(client)),
         ],
         child: MaterialApp.router(
           theme: AppTheme.light(),

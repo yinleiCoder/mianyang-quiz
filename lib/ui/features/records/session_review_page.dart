@@ -17,8 +17,7 @@ import 'package:mianyang_quiz/core/utils/formatters.dart';
 import 'package:mianyang_quiz/data/models/practice/practice_session.dart';
 import 'package:mianyang_quiz/data/models/practice/session_record.dart';
 import 'package:mianyang_quiz/data/repositories/practice_repository.dart';
-import 'package:mianyang_quiz/ui/core/feedback/error_state.dart';
-import 'package:mianyang_quiz/ui/core/feedback/loading_state.dart';
+import 'package:mianyang_quiz/ui/core/feedback/async_view.dart';
 import 'package:mianyang_quiz/ui/core/layout/section_header.dart';
 import 'package:mianyang_quiz/ui/features/records/widgets/review_question_card.dart';
 import 'package:mianyang_quiz/ui/features/records/widgets/review_summary.dart';
@@ -62,14 +61,12 @@ class _SessionReviewPageState extends State<SessionReviewPage> {
     return Scaffold(
       appBar: AppBar(title: const Text('练习复盘')),
       body: SafeArea(
-        child: switch (_state) {
-          AsyncLoading() => const LoadingState(message: '正在取回这次练习…'),
-          AsyncFailure(:final error) => ErrorState(
-            message: error.message,
-            onRetry: _load,
-          ),
-          AsyncData(:final value) => _ReviewBody(snapshot: value),
-        },
+        child: AsyncView<PracticeSessionSnapshot>(
+          state: _state,
+          loadingMessage: '正在取回这次练习…',
+          onRetry: _load,
+          builder: (snapshot) => _ReviewBody(snapshot: snapshot),
+        ),
       ),
     );
   }

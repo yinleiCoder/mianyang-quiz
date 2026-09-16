@@ -7,8 +7,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/core/theme/app_metrics.dart';
 import 'package:mianyang_quiz/state/practice_mode.dart';
-import 'package:mianyang_quiz/state/practice_draft_store.dart';
 import 'package:mianyang_quiz/ui/core/design/duo_card.dart';
+import 'package:mianyang_quiz/ui/features/compose/widgets/limit_slider.dart';
 
 class ComposeOptions extends StatelessWidget {
   const ComposeOptions({
@@ -47,17 +47,23 @@ class ComposeOptions extends StatelessWidget {
               const SizedBox(height: AppMetrics.gapSm),
           ],
           Divider(height: AppMetrics.gapXl * 2, color: theme.colorScheme.outlineVariant),
-          _LimitStepper(limit: limit, onChanged: onLimitChanged),
+          LimitSlider(limit: limit, onChanged: onLimitChanged),
           const SizedBox(height: AppMetrics.gapMd),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            value: shuffle,
-            onChanged: onShuffleChanged,
-            title: const Text('打乱选项顺序'),
-            subtitle: Text(
-              '同一道题反复练时，记住「A 是对的」没有意义',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+          // ListTile 的水波纹画在最近的 Material 上，而卡片是个带底色的 DecoratedBox，
+          // 中间没有 Material 时框架会断言 "ListTile background color or ink splashes
+          // may be invisible"（debug 下这里会变成红框）。垫一层透明 Material 即可。
+          Material(
+            type: MaterialType.transparency,
+            child: SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              value: shuffle,
+              onChanged: onShuffleChanged,
+              title: const Text('打乱选项顺序'),
+              subtitle: Text(
+                '同一道题反复练时，记住「A 是对的」没有意义',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
           ),
@@ -126,53 +132,6 @@ class _ModeOption extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-/// 题量选择。上下限取自服务端约束（1~50），客户端先挡一道。
-class _LimitStepper extends StatelessWidget {
-  const _LimitStepper({required this.limit, required this.onChanged});
-
-  final int limit;
-  final ValueChanged<int> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    const step = 5;
-
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('题量', style: theme.textTheme.titleSmall),
-              Text(
-                '$limit 题',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
-        ),
-        IconButton(
-          onPressed: limit <= PracticeDraftStore.minLimit
-              ? null
-              : () => onChanged(limit - step),
-          icon: const Icon(Icons.remove_circle_outline),
-          tooltip: '减少 $step 题',
-        ),
-        IconButton(
-          onPressed: limit >= PracticeDraftStore.maxLimit
-              ? null
-              : () => onChanged(limit + step),
-          icon: const Icon(Icons.add_circle_outline),
-          tooltip: '增加 $step 题',
-        ),
-      ],
     );
   }
 }

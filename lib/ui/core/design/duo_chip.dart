@@ -58,9 +58,12 @@ class DuoChip extends StatelessWidget {
         scheme.onSurfaceVariant,
       ),
       DuoChipTone.brand => (scheme.primaryContainer, scheme.onPrimaryContainer),
+      // 前景必须取同族的 onSuccessContainer：拿 onTertiaryContainer 顶替是
+      // AGENTS.md 二·五警告的那个坑——deepPurple 种子派生出的 tertiary 是粉红色，
+      // 粉字压在浅绿底上又脏又难认（难度「易」那枚 chip 就是这么来的）。
       DuoChipTone.success => (
         context.semantic.successContainer,
-        scheme.onTertiaryContainer,
+        context.semantic.onSuccessContainer,
       ),
       DuoChipTone.warning => (
         scheme.secondaryContainer,

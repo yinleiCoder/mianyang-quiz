@@ -66,9 +66,8 @@ class SessionRecordTile extends StatelessWidget {
               SizedBox(width: AppMetrics.gapSm.r),
               Text(
                 Formatters.dateTime(record.startedAt),
-                style: AppTextStyles.caption(context).copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+                style: AppTextStyles.caption(context)
+                    .copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
             ],
           ),
@@ -79,12 +78,8 @@ class SessionRecordTile extends StatelessWidget {
             alignment: Alignment.centerRight,
             child: DuoButton(
               label: active ? '继续练习' : '查看复盘',
-              icon: active
-                  ? Icons.play_arrow_rounded
-                  : Icons.receipt_long_outlined,
-              variant: active
-                  ? DuoButtonVariant.primary
-                  : DuoButtonVariant.outline,
+              icon: active ? Icons.play_arrow_rounded : Icons.receipt_long_outlined,
+              variant: active ? DuoButtonVariant.primary : DuoButtonVariant.outline,
               compact: true,
               expand: false,
               onPressed: action,

@@ -28,7 +28,7 @@ class PracticeRunner extends ChangeNotifier {
     required this._repository,
     required PracticeSessionSnapshot snapshot,
     required this.mode,
-    this.shuffleOptions = true,
+    bool shuffleOptions = true,
   }) : _sessionId = snapshot.sessionId,
        _runtimes = buildQuestionRuntimes(snapshot, shuffleOptions: shuffleOptions) {
     // 续练时定位到第一道未作答的题；全答完则停在最后一题
@@ -38,14 +38,22 @@ class PracticeRunner extends ChangeNotifier {
 
   final PracticeRepository _repository;
   final PracticeMode mode;
-  final bool shuffleOptions;
   final String _sessionId;
 
   /// 元素会被替换（每次变更都换新的不可变实例），但列表本身不重新赋值。
   final List<QuestionRuntime> _runtimes;
   int _index = 0;
   final DateTime _startedAt = DateTime.now();
-  bool _finishing = false;
+
+  /// 页面是否已经关掉。提交是异步的：用户完全可能在"检查"发出后、结果回来前
+  /// 退出练习页，此时 Runner 已 dispose，再调 notifyListeners() 会在 debug 下抛
+  /// 「A ChangeNotifier was used after being disposed」。判定结果仍照常写回
+  /// `_runtimes`（历史要留在库里），只是不再通知界面。
+  bool _disposed = false;
+
+  void _notify() {
+    if (!_disposed) super.notifyListeners();
+  }
 
   String get sessionId => _sessionId;
 
@@ -57,15 +65,24 @@ class PracticeRunner extends ChangeNotifier {
 
   QuestionRuntime get current => _runtimes[_index];
 
+  /// 第 [index] 题的运行时（答题卡要读全卷状态）。越界退化为当前题，调用方不必判空。
+  QuestionRuntime runtimeAt(int index) =>
+      index >= 0 && index < _runtimes.length ? _runtimes[index] : current;
+
+  /// 第 [index] 题的题目（答题卡按题型分组用）。
+  PracticeItem itemAt(int index) => runtimeAt(index).item;
+
+  /// 本次作答的开始时刻（页面打开时）。
+  ///
+  /// 计时器以它为起点，**不用库里会话的 started_at**：隔天点「继续练习」时，
+  /// 那个时间戳会让顶部直接显示"练了 20 小时"。
+  DateTime get startedAt => _startedAt;
+
   bool get isFirst => _index == 0;
 
   bool get isLast => _index == _runtimes.length - 1;
 
-  bool get isFinishing => _finishing;
-
   double get progress => total == 0 ? 0 : answeredCount / total;
-
-  List<QuestionRuntime> get runtimes => List.unmodifiable(_runtimes);
 
   /// 切题时结算本题用时（毫秒）。页面在 setDraft 前调用。
   void markQuestionSpent(int questionIndex, int elapsedMs) {
@@ -75,13 +92,13 @@ class PracticeRunner extends ChangeNotifier {
 
   void setDraft(SubmittedAnswer? answer) {
     _runtimes[_index] = current.copyWith(draft: answer, clearDraft: answer == null);
-    notifyListeners();
+    _notify();
   }
 
   /// 主观题自评。root 题的掌握与否通过 p_self_mastered 传给服务端。
   void setSelfMastered(bool mastered) {
     _runtimes[_index] = current.copyWith(selfMastered: mastered, verdict: mastered);
-    notifyListeners();
+    _notify();
   }
 
   /// 即时模式：判定当前题。
@@ -90,7 +107,11 @@ class PracticeRunner extends ChangeNotifier {
   /// 收到返回后用它的 is_correct **覆盖**本地结果——服务端是权威。
   /// 两者不一致说明本地镜像有 bug，会打日志（差分测试就是为了让它不发生）。
   Future<SubmitResult> check() async {
-    final runtime = current;
+    // **下标必须在 await 之前锁定**：等待期间用户可能切走（答题卡跳转、退出练习），
+    // 回来时 _index 已不是发起判定的那题 —— 那时写 _runtimes[_index] 会把判定结果
+    // 落到**别的题**上，而真正作答的那题永远停在 submitting=true（按钮一直转圈）。
+    final index = _index;
+    final runtime = _runtimes[index];
     final answer = runtime.draft;
     if (answer == null) {
       throw StateError('未作答就调用 check');
@@ -102,17 +123,11 @@ class PracticeRunner extends ChangeNotifier {
         : gradeAnswer(runtime.item.qtype, runtime.item.content.toJson(), answer.toJson());
 
     if (local != null) {
-      _runtimes[_index] = runtime.copyWith(verdict: local, submitting: true);
-      notifyListeners();
+      _runtimes[index] = runtime.copyWith(verdict: local, submitting: true);
+      _notify();
     }
 
-    final result = await _repository.submitAnswer(
-      sessionId: _sessionId,
-      questionId: runtime.item.questionId,
-      answer: answer,
-      durationMs: runtime.durationMs,
-      selfMastered: runtime.item.type.isSelfAssessed ? runtime.selfMastered : null,
-    );
+    final result = await _submit(runtime);
 
     if (local != null && local != result.isCorrect) {
       debugPrint(
@@ -121,13 +136,25 @@ class PracticeRunner extends ChangeNotifier {
         '—— 这是 domain/answer_grader.dart 的 bug，请对照数据库函数修正',
       );
     }
-    _runtimes[_index] = current.copyWith(
+    // 写回发起时的那一道题，而不是"现在这"一道
+    _runtimes[index] = _runtimes[index].copyWith(
       verdict: result.isCorrect,
       submitting: false,
     );
-    notifyListeners();
+    _notify();
     return result;
   }
+
+  /// 把一道题的作答送给服务端。单题判定与整卷提交共用这一处：
+  /// 两边参数完全一致，分开写迟早会漂移（比如新增 RPC 参数只改了一边）。
+  /// selfMastered 只对主观题传。
+  Future<SubmitResult> _submit(QuestionRuntime runtime) => _repository.submitAnswer(
+    sessionId: _sessionId,
+    questionId: runtime.item.questionId,
+    answer: runtime.draft!,
+    durationMs: runtime.durationMs,
+    selfMastered: runtime.item.type.isSelfAssessed ? runtime.selfMastered : null,
+  );
 
   /// 批量模式：交卷前把整卷未提交的作答逐题送上去。
   ///
@@ -138,60 +165,48 @@ class PracticeRunner extends ChangeNotifier {
       final runtime = _runtimes[i];
       if (runtime.isSubmitted || runtime.draft == null) continue;
       try {
-        final result = await _repository.submitAnswer(
-          sessionId: _sessionId,
-          questionId: runtime.item.questionId,
-          answer: runtime.draft!,
-          durationMs: runtime.durationMs,
-          selfMastered: runtime.item.type.isSelfAssessed ? runtime.selfMastered : null,
-        );
+        final result = await _submit(runtime);
         _runtimes[i] = runtime.copyWith(verdict: result.isCorrect);
       } catch (error) {
         // 单题失败不中断整卷：已提交的仍然算数，把失败的留给用户重试
         debugPrint('提交失败（题 ${runtime.item.questionId}）：${mapError(error).message}');
       }
-      notifyListeners();
+      _notify();
     }
   }
 
   void advance() {
     if (isLast) return;
     _index++;
-    notifyListeners();
+    _notify();
   }
 
   void retreat() {
     if (isFirst) return;
     _index--;
-    notifyListeners();
+    _notify();
   }
 
   void jumpTo(int target) {
     if (target < 0 || target >= total || target == _index) return;
     _index = target;
-    notifyListeners();
+    _notify();
   }
 
   /// 交卷。批量模式会先把未提交的作答送上去。
   Future<FinishSummary> finish() async {
-    _finishing = true;
-    notifyListeners();
-    try {
-      if (mode == PracticeMode.batch) await submitAll();
-      final elapsed = DateTime.now().difference(_startedAt).inMilliseconds;
-      return await _repository.finishSession(
-        sessionId: _sessionId,
-        durationMs: elapsed,
-      );
-    } finally {
-      _finishing = false;
-      notifyListeners();
-    }
+    if (mode == PracticeMode.batch) await submitAll();
+    final elapsed = DateTime.now().difference(_startedAt).inMilliseconds;
+    return _repository.finishSession(sessionId: _sessionId, durationMs: elapsed);
   }
 
   /// 放弃本次练习。**已作答的记录仍留在库里并计入统计**——这是服务端行为。
   Future<void> abandon() => _repository.abandonSession(_sessionId);
 
-  /// 续练：会话已交卷/作废时不该进入作答界面，由页面据此判断。
-  bool get hasUnanswered => _runtimes.any((r) => !r.isAnswered);
+  @override
+  void dispose() {
+    // 只置标志，不撤销在途请求：提交已经发出去了，结果仍要写回 _runtimes。
+    _disposed = true;
+    super.dispose();
+  }
 }

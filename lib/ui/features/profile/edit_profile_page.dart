@@ -16,13 +16,16 @@ import 'package:mianyang_quiz/core/constants/identity_meta.dart';
 import 'package:mianyang_quiz/core/error/app_exception.dart';
 import 'package:mianyang_quiz/core/theme/app_metrics.dart';
 import 'package:mianyang_quiz/core/theme/app_text_styles.dart';
+import 'package:mianyang_quiz/core/utils/async_value.dart';
+import 'package:mianyang_quiz/data/models/bank/subject_node.dart';
 import 'package:mianyang_quiz/data/models/user/profile.dart';
+import 'package:mianyang_quiz/data/repositories/subject_repository.dart';
 import 'package:mianyang_quiz/data/repositories/user_repository.dart';
 import 'package:mianyang_quiz/state/auth_store.dart';
 import 'package:mianyang_quiz/ui/core/design/duo_button.dart';
 import 'package:mianyang_quiz/ui/core/layout/section_header.dart';
 import 'package:mianyang_quiz/ui/features/profile/widgets/avatar_picker_field.dart';
-import 'package:mianyang_quiz/ui/features/profile/widgets/enrollment_form_section.dart';
+import 'package:mianyang_quiz/ui/core/form/enrollment_fields.dart';
 import 'package:mianyang_quiz/ui/features/profile/widgets/profile_form_field.dart';
 import 'package:mianyang_quiz/ui/features/profile/widgets/school_picker_field.dart';
 import 'package:provider/provider.dart';
@@ -36,10 +39,13 @@ class EditProfilePage extends StatefulWidget {
 
 class _EditProfilePageState extends State<EditProfilePage> {
   final _name = TextEditingController();
-  final _enrollYear = TextEditingController();
-  final _majorCategory = TextEditingController();
-  final _major = TextEditingController();
   final _className = TextEditingController();
+  // 入学年份/专业大类/专业都改成"选"而不是"填"（与注册页同一套组件）
+  int? _enrollYear;
+  String? _majorCategory;
+  String? _major;
+  // 与注册页同一套：失败不阻断保存，只让两个下拉不可用
+  AsyncValue<List<SubjectNode>> _nodes = const AsyncLoading<List<SubjectNode>>();
 
   String? _schoolId;
   String? _avatarUrl;
@@ -53,12 +59,16 @@ class _EditProfilePageState extends State<EditProfilePage> {
   @override
   void initState() {
     super.initState();
+    // 专业目录（登录后读，权限本来就有）：失败只让两个下拉禁用，不阻断本页
+    asAsyncValue(context.read<SubjectRepository>().fetchNodes).then((v) {
+      if (mounted) setState(() => _nodes = v);
+    });
     final profile = context.read<AuthStore>().profile;
     if (profile != null) {
       _name.text = profile.name;
-      _enrollYear.text = profile.enrollYear?.toString() ?? '';
-      _majorCategory.text = profile.majorCategory ?? '';
-      _major.text = profile.major ?? '';
+      _enrollYear = profile.enrollYear;
+      _majorCategory = profile.majorCategory;
+      _major = profile.major;
       _className.text = profile.className ?? '';
       _schoolId = profile.schoolId;
       _avatarUrl = profile.avatarUrl;
@@ -71,9 +81,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
   @override
   void dispose() {
     _name.dispose();
-    _enrollYear.dispose();
-    _majorCategory.dispose();
-    _major.dispose();
     _className.dispose();
     super.dispose();
   }
@@ -85,12 +92,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
       _toast('请先填写姓名');
       return;
     }
-    final yearError = validateEnrollYear(_enrollYear.text);
-    if (yearError != null) {
-      _toast(yearError);
-      return;
-    }
-
     setState(() => _saving = true);
     // 依赖先取好：await 之后除了已判过 mounted 的提示，不再碰 context。
     final users = context.read<UserRepository>();
@@ -104,9 +105,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
       );
       if (_showEnrollment) {
         await users.updateEnrollment(
-          enrollYear: parseEnrollYear(_enrollYear.text),
-          majorCategory: optionalText(_majorCategory.text),
-          major: optionalText(_major.text),
+          enrollYear: _enrollYear,
+          majorCategory: _majorCategory,
+          major: _major,
           className: optionalText(_className.text),
         );
       }
@@ -162,18 +163,23 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       SizedBox(height: AppMetrics.gapMd.r),
                       SchoolPickerField(
                         schoolId: _schoolId,
-                        onChanged: (id) {
-                          if (!mounted) return;
-                          setState(() => _schoolId = id);
-                        },
+                        onChanged: (id) => setState(() => _schoolId = id),
                       ),
                       if (_showEnrollment) ...[
                         SizedBox(height: AppMetrics.gapXl.r),
-                        EnrollmentFormSection(
+                        EnrollmentFields(
                           enrollYear: _enrollYear,
+                          onEnrollYearChanged: (v) =>
+                              setState(() => _enrollYear = v),
                           majorCategory: _majorCategory,
+                          onMajorCategoryChanged: (v) =>
+                              setState(() => _majorCategory = v),
                           major: _major,
-                          className: _className,
+                          onMajorChanged: (v) => setState(() => _major = v),
+                          classNameController: _className,
+                          nodes: _nodes.valueOrNull ?? const [],
+                          nodesLoading: _nodes.isLoading,
+                          enabled: !_saving,
                         ),
                       ],
                       SizedBox(height: AppMetrics.gapXl.r),

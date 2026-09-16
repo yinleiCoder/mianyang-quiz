@@ -17,6 +17,10 @@ import 'package:mianyang_quiz/core/router/app_router.dart';
 import 'package:mianyang_quiz/core/theme/app_theme.dart';
 import 'package:provider/provider.dart';
 
+/// 应用名。主壳与"起不来"提示页共用一处 —— 两处各写一份必然会漂移
+/// （桌面端窗口标题、任务栏、任务管理器读的都是它）。
+const _appTitle = '绵阳市中职共建题库';
+
 class MianyangQuizApp extends StatefulWidget {
   const MianyangQuizApp({super.key, required this.startup});
 
@@ -74,6 +78,7 @@ class _MianyangQuizAppState extends State<MianyangQuizApp> {
                 Provider.value(value: deps.listRepository),
                 Provider.value(value: deps.favoriteRepository),
                 Provider.value(value: deps.feedbackRepository),
+                Provider.value(value: deps.appUpdateRepository),
                 Provider.value(value: deps.ossUploadService),
                 // 跨页状态：只有这四个进全局
                 ChangeNotifierProvider.value(value: deps.authStore),
@@ -82,7 +87,7 @@ class _MianyangQuizAppState extends State<MianyangQuizApp> {
                 ChangeNotifierProvider.value(value: deps.practiceDraftStore),
               ],
               child: MaterialApp.router(
-                title: '绵阳题库',
+                title: _appTitle,
                 theme: AppTheme.light(),
                 darkTheme: AppTheme.dark(),
                 routerConfig: router,
@@ -101,41 +106,48 @@ class _StartupMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return MaterialApp(
-      title: '绵阳题库',
+      title: _appTitle,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
       debugShowCheckedModeBanner: false,
-      home: Scaffold(
-        body: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 460),
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.settings_suggest_outlined,
-                    size: 56,
-                    color: theme.colorScheme.primary,
+      // 取色必须放在 MaterialApp **之下**。本方法拿到的 context 在 MaterialApp 之上，
+      // Theme.of 在那里查不到刚传下去的 AppTheme，只会回落到兜底主题——
+      // 表现是提示页的图标/文字颜色与全站品牌色不一致，而且不报错。
+      home: Builder(
+        builder: (context) {
+          final theme = Theme.of(context);
+          return Scaffold(
+            body: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 460),
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.settings_suggest_outlined,
+                        size: 56,
+                        color: theme.colorScheme.primary,
+                      ),
+                      const SizedBox(height: 16),
+                      Text('需要先完成配置', style: theme.textTheme.titleLarge),
+                      const SizedBox(height: 12),
+                      Text(
+                        failure ?? '启动失败，请检查配置后重试。',
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 16),
-                  Text('需要先完成配置', style: theme.textTheme.titleLarge),
-                  const SizedBox(height: 12),
-                  Text(
-                    failure ?? '启动失败，请检查配置后重试。',
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }

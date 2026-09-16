@@ -51,14 +51,17 @@ class EmailVerifyPage extends StatelessWidget {
                 Icon(
                   Icons.mark_email_read_outlined,
                   size: 20.r,
-                  color: scheme.onTertiaryContainer,
+                  color: context.semantic.onSuccessContainer,
                 ),
                 SizedBox(width: AppMetrics.gapSm.r),
                 Expanded(
                   child: Text(
                     '本项目已关闭邮箱验证，请直接登录。',
                     style: AppTextStyles.body(context).copyWith(
-                      color: scheme.onTertiaryContainer,
+                      // 底色是 successContainer，前景就必须是同族的 onSuccessContainer：
+                      // 拿 onTertiaryContainer 顶替是 AGENTS.md 二·五警告的那个坑 ——
+                      // tertiary 由种子色相旋转派生，深色模式下与这块绿底毫无关系。
+                      color: context.semantic.onSuccessContainer,
                       fontWeight: FontWeight.w400,
                     ),
                   ),

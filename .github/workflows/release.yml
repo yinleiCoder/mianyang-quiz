@@ -1,0 +1,216 @@
+# 发布客户端：打 tag（v*）即出 Android APK 与 Windows 压缩包，挂到本仓库的 GitHub Release。
+#
+# **本文件必须留在客户端仓库**（yinleiCoder/mianyang-quiz，也就是这个仓库）：
+# 网页端仓库把本目录记成一个 gitlink（没有 .gitmodules），那边 checkout 出来是空目录，
+# 工作流放那边根本构建不了。
+#
+# 为什么是 tag 触发：发布版本必须与代码一一对应，tag 是唯一不会漂移的锚点；
+# 手动跑（workflow_dispatch）只为验证流水线本身，产出的包不会创建 Release。
+#
+# 混淆与符号：两个平台都带 --obfuscate --split-debug-info（见 AGENTS.md 第七节）。
+# 符号文件（app.*.symbols + obfuscation-map.json）**只作为 Actions artifact 上传，不进 Release**——
+# 它们能反解混淆，公开挂出去等于白混淆；排查崩溃时从 workflow 运行页下载即可。
+
+name: Release clients
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch: {} # 只跑构建、不发 Release
+
+permissions:
+  contents: write # 创建 Release 需要
+
+env:
+  FLUTTER_VERSION: "3.47.0"
+
+jobs:
+  # ---------- Windows ----------
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: 版本号（tag → 版本名 + 递增版本号）
+        # **必须显式传 --build-number**：否则 Android 的 versionCode 永远是 pubspec 里的 +1，
+        # 而系统只允许 versionCode 更大的包覆盖安装 —— 用户会看到装到一半「应用未安装」。
+        # 用 run_number 保证单调递增；版本名取 tag（去掉 v 前缀，versionName 不接受它）。
+        id: ver
+        shell: bash
+        run: |
+          tag="${{ github.ref_type == 'tag' && github.ref_name || 'v0.0.0-dev' }}"
+          echo "name=${tag#v}" >> "$GITHUB_OUTPUT"
+          echo "code=${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+
+      - name: 写入发布配置
+        # 这些值都会随客户端一起发出去（publishable key 本来就印在每个包里），不是机密；
+        # 真正的密钥（OSS AccessKey、DeepSeek key）只在网页端服务端，客户端从不内嵌。
+        # APP_VERSION 取 tag 名（如 v1.0.1）——客户端内的"检查更新"就是拿它和本仓库
+        # Release 的 tag 比，两边同源才不会误报。
+        run: |
+          $config = [ordered]@{
+            SUPABASE_URL      = "https://jmsryficskggsruhicys.supabase.co"
+            SUPABASE_ANON_KEY = "sb_publishable_eGWYuQXE8Y8WlLdaPULAxA_6ngyyx-y"
+            OSS_PUBLIC_HOST   = "mianyang-question-bank.oss-cn-chengdu.aliyuncs.com"
+            API_BASE_URL      = "https://myquiz.cn"
+            SHARE_BASE_URL    = "https://myquiz.cn"
+            APP_VERSION       = "${{ github.ref_type == 'tag' && github.ref_name || 'dev' }}"
+          }
+          $config | ConvertTo-Json | Set-Content -Encoding utf8 "config/ci.local.json"
+        shell: pwsh
+
+      - name: 构建（混淆）
+        run: |
+          flutter pub get
+          flutter build windows --release `
+            --build-name=${{ steps.ver.outputs.name }} `
+            --build-number=${{ steps.ver.outputs.code }} `
+            --obfuscate `
+            --split-debug-info=symbols/windows `
+            --extra-gen-snapshot-options=--save-obfuscation-map=symbols/windows/obfuscation-map.json `
+            --dart-define-from-file=config/ci.local.json
+        shell: pwsh
+
+      - name: 打包（整个 Release 目录一起，exe 只是入口）
+        run: |
+          # 资产名固定不带版本号：这样 /releases/latest/download/<名字> 永远指向最新版，
+          # 产品页与客户端内"去下载"都能写死链接（版本号在 Release 标题与正文里）。
+          $name = "mianyang_quiz-windows-x64"
+          New-Item -ItemType Directory -Force -Path "build/dist/$name" | Out-Null
+          Copy-Item -Recurse -Force "build/windows/x64/runner/Release/*" "build/dist/$name"
+          Compress-Archive -Path "build/dist/$name" -DestinationPath "build/dist/$name.zip" -Force
+        shell: pwsh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-bundle
+          path: build/dist/*.zip
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-symbols
+          path: symbols/windows/*
+          if-no-files-found: error
+
+  # ---------- Android ----------
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: 版本号（tag → 版本名 + 递增版本号）
+        # **必须显式传 --build-number**：否则 Android 的 versionCode 永远是 pubspec 里的 +1，
+        # 而系统只允许 versionCode 更大的包覆盖安装 —— 用户会看到装到一半「应用未安装」。
+        # 用 run_number 保证单调递增；版本名取 tag（去掉 v 前缀，versionName 不接受它）。
+        id: ver
+        shell: bash
+        run: |
+          tag="${{ github.ref_type == 'tag' && github.ref_name || 'v0.0.0-dev' }}"
+          echo "name=${tag#v}" >> "$GITHUB_OUTPUT"
+          echo "code=${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+
+      - name: 写入发布配置
+        run: |
+          cat > config/ci.local.json <<JSON
+          {
+            "SUPABASE_URL": "https://jmsryficskggsruhicys.supabase.co",
+            "SUPABASE_ANON_KEY": "sb_publishable_eGWYuQXE8Y8WlLdaPULAxA_6ngyyx-y",
+            "OSS_PUBLIC_HOST": "mianyang-question-bank.oss-cn-chengdu.aliyuncs.com",
+            "API_BASE_URL": "https://myquiz.cn",
+            "SHARE_BASE_URL": "https://myquiz.cn",
+            "APP_VERSION": "${{ github.ref_type == 'tag' && github.ref_name || 'dev' }}"
+          }
+          JSON
+
+      - name: 配置签名（可选）
+        # 没配 ANDROID_KEYSTORE_BASE64 时 Flutter 用 debug 签名——能装，但**换台机器就发不出
+        # 可覆盖安装的更新**（Android 要求同包名同签名）。正式发布请先生成一次 keystore
+        #（见 AGENTS.md 第七节），把 base64 与口令存进本仓库 secret。
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "::warning::未配置 ANDROID_KEYSTORE_BASE64，本次用 debug 签名（仅适合内测）"
+            exit 0
+          fi
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/app/release.keystore
+          cat > android/key.properties <<EOF
+          storeFile=release.keystore
+          storePassword=$ANDROID_KEYSTORE_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          keyPassword=$ANDROID_KEY_PASSWORD
+          EOF
+
+      - name: 构建（混淆）
+        run: |
+          flutter pub get
+          flutter build apk --release \
+            --build-name=${{ steps.ver.outputs.name }} \
+            --build-number=${{ steps.ver.outputs.code }} \
+            --obfuscate \
+            --split-debug-info=symbols/android \
+            --dart-define-from-file=config/ci.local.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-symbols
+          path: symbols/android/*
+          if-no-files-found: error
+
+  # ---------- 发布 ----------
+  release:
+    needs: [build-windows, build-android]
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: 规整资产名
+        run: |
+          mkdir -p assets
+          cp dist/windows-bundle/*.zip assets/
+          cp dist/android-apk/*.apk "assets/mianyang_quiz-android.apk"
+          ls -la assets
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          # 客户端内的"检查更新"读的就是这个 Release 的 tag_name，正文顺带写清楚装法
+          body: |
+            绵阳市中职共建题库客户端 ${{ github.ref_name }}
+
+            - **Android**：下载 `mianyang_quiz-android.apk` 直接安装（首次需允许「安装未知来源应用」）
+            - **Windows**：下载 `mianyang_quiz-windows-x64.zip`，**解压后运行整个目录里的 exe**（不能只拷 exe）
+              - 若提示缺少 `vcruntime140.dll` 等，装一次 Microsoft Visual C++ Redistributable
+          files: assets/*
+          fail_on_unmatched_files: true

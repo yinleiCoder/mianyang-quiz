@@ -19,7 +19,7 @@ import 'package:mianyang_quiz/ui/core/design/duo_card.dart';
 import 'package:mianyang_quiz/ui/core/design/duo_chip.dart';
 import 'package:mianyang_quiz/ui/core/question/analysis_view.dart';
 import 'package:mianyang_quiz/ui/core/question/question_view.dart';
-import 'package:mianyang_quiz/ui/features/records/widgets/difficulty_chip.dart';
+import 'package:mianyang_quiz/ui/core/design/difficulty_chip.dart';
 import 'package:mianyang_quiz/ui/features/records/widgets/submitted_answer_text.dart';
 import 'package:mianyang_quiz/core/theme/semantic_colors.dart';
 
@@ -102,11 +102,7 @@ class _VerdictChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final record = this.record;
     if (record == null) {
-      return const DuoChip(
-        label: '未作答',
-        tone: DuoChipTone.neutral,
-        dense: true,
-      );
+      return const DuoChip(label: '未作答', tone: DuoChipTone.neutral, dense: true);
     }
     if (record.grading == 'self') {
       final mastered = record.selfMastered == true;
@@ -146,8 +142,7 @@ class _YourAnswerLine extends StatelessWidget {
       children: [
         Text(
           '你的作答：',
-          style: AppTextStyles.label(context)
-              .copyWith(color: scheme.onSurfaceVariant),
+          style: AppTextStyles.label(context).copyWith(color: scheme.onSurfaceVariant),
         ),
         Expanded(
           child: Text(

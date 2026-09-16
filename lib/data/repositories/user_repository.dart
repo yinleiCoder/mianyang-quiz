@@ -41,6 +41,27 @@ class UserRepository {
     }
   }
 
+  /// 按 id 批量取档案（题库列表与详情的「作者 / 审核人」署名用）。
+  ///
+  /// 与网页端 lib/people.js 同一口径，但这里**不查角色**：署名只显示姓名与头像，
+  /// 组长/专家的身份由 `bank_reviewers` 的 stage 直接给出，不必再查两张表。
+  /// 查不到的 id 不会出现在结果里（账号已注销 → 调用方按"已注销"占位渲染）。
+  Future<Map<String, Profile>> fetchProfiles(List<String> userIds) async {
+    final ids = userIds.toSet().toList();
+    if (ids.isEmpty) return const {};
+    try {
+      final rows = await _client
+          .from('profiles')
+          .select(_profileColumns)
+          .inFilter('user_id', ids);
+      return {
+        for (final row in rows) row['user_id'] as String: Profile.fromJson(row),
+      };
+    } catch (error) {
+      throw mapError(error);
+    }
+  }
+
   /// 学校列表。[onlyActive] 为 true 时只取启用中的（注册、改校的选择器用）；
   /// 展示历史题目来源的校名时才传 false。
   Future<List<School>> fetchSchools({bool onlyActive = true}) async {

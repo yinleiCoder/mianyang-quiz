@@ -69,9 +69,7 @@ class ReviewSummary extends StatelessWidget {
         return Wrap(
           spacing: gap,
           runSpacing: gap,
-          children: [
-            for (final tile in tiles) SizedBox(width: width, child: tile),
-          ],
+          children: [for (final tile in tiles) SizedBox(width: width, child: tile)],
         );
       },
     );

@@ -16,7 +16,7 @@ import 'package:mianyang_quiz/data/models/user/profile.dart';
 import 'package:mianyang_quiz/ui/core/design/duo_card.dart';
 import 'package:mianyang_quiz/ui/core/design/duo_chip.dart';
 import 'package:mianyang_quiz/ui/core/design/duo_icon_badge.dart';
-import 'package:mianyang_quiz/ui/features/profile/widgets/profile_avatar.dart';
+import 'package:mianyang_quiz/ui/core/people/user_avatar.dart';
 
 class ProfileHeader extends StatelessWidget {
   const ProfileHeader({super.key, required this.profile, this.schoolName});
@@ -39,7 +39,7 @@ class ProfileHeader extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ProfileAvatar(
+              UserAvatar(
                 initial: profile.initial,
                 avatarUrl: profile.avatarUrl,
               ),

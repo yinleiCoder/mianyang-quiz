@@ -95,7 +95,7 @@ class _AvatarPickerFieldState extends State<AvatarPickerField> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final url = OssUrl.of(widget.avatarUrl);
+    final url = OssUrl.avatar(widget.avatarUrl);
     final localPath = widget.localPath;
     final fallback = Center(
       child: Text(
@@ -109,7 +109,15 @@ class _AvatarPickerFieldState extends State<AvatarPickerField> {
     );
 
     final image = localPath != null
-        ? Image.file(File(localPath), fit: BoxFit.cover)
+        // 本地预览必须限制解码尺寸。选图时 picker 允许到 1024×1024，
+        // 不限制的话这张位图会按原尺寸进内存/显存，而这个框只有 72 逻辑像素 ——
+        // 一张 4MB 的图解码出来几百 KB 到几 MB，只为显示一个头像。
+        // 按设备的实际像素密度算，高分屏也不会糊。
+        ? Image.file(
+            File(localPath),
+            fit: BoxFit.cover,
+            cacheWidth: (72 * MediaQuery.devicePixelRatioOf(context)).round(),
+          )
         : url.isEmpty
         ? fallback
         : CachedNetworkImage(

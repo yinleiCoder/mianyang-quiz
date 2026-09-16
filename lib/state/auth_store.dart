@@ -66,7 +66,20 @@ class AuthStore extends ChangeNotifier {
 
     // 令牌过期被踢、或换账号时，档案必须跟着变，否则会拿旧档案渲染新会话
     _subscription = _auth.authStateChanges.listen((_) {
-      unawaited(_loadProfile().then((_) => notifyListeners()));
+      // 必须自己接住异常：_loadProfile 抛错时 then 不执行，错误会变成
+      // 未捕获的异步异常（只在控制台出现），而登录态已经变了、档案却停在旧值上。
+      unawaited(
+        _loadProfile().then(
+          (_) {
+            _error = null;
+            notifyListeners();
+          },
+          onError: (Object error) {
+            _error = mapError(error);
+            notifyListeners();
+          },
+        ),
+      );
     });
   }
 

@@ -8,8 +8,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/core/utils/async_value.dart';
 import 'package:mianyang_quiz/data/models/bank/question_brief.dart';
 import 'package:mianyang_quiz/data/repositories/question_repository.dart';
-import 'package:mianyang_quiz/ui/core/feedback/error_state.dart';
-import 'package:mianyang_quiz/ui/core/feedback/loading_state.dart';
+import 'package:mianyang_quiz/ui/core/feedback/async_view.dart';
+import 'package:mianyang_quiz/ui/core/list/pull_to_refresh.dart';
 import 'package:mianyang_quiz/ui/features/bank/widgets/bank_empty_state.dart';
 import 'package:mianyang_quiz/ui/features/bank/widgets/question_list_view.dart';
 
@@ -20,6 +20,7 @@ class BankBody extends StatelessWidget {
     required this.filtered,
     required this.onClear,
     required this.onRetry,
+    required this.onRefresh,
     required this.isFavorite,
     required this.onOpen,
     required this.onToggleFavorite,
@@ -34,24 +35,31 @@ class BankBody extends StatelessWidget {
   final VoidCallback onClear;
   final VoidCallback onRetry;
 
+  /// 下拉刷新（空态下同样可用：题库刚被别人入库了新题时，这一页正等着被拉）。
+  final Future<void> Function() onRefresh;
+
   final bool Function(String questionId) isFavorite;
   final ValueChanged<QuestionBrief> onOpen;
   final ValueChanged<QuestionBrief> onToggleFavorite;
 
   @override
-  Widget build(BuildContext context) => switch (state) {
-    AsyncLoading() => const LoadingState(),
-    AsyncFailure(:final error) => ErrorState(
-      message: error.message,
-      onRetry: onRetry,
-    ),
-    AsyncData(:final value) => value.rows.isEmpty
-        ? BankEmptyState(filtered: filtered, onClear: onClear)
+  Widget build(BuildContext context) => AsyncView<QuestionPage>(
+    state: state,
+    onRetry: onRetry,
+    // 空态是"这一页没有行"的两种含义：筛过没结果、或题库本来就空。
+    // 两者的引导动作不同，所以判断留在本组件而不是 AsyncView 里。
+    builder: (page) => page.rows.isEmpty
+        ? PullToRefresh(
+            onRefresh: onRefresh,
+            fill: true,
+            child: BankEmptyState(filtered: filtered, onClear: onClear),
+          )
         : QuestionListView(
-            rows: value.rows,
+            rows: page.rows,
             isFavorite: isFavorite,
             onOpen: onOpen,
             onToggleFavorite: onToggleFavorite,
+            onRefresh: onRefresh,
           ),
-  };
+  );
 }
