@@ -2,7 +2,7 @@
 //
 // 从 PracticeStage 里抽出来，两者分工是：
 //   · 本文件只管"东西摆在哪"——宽屏把答题卡常驻在右侧，窄屏收进顶栏按钮；
-//   · PracticeStage 管"什么时候发生什么"（自动判题、自动跳题、交卷、退出）。
+//   · PracticeStage 管"什么时候发生什么"（自动判题、交卷、退出）。
 // 抽出来的直接原因是单文件行数（AGENTS.md 第三条），顺带让版式能单独读懂。
 
 import 'package:flutter_screenutil/flutter_screenutil.dart';

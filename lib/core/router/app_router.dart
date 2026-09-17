@@ -15,6 +15,7 @@
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/core/router/routes.dart';
+import 'package:mianyang_quiz/data/models/exam/exam_attempt.dart';
 import 'package:mianyang_quiz/data/models/practice/practice_results.dart';
 import 'package:mianyang_quiz/state/auth_store.dart';
 import 'package:mianyang_quiz/state/practice_mode.dart';
@@ -26,6 +27,9 @@ import 'package:mianyang_quiz/ui/features/ai/ai_page.dart';
 import 'package:mianyang_quiz/ui/features/bank/bank_page.dart';
 import 'package:mianyang_quiz/ui/features/bank/question_detail_page.dart';
 import 'package:mianyang_quiz/ui/features/compose/compose_page.dart';
+import 'package:mianyang_quiz/ui/features/exam/exam_list_page.dart';
+import 'package:mianyang_quiz/ui/features/exam/exam_page.dart';
+import 'package:mianyang_quiz/ui/features/exam/exam_result_page.dart';
 import 'package:mianyang_quiz/ui/features/home/home_page.dart';
 import 'package:mianyang_quiz/ui/features/practice/practice_page.dart';
 import 'package:mianyang_quiz/ui/features/practice/practice_result_page.dart';
@@ -184,6 +188,33 @@ GoRouter createAppRouter(AuthStore auth) {
         name: AppRoutes.sessionReviewName,
         builder: (context, state) =>
             SessionReviewPage(sessionId: state.pathParameters['sessionId']!),
+      ),
+      // ---------- 考试 ----------
+      // 列表页带页签（试卷库 / 我的考试），答题页与成绩单页是全屏的下一步。
+      GoRoute(
+        path: AppRoutes.examsPath,
+        name: AppRoutes.examsName,
+        builder: (context, state) => ExamListPage(
+          initialTab: state.uri.queryParameters[AppRoutes.examsTabQuery],
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.examAttemptPath,
+        name: AppRoutes.examAttemptName,
+        builder: (context, state) => ExamPage(
+          attemptId: state.pathParameters['attemptId']!,
+          // 开考那一跳会把刚拿到的快照一起带过来，省一次往返；
+          // extra 的类型不受编译器保证，用 is 判断而不是硬转
+          snapshot: state.extra is ExamSnapshot
+              ? state.extra! as ExamSnapshot
+              : null,
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.examResultPath,
+        name: AppRoutes.examResultName,
+        builder: (context, state) =>
+            ExamResultPage(attemptId: state.pathParameters['attemptId']!),
       ),
       GoRoute(
         path: AppRoutes.editProfilePath,

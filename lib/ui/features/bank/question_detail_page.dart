@@ -58,8 +58,8 @@ class _QuestionDetailPageState extends State<QuestionDetailPage> {
     }
   }
 
-  /// 打印这道题。中文字体是运行时从 Google Fonts 拉的（见 QuestionPdfService 文件头），
-  /// 拉不到就提示需要联网，而不是印出一片空白。
+  /// 打印这道题。中文字体从**系统字体文件**读（见 QuestionPdfService 文件头），
+  /// 读不到就明确告诉用户，而不是印出一片空白、也不是卡住不响应。
   Future<void> _print() async {
     final detail = _state.valueOrNull;
     if (detail == null) return;
@@ -72,7 +72,9 @@ class _QuestionDetailPageState extends State<QuestionDetailPage> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('生成 PDF 失败：中文字体需要联网下载，请检查网络后重试')),
+        const SnackBar(
+          content: Text('生成 PDF 失败：这台电脑上没找到可用的中文字体（需要 simhei/msyh 这类字体）'),
+        ),
       );
     }
   }

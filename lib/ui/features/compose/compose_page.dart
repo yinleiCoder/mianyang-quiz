@@ -118,6 +118,7 @@ class _ComposePageState extends State<ComposePage> {
                           },
                         ),
                       ),
+                      const SizedBox(height: AppMetrics.gapXl),
                       const SectionHeader(title: '练习方式'),
                       ComposeOptions(
                         mode: draft.mode,
@@ -130,6 +131,7 @@ class _ComposePageState extends State<ComposePage> {
                         onSoundChanged: context.read<SfxService>().setEnabled,
                       ),
                       if (draft.filterApplies) ...[
+                        const SizedBox(height: AppMetrics.gapXl),
                         const SectionHeader(
                           title: '筛选条件',
                           subtitle: '选了父级科目会包含它下面的全部课程',

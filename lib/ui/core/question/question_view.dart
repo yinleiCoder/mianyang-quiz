@@ -21,8 +21,10 @@ import 'package:mianyang_quiz/data/models/content/question_content.dart';
 import 'package:mianyang_quiz/domain/submitted_answer.dart';
 import 'package:mianyang_quiz/ui/core/question/input/choice_input_view.dart';
 import 'package:mianyang_quiz/ui/core/question/input/composite_input_view.dart';
+import 'package:mianyang_quiz/ui/core/question/input/essay_input_view.dart';
 import 'package:mianyang_quiz/ui/core/question/input/fill_blank_input_view.dart';
 import 'package:mianyang_quiz/ui/core/question/input/short_answer_input_view.dart';
+import 'package:mianyang_quiz/ui/core/question/input/short_answer_mode.dart';
 import 'package:mianyang_quiz/ui/core/question/input/true_false_input_view.dart';
 import 'package:mianyang_quiz/ui/core/question/stem_view.dart';
 
@@ -47,6 +49,7 @@ class QuestionView extends StatelessWidget {
     required this.onAnswerChanged,
     this.reveal = AnswerReveal.none,
     this.readOnly = false,
+    this.shortAnswerMode = ShortAnswerMode.selfAssess,
     this.shuffledKeys,
     this.onSelfAssessed,
     this.selfMastered,
@@ -69,6 +72,9 @@ class QuestionView extends StatelessWidget {
   /// 禁止作答交互。reveal 为 answerOnly 时即使传 false 也按 true 处理
   /// （「背题」的语义就是只看不做）。
   final bool readOnly;
+
+  /// 主观题怎么作答（练习自评 / 考试手写）。复合题会把它传给每个主观子题。
+  final ShortAnswerMode shortAnswerMode;
 
   /// 选项显示顺序（原始 key 序列）。仅单选题/多选题使用。
   final List<String>? shuffledKeys;
@@ -130,15 +136,25 @@ class QuestionView extends StatelessWidget {
           readOnly: locked,
         );
       case QuestionType.shortAnswer:
-        return ShortAnswerInputView(
-          content: content,
-          answer: answer,
-          onAnswerChanged: onAnswerChanged,
-          onSelfAssessed: onSelfAssessed,
-          selfMastered: selfMastered,
-          reveal: reveal,
-          readOnly: locked,
-        );
+        // 考试的「主观题」是手写作答，与练习的自评区是两套组件（见 essay_input_view.dart）。
+        // 自评回调只对练习那一套有意义，这里不必传。
+        return shortAnswerMode == ShortAnswerMode.essay
+            ? EssayInputView(
+                content: content,
+                answer: answer,
+                onAnswerChanged: onAnswerChanged,
+                reveal: reveal,
+                readOnly: locked,
+              )
+            : ShortAnswerInputView(
+                content: content,
+                answer: answer,
+                onAnswerChanged: onAnswerChanged,
+                onSelfAssessed: onSelfAssessed,
+                selfMastered: selfMastered,
+                reveal: reveal,
+                readOnly: locked,
+              );
       case QuestionType.composite:
         return CompositeInputView(
           content: content,
@@ -146,6 +162,7 @@ class QuestionView extends StatelessWidget {
           onAnswerChanged: onAnswerChanged,
           reveal: reveal,
           readOnly: locked,
+          shortAnswerMode: shortAnswerMode,
         );
       case QuestionType.unknown:
         return _UnsupportedTypeView(wire: qtype);

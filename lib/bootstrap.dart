@@ -10,7 +10,9 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
+import 'package:http/http.dart' as http;
 import 'package:mianyang_quiz/core/config/env.dart';
+import 'package:mianyang_quiz/core/network/auth_refresh_client.dart';
 import 'package:mianyang_quiz/dependencies.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -49,12 +51,26 @@ Future<StartupResult> bootstrap() async {
   }
 
   try {
+    // 令牌过期自愈：收到 401 就刷新会话并重放一次（见 auth_refresh_client.dart）。
+    // 必须在 Supabase.initialize 之前建好并传进去——它要包住整个 http 通道。
+    final authClient = AuthRefreshClient(http.Client());
     final supabase = await Supabase.initialize(
       url: Env.supabaseUrl,
       // 本项目用的是 sb_publishable_… 格式的密钥，对应 publishableKey 参数
       // （anonKey 参数已废弃，传它会被忽略并告警）
       publishableKey: Env.supabaseAnonKey,
+      httpClient: authClient,
     );
+    // 接上刷新回调。**在 initialize 之后**：它需要 client.auth，
+    // 而 client 正是用这个 httpClient 造出来的（构造期拿不到，会造成循环依赖）。
+    // 返回**新令牌**而不是空：重放时要拿它换掉请求头里那个过期的（见 auth_refresh_client）。
+    authClient.onExpired = () async {
+      // SDK 可能刚好自己刷过了，那就直接用现成的，不必再刷一次
+      // （刷新令牌是一次性的，多刷一次会把会话刷没）
+      final refreshed = await supabase.client.auth.refreshSession();
+      return refreshed.session?.accessToken ??
+          supabase.client.auth.currentSession?.accessToken;
+    };
     final deps = AppDependencies.create(supabase.client);
     // 会话恢复不 await：要走网络，等它会让首屏白屏。
     // 路由守卫在 isReady 为 false 时挂起，页面自己显示加载态。

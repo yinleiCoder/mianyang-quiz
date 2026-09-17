@@ -15,12 +15,14 @@ import 'package:mianyang_quiz/data/repositories/app_update_repository.dart';
 import 'package:mianyang_quiz/data/repositories/favorite_repository.dart';
 import 'package:mianyang_quiz/data/repositories/feedback_repository.dart';
 import 'package:mianyang_quiz/data/repositories/list_repository.dart';
+import 'package:mianyang_quiz/data/repositories/paper_repository.dart';
 import 'package:mianyang_quiz/data/repositories/practice_repository.dart';
 import 'package:mianyang_quiz/data/repositories/question_repository.dart';
 import 'package:mianyang_quiz/data/repositories/stats_repository.dart';
 import 'package:mianyang_quiz/data/repositories/subject_repository.dart';
 import 'package:mianyang_quiz/data/repositories/user_repository.dart';
 import 'package:mianyang_quiz/data/services/auth_service.dart';
+import 'package:mianyang_quiz/data/services/exam_draft_service.dart';
 import 'package:mianyang_quiz/data/services/oss_upload_service.dart';
 import 'package:mianyang_quiz/data/services/question_pdf_service.dart';
 import 'package:mianyang_quiz/data/services/sfx_service.dart';
@@ -40,9 +42,11 @@ class AppDependencies {
       listRepository = ListRepository(client),
       favoriteRepository = FavoriteRepository(client),
       feedbackRepository = FeedbackRepository(client),
+      paperRepository = PaperRepository(client),
       appUpdateRepository = AppUpdateRepository(Dio()),
       ossUploadService = OssUploadService(client),
       sfxService = SfxService(),
+      examDraftService = ExamDraftService(),
       questionPdfService = QuestionPdfService();
 
   /// 由 bootstrap() 在 Supabase.initialize 之后调用。
@@ -66,9 +70,14 @@ class AppDependencies {
   final ListRepository listRepository;
   final FavoriteRepository favoriteRepository;
   final FeedbackRepository feedbackRepository;
+  final PaperRepository paperRepository;
   final AppUpdateRepository appUpdateRepository;
   final OssUploadService ossUploadService;
   final SfxService sfxService;
+
+  /// 考试作答的本机暂存。**不是 Store**：它不通知任何人，只是一处本地读写
+  /// （服务端要等交卷才存答案，中途退出只能靠它，见 exam_draft_service.dart）。
+  final ExamDraftService examDraftService;
   final QuestionPdfService questionPdfService;
 
   /// 四个跨页 Store。赋值在 create() 里完成（它们彼此之间与仓储有依赖顺序）。

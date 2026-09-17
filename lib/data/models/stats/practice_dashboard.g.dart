@@ -90,6 +90,16 @@ _PracticeDashboard _$PracticeDashboardFromJson(Map<String, dynamic> json) =>
             'last_practice_day',
             (v) => v as String?,
           ),
+          heatmapDaily: $checkedConvert(
+            'heatmap_daily',
+            (v) =>
+                (v as List<dynamic>?)
+                    ?.map((e) => DailyStat.fromJson(e as Map<String, dynamic>))
+                    .toList() ??
+                const <DailyStat>[],
+          ),
+          heatmapFrom: $checkedConvert('heatmap_from', (v) => v as String?),
+          heatmapTo: $checkedConvert('heatmap_to', (v) => v as String?),
           activeSession: $checkedConvert(
             'active_session',
             (v) => v == null
@@ -136,6 +146,9 @@ _PracticeDashboard _$PracticeDashboardFromJson(Map<String, dynamic> json) =>
         'prevWeekAnswers': 'prev_week_answers',
         'streakDays': 'streak_days',
         'lastPracticeDay': 'last_practice_day',
+        'heatmapDaily': 'heatmap_daily',
+        'heatmapFrom': 'heatmap_from',
+        'heatmapTo': 'heatmap_to',
         'activeSession': 'active_session',
         'qtypeStats': 'qtype_stats',
       },
@@ -154,6 +167,9 @@ Map<String, dynamic> _$PracticeDashboardToJson(_PracticeDashboard instance) =>
       'prev_week_answers': instance.prevWeekAnswers,
       'streak_days': instance.streakDays,
       'last_practice_day': instance.lastPracticeDay,
+      'heatmap_daily': instance.heatmapDaily.map((e) => e.toJson()).toList(),
+      'heatmap_from': instance.heatmapFrom,
+      'heatmap_to': instance.heatmapTo,
       'active_session': instance.activeSession?.toJson(),
       'daily': instance.daily.map((e) => e.toJson()).toList(),
       'qtype_stats': instance.qtypeStats.map((e) => e.toJson()).toList(),

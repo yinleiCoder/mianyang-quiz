@@ -15,6 +15,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/core/theme/app_metrics.dart';
 import 'package:mianyang_quiz/data/models/content/question_content.dart';
 import 'package:mianyang_quiz/domain/submitted_answer.dart';
+import 'package:mianyang_quiz/ui/core/question/input/short_answer_mode.dart';
 import 'package:mianyang_quiz/ui/core/question/input/sub_question_card.dart';
 import 'package:mianyang_quiz/ui/core/question/question_view.dart';
 
@@ -26,6 +27,7 @@ class CompositeInputView extends StatelessWidget {
     required this.onAnswerChanged,
     this.reveal = AnswerReveal.none,
     this.readOnly = false,
+    this.shortAnswerMode = ShortAnswerMode.selfAssess,
   });
 
   final QuestionContent content;
@@ -36,6 +38,9 @@ class CompositeInputView extends StatelessWidget {
   final ValueChanged<SubmittedAnswer> onAnswerChanged;
   final AnswerReveal reveal;
   final bool readOnly;
+
+  /// 主观**子**题的作答方式，原样传给每个子题卡（练习自评 / 考试手写）。
+  final ShortAnswerMode shortAnswerMode;
 
   List<SubmittedAnswer> get _subs {
     final current = answer;
@@ -74,6 +79,7 @@ class CompositeInputView extends StatelessWidget {
               onAnswerChanged: (value) => _replaceAt(i, value),
               reveal: reveal,
               readOnly: readOnly,
+              shortAnswerMode: shortAnswerMode,
             ),
           ),
       ],

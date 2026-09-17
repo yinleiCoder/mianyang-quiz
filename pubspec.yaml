@@ -24,6 +24,10 @@ dependencies:
   # dio 只用于网页端的 /api/oss/sign 签名与 OSS 直传（见 lib/core/network/oss_dio.dart）。
   supabase_flutter: ^2.17.2
   dio: ^5.11.1
+  # 显式声明 http：core/network/auth_refresh_client.dart 要包一层 http.Client
+  # 来接住 401（令牌过期自愈）。它本来就是 supabase_flutter 的传递依赖，
+  # 但**用到了就要写进 pubspec**，否则哪天上游换实现这里会静默断掉。
+  http: ^1.6.0
 
   # 屏幕适配（桌面端需关闭缩放，见 bootstrap.dart）
   flutter_screenutil: ^5.9.3
@@ -48,6 +52,7 @@ dependencies:
   audioplayers: ^6.8.1
   pdf: ^3.13.0
   printing: ^5.15.0
+  contribution_heatmap: ^0.6.0
 
 dev_dependencies:
   flutter_test:

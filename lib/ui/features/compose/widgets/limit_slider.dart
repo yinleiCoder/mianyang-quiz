@@ -20,9 +20,6 @@ class LimitSlider extends StatelessWidget {
     final theme = Theme.of(context);
     const min = PracticeDraftStore.minLimit;
     const max = PracticeDraftStore.maxLimit;
-    final muted = theme.textTheme.bodySmall?.copyWith(
-      color: theme.colorScheme.onSurfaceVariant,
-    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -54,13 +51,6 @@ class LimitSlider extends StatelessWidget {
             label: '$limit 题',
             onChanged: (value) => onChanged(value.round()),
           ),
-        ),
-        Row(
-          children: [
-            Text('$min', style: muted),
-            const Spacer(),
-            Text('$max', style: muted),
-          ],
         ),
       ],
     );

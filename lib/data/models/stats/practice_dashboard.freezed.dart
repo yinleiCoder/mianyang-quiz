@@ -570,7 +570,11 @@ mixin _$PracticeDashboard {
 
 @JsonKey(name: 'total_answers') int get totalAnswers;@JsonKey(name: 'correct_answers') int get correctAnswers;/// 累计正确率 = correct_answers / **total_answers**（已答数，与交卷结算的分母不同）。
  double get accuracy;@JsonKey(name: 'today_answers') int get todayAnswers;@JsonKey(name: 'total_duration_ms') int get totalDurationMs;/// 错题数：最近一次作答为错、且题目当前仍在线。
-@JsonKey(name: 'wrong_count') int get wrongCount;@JsonKey(name: 'favorite_count') int get favoriteCount;@JsonKey(name: 'week_answers') int get weekAnswers;@JsonKey(name: 'prev_week_answers') int get prevWeekAnswers;@JsonKey(name: 'streak_days') int get streakDays;@JsonKey(name: 'last_practice_day') String? get lastPracticeDay;/// 进行中的会话；非空时首页显示「继续练习」。
+@JsonKey(name: 'wrong_count') int get wrongCount;@JsonKey(name: 'favorite_count') int get favoriteCount;@JsonKey(name: 'week_answers') int get weekAnswers;@JsonKey(name: 'prev_week_answers') int get prevWeekAnswers;@JsonKey(name: 'streak_days') int get streakDays;@JsonKey(name: 'last_practice_day') String? get lastPracticeDay;/// 热力图逐日答题数（**近 20 周**）。只含有作答的日子，没作答的那天客户端按 0 处理。
+/// 与 [daily] 的区别：daily 是近 14 天且补过零（趋势图要连续），这个是 140 天、只给有数据的。
+@JsonKey(name: 'heatmap_daily') List<DailyStat> get heatmapDaily;/// 热力图窗口的起止（`YYYY-MM-DD`，含两端）。服务端按**服务器时区**算，
+/// 客户端不自己推——本机时区与服务器差一天时，两边各算一次就会错位。
+@JsonKey(name: 'heatmap_from') String? get heatmapFrom;@JsonKey(name: 'heatmap_to') String? get heatmapTo;/// 进行中的会话；非空时首页显示「继续练习」。
 /// **注意**：开始新练习会静默作废它，所以入口处要先问用户。
 @JsonKey(name: 'active_session') ActiveSessionBrief? get activeSession; List<DailyStat> get daily;@JsonKey(name: 'qtype_stats') List<QtypeStat> get qtypeStats; List<RecentAnswer> get recent;
 /// Create a copy of PracticeDashboard
@@ -586,20 +590,20 @@ $PracticeDashboardCopyWith<PracticeDashboard> get copyWith => _$PracticeDashboar
 @override
 bool operator ==(Object other) {
   final _this = this as PracticeDashboard;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is PracticeDashboard&&(identical(other.totalAnswers, _this.totalAnswers) || other.totalAnswers == _this.totalAnswers)&&(identical(other.correctAnswers, _this.correctAnswers) || other.correctAnswers == _this.correctAnswers)&&(identical(other.accuracy, _this.accuracy) || other.accuracy == _this.accuracy)&&(identical(other.todayAnswers, _this.todayAnswers) || other.todayAnswers == _this.todayAnswers)&&(identical(other.totalDurationMs, _this.totalDurationMs) || other.totalDurationMs == _this.totalDurationMs)&&(identical(other.wrongCount, _this.wrongCount) || other.wrongCount == _this.wrongCount)&&(identical(other.favoriteCount, _this.favoriteCount) || other.favoriteCount == _this.favoriteCount)&&(identical(other.weekAnswers, _this.weekAnswers) || other.weekAnswers == _this.weekAnswers)&&(identical(other.prevWeekAnswers, _this.prevWeekAnswers) || other.prevWeekAnswers == _this.prevWeekAnswers)&&(identical(other.streakDays, _this.streakDays) || other.streakDays == _this.streakDays)&&(identical(other.lastPracticeDay, _this.lastPracticeDay) || other.lastPracticeDay == _this.lastPracticeDay)&&(identical(other.activeSession, _this.activeSession) || other.activeSession == _this.activeSession)&&const DeepCollectionEquality().equals(other.daily, _this.daily)&&const DeepCollectionEquality().equals(other.qtypeStats, _this.qtypeStats)&&const DeepCollectionEquality().equals(other.recent, _this.recent));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is PracticeDashboard&&(identical(other.totalAnswers, _this.totalAnswers) || other.totalAnswers == _this.totalAnswers)&&(identical(other.correctAnswers, _this.correctAnswers) || other.correctAnswers == _this.correctAnswers)&&(identical(other.accuracy, _this.accuracy) || other.accuracy == _this.accuracy)&&(identical(other.todayAnswers, _this.todayAnswers) || other.todayAnswers == _this.todayAnswers)&&(identical(other.totalDurationMs, _this.totalDurationMs) || other.totalDurationMs == _this.totalDurationMs)&&(identical(other.wrongCount, _this.wrongCount) || other.wrongCount == _this.wrongCount)&&(identical(other.favoriteCount, _this.favoriteCount) || other.favoriteCount == _this.favoriteCount)&&(identical(other.weekAnswers, _this.weekAnswers) || other.weekAnswers == _this.weekAnswers)&&(identical(other.prevWeekAnswers, _this.prevWeekAnswers) || other.prevWeekAnswers == _this.prevWeekAnswers)&&(identical(other.streakDays, _this.streakDays) || other.streakDays == _this.streakDays)&&(identical(other.lastPracticeDay, _this.lastPracticeDay) || other.lastPracticeDay == _this.lastPracticeDay)&&const DeepCollectionEquality().equals(other.heatmapDaily, _this.heatmapDaily)&&(identical(other.heatmapFrom, _this.heatmapFrom) || other.heatmapFrom == _this.heatmapFrom)&&(identical(other.heatmapTo, _this.heatmapTo) || other.heatmapTo == _this.heatmapTo)&&(identical(other.activeSession, _this.activeSession) || other.activeSession == _this.activeSession)&&const DeepCollectionEquality().equals(other.daily, _this.daily)&&const DeepCollectionEquality().equals(other.qtypeStats, _this.qtypeStats)&&const DeepCollectionEquality().equals(other.recent, _this.recent));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as PracticeDashboard;
-  return Object.hash(runtimeType,_this.totalAnswers,_this.correctAnswers,_this.accuracy,_this.todayAnswers,_this.totalDurationMs,_this.wrongCount,_this.favoriteCount,_this.weekAnswers,_this.prevWeekAnswers,_this.streakDays,_this.lastPracticeDay,_this.activeSession,const DeepCollectionEquality().hash(_this.daily),const DeepCollectionEquality().hash(_this.qtypeStats),const DeepCollectionEquality().hash(_this.recent));
+  return Object.hash(runtimeType,_this.totalAnswers,_this.correctAnswers,_this.accuracy,_this.todayAnswers,_this.totalDurationMs,_this.wrongCount,_this.favoriteCount,_this.weekAnswers,_this.prevWeekAnswers,_this.streakDays,_this.lastPracticeDay,const DeepCollectionEquality().hash(_this.heatmapDaily),_this.heatmapFrom,_this.heatmapTo,_this.activeSession,const DeepCollectionEquality().hash(_this.daily),const DeepCollectionEquality().hash(_this.qtypeStats),const DeepCollectionEquality().hash(_this.recent));
 }
 
 @override
 String toString() {
   final _this = this as PracticeDashboard;
-  return 'PracticeDashboard(totalAnswers: ${_this.totalAnswers}, correctAnswers: ${_this.correctAnswers}, accuracy: ${_this.accuracy}, todayAnswers: ${_this.todayAnswers}, totalDurationMs: ${_this.totalDurationMs}, wrongCount: ${_this.wrongCount}, favoriteCount: ${_this.favoriteCount}, weekAnswers: ${_this.weekAnswers}, prevWeekAnswers: ${_this.prevWeekAnswers}, streakDays: ${_this.streakDays}, lastPracticeDay: ${_this.lastPracticeDay}, activeSession: ${_this.activeSession}, daily: ${_this.daily}, qtypeStats: ${_this.qtypeStats}, recent: ${_this.recent})';
+  return 'PracticeDashboard(totalAnswers: ${_this.totalAnswers}, correctAnswers: ${_this.correctAnswers}, accuracy: ${_this.accuracy}, todayAnswers: ${_this.todayAnswers}, totalDurationMs: ${_this.totalDurationMs}, wrongCount: ${_this.wrongCount}, favoriteCount: ${_this.favoriteCount}, weekAnswers: ${_this.weekAnswers}, prevWeekAnswers: ${_this.prevWeekAnswers}, streakDays: ${_this.streakDays}, lastPracticeDay: ${_this.lastPracticeDay}, heatmapDaily: ${_this.heatmapDaily}, heatmapFrom: ${_this.heatmapFrom}, heatmapTo: ${_this.heatmapTo}, activeSession: ${_this.activeSession}, daily: ${_this.daily}, qtypeStats: ${_this.qtypeStats}, recent: ${_this.recent})';
 }
 
 
@@ -610,7 +614,7 @@ abstract mixin class $PracticeDashboardCopyWith<$Res>  {
   factory $PracticeDashboardCopyWith(PracticeDashboard value, $Res Function(PracticeDashboard) _then) = _$PracticeDashboardCopyWithImpl;
 @useResult
 $Res call({
-@JsonKey(name: 'total_answers') int totalAnswers,@JsonKey(name: 'correct_answers') int correctAnswers, double accuracy,@JsonKey(name: 'today_answers') int todayAnswers,@JsonKey(name: 'total_duration_ms') int totalDurationMs,@JsonKey(name: 'wrong_count') int wrongCount,@JsonKey(name: 'favorite_count') int favoriteCount,@JsonKey(name: 'week_answers') int weekAnswers,@JsonKey(name: 'prev_week_answers') int prevWeekAnswers,@JsonKey(name: 'streak_days') int streakDays,@JsonKey(name: 'last_practice_day') String? lastPracticeDay,@JsonKey(name: 'active_session') ActiveSessionBrief? activeSession, List<DailyStat> daily,@JsonKey(name: 'qtype_stats') List<QtypeStat> qtypeStats, List<RecentAnswer> recent
+@JsonKey(name: 'total_answers') int totalAnswers,@JsonKey(name: 'correct_answers') int correctAnswers, double accuracy,@JsonKey(name: 'today_answers') int todayAnswers,@JsonKey(name: 'total_duration_ms') int totalDurationMs,@JsonKey(name: 'wrong_count') int wrongCount,@JsonKey(name: 'favorite_count') int favoriteCount,@JsonKey(name: 'week_answers') int weekAnswers,@JsonKey(name: 'prev_week_answers') int prevWeekAnswers,@JsonKey(name: 'streak_days') int streakDays,@JsonKey(name: 'last_practice_day') String? lastPracticeDay,@JsonKey(name: 'heatmap_daily') List<DailyStat> heatmapDaily,@JsonKey(name: 'heatmap_from') String? heatmapFrom,@JsonKey(name: 'heatmap_to') String? heatmapTo,@JsonKey(name: 'active_session') ActiveSessionBrief? activeSession, List<DailyStat> daily,@JsonKey(name: 'qtype_stats') List<QtypeStat> qtypeStats, List<RecentAnswer> recent
 });
 
 
@@ -627,7 +631,7 @@ class _$PracticeDashboardCopyWithImpl<$Res>
 
 /// Create a copy of PracticeDashboard
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? totalAnswers = null,Object? correctAnswers = null,Object? accuracy = null,Object? todayAnswers = null,Object? totalDurationMs = null,Object? wrongCount = null,Object? favoriteCount = null,Object? weekAnswers = null,Object? prevWeekAnswers = null,Object? streakDays = null,Object? lastPracticeDay = freezed,Object? activeSession = freezed,Object? daily = null,Object? qtypeStats = null,Object? recent = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? totalAnswers = null,Object? correctAnswers = null,Object? accuracy = null,Object? todayAnswers = null,Object? totalDurationMs = null,Object? wrongCount = null,Object? favoriteCount = null,Object? weekAnswers = null,Object? prevWeekAnswers = null,Object? streakDays = null,Object? lastPracticeDay = freezed,Object? heatmapDaily = null,Object? heatmapFrom = freezed,Object? heatmapTo = freezed,Object? activeSession = freezed,Object? daily = null,Object? qtypeStats = null,Object? recent = null,}) {
   return _then(PracticeDashboard(
 totalAnswers: null == totalAnswers ? _self.totalAnswers : totalAnswers // ignore: cast_nullable_to_non_nullable
 as int,correctAnswers: null == correctAnswers ? _self.correctAnswers : correctAnswers // ignore: cast_nullable_to_non_nullable
@@ -640,6 +644,9 @@ as int,weekAnswers: null == weekAnswers ? _self.weekAnswers : weekAnswers // ign
 as int,prevWeekAnswers: null == prevWeekAnswers ? _self.prevWeekAnswers : prevWeekAnswers // ignore: cast_nullable_to_non_nullable
 as int,streakDays: null == streakDays ? _self.streakDays : streakDays // ignore: cast_nullable_to_non_nullable
 as int,lastPracticeDay: freezed == lastPracticeDay ? _self.lastPracticeDay : lastPracticeDay // ignore: cast_nullable_to_non_nullable
+as String?,heatmapDaily: null == heatmapDaily ? _self.heatmapDaily : heatmapDaily // ignore: cast_nullable_to_non_nullable
+as List<DailyStat>,heatmapFrom: freezed == heatmapFrom ? _self.heatmapFrom : heatmapFrom // ignore: cast_nullable_to_non_nullable
+as String?,heatmapTo: freezed == heatmapTo ? _self.heatmapTo : heatmapTo // ignore: cast_nullable_to_non_nullable
 as String?,activeSession: freezed == activeSession ? _self.activeSession : activeSession // ignore: cast_nullable_to_non_nullable
 as ActiveSessionBrief?,daily: null == daily ? _self.daily : daily // ignore: cast_nullable_to_non_nullable
 as List<DailyStat>,qtypeStats: null == qtypeStats ? _self.qtypeStats : qtypeStats // ignore: cast_nullable_to_non_nullable
@@ -741,10 +748,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'total_answers')  int totalAnswers, @JsonKey(name: 'correct_answers')  int correctAnswers,  double accuracy, @JsonKey(name: 'today_answers')  int todayAnswers, @JsonKey(name: 'total_duration_ms')  int totalDurationMs, @JsonKey(name: 'wrong_count')  int wrongCount, @JsonKey(name: 'favorite_count')  int favoriteCount, @JsonKey(name: 'week_answers')  int weekAnswers, @JsonKey(name: 'prev_week_answers')  int prevWeekAnswers, @JsonKey(name: 'streak_days')  int streakDays, @JsonKey(name: 'last_practice_day')  String? lastPracticeDay, @JsonKey(name: 'active_session')  ActiveSessionBrief? activeSession,  List<DailyStat> daily, @JsonKey(name: 'qtype_stats')  List<QtypeStat> qtypeStats,  List<RecentAnswer> recent)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'total_answers')  int totalAnswers, @JsonKey(name: 'correct_answers')  int correctAnswers,  double accuracy, @JsonKey(name: 'today_answers')  int todayAnswers, @JsonKey(name: 'total_duration_ms')  int totalDurationMs, @JsonKey(name: 'wrong_count')  int wrongCount, @JsonKey(name: 'favorite_count')  int favoriteCount, @JsonKey(name: 'week_answers')  int weekAnswers, @JsonKey(name: 'prev_week_answers')  int prevWeekAnswers, @JsonKey(name: 'streak_days')  int streakDays, @JsonKey(name: 'last_practice_day')  String? lastPracticeDay, @JsonKey(name: 'heatmap_daily')  List<DailyStat> heatmapDaily, @JsonKey(name: 'heatmap_from')  String? heatmapFrom, @JsonKey(name: 'heatmap_to')  String? heatmapTo, @JsonKey(name: 'active_session')  ActiveSessionBrief? activeSession,  List<DailyStat> daily, @JsonKey(name: 'qtype_stats')  List<QtypeStat> qtypeStats,  List<RecentAnswer> recent)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _PracticeDashboard() when $default != null:
-return $default(_that.totalAnswers,_that.correctAnswers,_that.accuracy,_that.todayAnswers,_that.totalDurationMs,_that.wrongCount,_that.favoriteCount,_that.weekAnswers,_that.prevWeekAnswers,_that.streakDays,_that.lastPracticeDay,_that.activeSession,_that.daily,_that.qtypeStats,_that.recent);case _:
+return $default(_that.totalAnswers,_that.correctAnswers,_that.accuracy,_that.todayAnswers,_that.totalDurationMs,_that.wrongCount,_that.favoriteCount,_that.weekAnswers,_that.prevWeekAnswers,_that.streakDays,_that.lastPracticeDay,_that.heatmapDaily,_that.heatmapFrom,_that.heatmapTo,_that.activeSession,_that.daily,_that.qtypeStats,_that.recent);case _:
   return orElse();
 
 }
@@ -762,10 +769,10 @@ return $default(_that.totalAnswers,_that.correctAnswers,_that.accuracy,_that.tod
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'total_answers')  int totalAnswers, @JsonKey(name: 'correct_answers')  int correctAnswers,  double accuracy, @JsonKey(name: 'today_answers')  int todayAnswers, @JsonKey(name: 'total_duration_ms')  int totalDurationMs, @JsonKey(name: 'wrong_count')  int wrongCount, @JsonKey(name: 'favorite_count')  int favoriteCount, @JsonKey(name: 'week_answers')  int weekAnswers, @JsonKey(name: 'prev_week_answers')  int prevWeekAnswers, @JsonKey(name: 'streak_days')  int streakDays, @JsonKey(name: 'last_practice_day')  String? lastPracticeDay, @JsonKey(name: 'active_session')  ActiveSessionBrief? activeSession,  List<DailyStat> daily, @JsonKey(name: 'qtype_stats')  List<QtypeStat> qtypeStats,  List<RecentAnswer> recent)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'total_answers')  int totalAnswers, @JsonKey(name: 'correct_answers')  int correctAnswers,  double accuracy, @JsonKey(name: 'today_answers')  int todayAnswers, @JsonKey(name: 'total_duration_ms')  int totalDurationMs, @JsonKey(name: 'wrong_count')  int wrongCount, @JsonKey(name: 'favorite_count')  int favoriteCount, @JsonKey(name: 'week_answers')  int weekAnswers, @JsonKey(name: 'prev_week_answers')  int prevWeekAnswers, @JsonKey(name: 'streak_days')  int streakDays, @JsonKey(name: 'last_practice_day')  String? lastPracticeDay, @JsonKey(name: 'heatmap_daily')  List<DailyStat> heatmapDaily, @JsonKey(name: 'heatmap_from')  String? heatmapFrom, @JsonKey(name: 'heatmap_to')  String? heatmapTo, @JsonKey(name: 'active_session')  ActiveSessionBrief? activeSession,  List<DailyStat> daily, @JsonKey(name: 'qtype_stats')  List<QtypeStat> qtypeStats,  List<RecentAnswer> recent)  $default,) {final _that = this;
 switch (_that) {
 case _PracticeDashboard():
-return $default(_that.totalAnswers,_that.correctAnswers,_that.accuracy,_that.todayAnswers,_that.totalDurationMs,_that.wrongCount,_that.favoriteCount,_that.weekAnswers,_that.prevWeekAnswers,_that.streakDays,_that.lastPracticeDay,_that.activeSession,_that.daily,_that.qtypeStats,_that.recent);case _:
+return $default(_that.totalAnswers,_that.correctAnswers,_that.accuracy,_that.todayAnswers,_that.totalDurationMs,_that.wrongCount,_that.favoriteCount,_that.weekAnswers,_that.prevWeekAnswers,_that.streakDays,_that.lastPracticeDay,_that.heatmapDaily,_that.heatmapFrom,_that.heatmapTo,_that.activeSession,_that.daily,_that.qtypeStats,_that.recent);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -782,10 +789,10 @@ return $default(_that.totalAnswers,_that.correctAnswers,_that.accuracy,_that.tod
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'total_answers')  int totalAnswers, @JsonKey(name: 'correct_answers')  int correctAnswers,  double accuracy, @JsonKey(name: 'today_answers')  int todayAnswers, @JsonKey(name: 'total_duration_ms')  int totalDurationMs, @JsonKey(name: 'wrong_count')  int wrongCount, @JsonKey(name: 'favorite_count')  int favoriteCount, @JsonKey(name: 'week_answers')  int weekAnswers, @JsonKey(name: 'prev_week_answers')  int prevWeekAnswers, @JsonKey(name: 'streak_days')  int streakDays, @JsonKey(name: 'last_practice_day')  String? lastPracticeDay, @JsonKey(name: 'active_session')  ActiveSessionBrief? activeSession,  List<DailyStat> daily, @JsonKey(name: 'qtype_stats')  List<QtypeStat> qtypeStats,  List<RecentAnswer> recent)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'total_answers')  int totalAnswers, @JsonKey(name: 'correct_answers')  int correctAnswers,  double accuracy, @JsonKey(name: 'today_answers')  int todayAnswers, @JsonKey(name: 'total_duration_ms')  int totalDurationMs, @JsonKey(name: 'wrong_count')  int wrongCount, @JsonKey(name: 'favorite_count')  int favoriteCount, @JsonKey(name: 'week_answers')  int weekAnswers, @JsonKey(name: 'prev_week_answers')  int prevWeekAnswers, @JsonKey(name: 'streak_days')  int streakDays, @JsonKey(name: 'last_practice_day')  String? lastPracticeDay, @JsonKey(name: 'heatmap_daily')  List<DailyStat> heatmapDaily, @JsonKey(name: 'heatmap_from')  String? heatmapFrom, @JsonKey(name: 'heatmap_to')  String? heatmapTo, @JsonKey(name: 'active_session')  ActiveSessionBrief? activeSession,  List<DailyStat> daily, @JsonKey(name: 'qtype_stats')  List<QtypeStat> qtypeStats,  List<RecentAnswer> recent)?  $default,) {final _that = this;
 switch (_that) {
 case _PracticeDashboard() when $default != null:
-return $default(_that.totalAnswers,_that.correctAnswers,_that.accuracy,_that.todayAnswers,_that.totalDurationMs,_that.wrongCount,_that.favoriteCount,_that.weekAnswers,_that.prevWeekAnswers,_that.streakDays,_that.lastPracticeDay,_that.activeSession,_that.daily,_that.qtypeStats,_that.recent);case _:
+return $default(_that.totalAnswers,_that.correctAnswers,_that.accuracy,_that.todayAnswers,_that.totalDurationMs,_that.wrongCount,_that.favoriteCount,_that.weekAnswers,_that.prevWeekAnswers,_that.streakDays,_that.lastPracticeDay,_that.heatmapDaily,_that.heatmapFrom,_that.heatmapTo,_that.activeSession,_that.daily,_that.qtypeStats,_that.recent);case _:
   return null;
 
 }
@@ -797,7 +804,7 @@ return $default(_that.totalAnswers,_that.correctAnswers,_that.accuracy,_that.tod
 @JsonSerializable()
 
 class _PracticeDashboard implements PracticeDashboard {
-  const _PracticeDashboard({@JsonKey(name: 'total_answers') this.totalAnswers = 0, @JsonKey(name: 'correct_answers') this.correctAnswers = 0, this.accuracy = 0, @JsonKey(name: 'today_answers') this.todayAnswers = 0, @JsonKey(name: 'total_duration_ms') this.totalDurationMs = 0, @JsonKey(name: 'wrong_count') this.wrongCount = 0, @JsonKey(name: 'favorite_count') this.favoriteCount = 0, @JsonKey(name: 'week_answers') this.weekAnswers = 0, @JsonKey(name: 'prev_week_answers') this.prevWeekAnswers = 0, @JsonKey(name: 'streak_days') this.streakDays = 0, @JsonKey(name: 'last_practice_day') this.lastPracticeDay, @JsonKey(name: 'active_session') this.activeSession,  List<DailyStat> daily = const <DailyStat>[], @JsonKey(name: 'qtype_stats')  List<QtypeStat> qtypeStats = const <QtypeStat>[],  List<RecentAnswer> recent = const <RecentAnswer>[]}): _daily = daily,_qtypeStats = qtypeStats,_recent = recent;
+  const _PracticeDashboard({@JsonKey(name: 'total_answers') this.totalAnswers = 0, @JsonKey(name: 'correct_answers') this.correctAnswers = 0, this.accuracy = 0, @JsonKey(name: 'today_answers') this.todayAnswers = 0, @JsonKey(name: 'total_duration_ms') this.totalDurationMs = 0, @JsonKey(name: 'wrong_count') this.wrongCount = 0, @JsonKey(name: 'favorite_count') this.favoriteCount = 0, @JsonKey(name: 'week_answers') this.weekAnswers = 0, @JsonKey(name: 'prev_week_answers') this.prevWeekAnswers = 0, @JsonKey(name: 'streak_days') this.streakDays = 0, @JsonKey(name: 'last_practice_day') this.lastPracticeDay, @JsonKey(name: 'heatmap_daily')  List<DailyStat> heatmapDaily = const <DailyStat>[], @JsonKey(name: 'heatmap_from') this.heatmapFrom, @JsonKey(name: 'heatmap_to') this.heatmapTo, @JsonKey(name: 'active_session') this.activeSession,  List<DailyStat> daily = const <DailyStat>[], @JsonKey(name: 'qtype_stats')  List<QtypeStat> qtypeStats = const <QtypeStat>[],  List<RecentAnswer> recent = const <RecentAnswer>[]}): _heatmapDaily = heatmapDaily,_daily = daily,_qtypeStats = qtypeStats,_recent = recent;
   factory _PracticeDashboard.fromJson(Map<String, dynamic> json) => _$PracticeDashboardFromJson(json);
 
 @override@JsonKey(name: 'total_answers') final  int totalAnswers;
@@ -813,6 +820,21 @@ class _PracticeDashboard implements PracticeDashboard {
 @override@JsonKey(name: 'prev_week_answers') final  int prevWeekAnswers;
 @override@JsonKey(name: 'streak_days') final  int streakDays;
 @override@JsonKey(name: 'last_practice_day') final  String? lastPracticeDay;
+/// 热力图逐日答题数（**近 20 周**）。只含有作答的日子，没作答的那天客户端按 0 处理。
+/// 与 [daily] 的区别：daily 是近 14 天且补过零（趋势图要连续），这个是 140 天、只给有数据的。
+ final  List<DailyStat> _heatmapDaily;
+/// 热力图逐日答题数（**近 20 周**）。只含有作答的日子，没作答的那天客户端按 0 处理。
+/// 与 [daily] 的区别：daily 是近 14 天且补过零（趋势图要连续），这个是 140 天、只给有数据的。
+@override@JsonKey(name: 'heatmap_daily') List<DailyStat> get heatmapDaily {
+  if (_heatmapDaily is EqualUnmodifiableListView) return _heatmapDaily;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_heatmapDaily);
+}
+
+/// 热力图窗口的起止（`YYYY-MM-DD`，含两端）。服务端按**服务器时区**算，
+/// 客户端不自己推——本机时区与服务器差一天时，两边各算一次就会错位。
+@override@JsonKey(name: 'heatmap_from') final  String? heatmapFrom;
+@override@JsonKey(name: 'heatmap_to') final  String? heatmapTo;
 /// 进行中的会话；非空时首页显示「继续练习」。
 /// **注意**：开始新练习会静默作废它，所以入口处要先问用户。
 @override@JsonKey(name: 'active_session') final  ActiveSessionBrief? activeSession;
@@ -851,18 +873,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _PracticeDashboard&&(identical(other.totalAnswers, totalAnswers) || other.totalAnswers == totalAnswers)&&(identical(other.correctAnswers, correctAnswers) || other.correctAnswers == correctAnswers)&&(identical(other.accuracy, accuracy) || other.accuracy == accuracy)&&(identical(other.todayAnswers, todayAnswers) || other.todayAnswers == todayAnswers)&&(identical(other.totalDurationMs, totalDurationMs) || other.totalDurationMs == totalDurationMs)&&(identical(other.wrongCount, wrongCount) || other.wrongCount == wrongCount)&&(identical(other.favoriteCount, favoriteCount) || other.favoriteCount == favoriteCount)&&(identical(other.weekAnswers, weekAnswers) || other.weekAnswers == weekAnswers)&&(identical(other.prevWeekAnswers, prevWeekAnswers) || other.prevWeekAnswers == prevWeekAnswers)&&(identical(other.streakDays, streakDays) || other.streakDays == streakDays)&&(identical(other.lastPracticeDay, lastPracticeDay) || other.lastPracticeDay == lastPracticeDay)&&(identical(other.activeSession, activeSession) || other.activeSession == activeSession)&&const DeepCollectionEquality().equals(other.daily, _daily)&&const DeepCollectionEquality().equals(other.qtypeStats, _qtypeStats)&&const DeepCollectionEquality().equals(other.recent, _recent));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _PracticeDashboard&&(identical(other.totalAnswers, totalAnswers) || other.totalAnswers == totalAnswers)&&(identical(other.correctAnswers, correctAnswers) || other.correctAnswers == correctAnswers)&&(identical(other.accuracy, accuracy) || other.accuracy == accuracy)&&(identical(other.todayAnswers, todayAnswers) || other.todayAnswers == todayAnswers)&&(identical(other.totalDurationMs, totalDurationMs) || other.totalDurationMs == totalDurationMs)&&(identical(other.wrongCount, wrongCount) || other.wrongCount == wrongCount)&&(identical(other.favoriteCount, favoriteCount) || other.favoriteCount == favoriteCount)&&(identical(other.weekAnswers, weekAnswers) || other.weekAnswers == weekAnswers)&&(identical(other.prevWeekAnswers, prevWeekAnswers) || other.prevWeekAnswers == prevWeekAnswers)&&(identical(other.streakDays, streakDays) || other.streakDays == streakDays)&&(identical(other.lastPracticeDay, lastPracticeDay) || other.lastPracticeDay == lastPracticeDay)&&const DeepCollectionEquality().equals(other.heatmapDaily, _heatmapDaily)&&(identical(other.heatmapFrom, heatmapFrom) || other.heatmapFrom == heatmapFrom)&&(identical(other.heatmapTo, heatmapTo) || other.heatmapTo == heatmapTo)&&(identical(other.activeSession, activeSession) || other.activeSession == activeSession)&&const DeepCollectionEquality().equals(other.daily, _daily)&&const DeepCollectionEquality().equals(other.qtypeStats, _qtypeStats)&&const DeepCollectionEquality().equals(other.recent, _recent));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,totalAnswers,correctAnswers,accuracy,todayAnswers,totalDurationMs,wrongCount,favoriteCount,weekAnswers,prevWeekAnswers,streakDays,lastPracticeDay,activeSession,const DeepCollectionEquality().hash(_daily),const DeepCollectionEquality().hash(_qtypeStats),const DeepCollectionEquality().hash(_recent));
+    return Object.hash(runtimeType,totalAnswers,correctAnswers,accuracy,todayAnswers,totalDurationMs,wrongCount,favoriteCount,weekAnswers,prevWeekAnswers,streakDays,lastPracticeDay,const DeepCollectionEquality().hash(_heatmapDaily),heatmapFrom,heatmapTo,activeSession,const DeepCollectionEquality().hash(_daily),const DeepCollectionEquality().hash(_qtypeStats),const DeepCollectionEquality().hash(_recent));
 }
 
 @override
 String toString() {
-    return 'PracticeDashboard(totalAnswers: $totalAnswers, correctAnswers: $correctAnswers, accuracy: $accuracy, todayAnswers: $todayAnswers, totalDurationMs: $totalDurationMs, wrongCount: $wrongCount, favoriteCount: $favoriteCount, weekAnswers: $weekAnswers, prevWeekAnswers: $prevWeekAnswers, streakDays: $streakDays, lastPracticeDay: $lastPracticeDay, activeSession: $activeSession, daily: $daily, qtypeStats: $qtypeStats, recent: $recent)';
+    return 'PracticeDashboard(totalAnswers: $totalAnswers, correctAnswers: $correctAnswers, accuracy: $accuracy, todayAnswers: $todayAnswers, totalDurationMs: $totalDurationMs, wrongCount: $wrongCount, favoriteCount: $favoriteCount, weekAnswers: $weekAnswers, prevWeekAnswers: $prevWeekAnswers, streakDays: $streakDays, lastPracticeDay: $lastPracticeDay, heatmapDaily: $heatmapDaily, heatmapFrom: $heatmapFrom, heatmapTo: $heatmapTo, activeSession: $activeSession, daily: $daily, qtypeStats: $qtypeStats, recent: $recent)';
 }
 
 
@@ -873,7 +895,7 @@ abstract mixin class _$PracticeDashboardCopyWith<$Res> implements $PracticeDashb
   factory _$PracticeDashboardCopyWith(_PracticeDashboard value, $Res Function(_PracticeDashboard) _then) = __$PracticeDashboardCopyWithImpl;
 @override @useResult
 $Res call({
-@JsonKey(name: 'total_answers') int totalAnswers,@JsonKey(name: 'correct_answers') int correctAnswers, double accuracy,@JsonKey(name: 'today_answers') int todayAnswers,@JsonKey(name: 'total_duration_ms') int totalDurationMs,@JsonKey(name: 'wrong_count') int wrongCount,@JsonKey(name: 'favorite_count') int favoriteCount,@JsonKey(name: 'week_answers') int weekAnswers,@JsonKey(name: 'prev_week_answers') int prevWeekAnswers,@JsonKey(name: 'streak_days') int streakDays,@JsonKey(name: 'last_practice_day') String? lastPracticeDay,@JsonKey(name: 'active_session') ActiveSessionBrief? activeSession, List<DailyStat> daily,@JsonKey(name: 'qtype_stats') List<QtypeStat> qtypeStats, List<RecentAnswer> recent
+@JsonKey(name: 'total_answers') int totalAnswers,@JsonKey(name: 'correct_answers') int correctAnswers, double accuracy,@JsonKey(name: 'today_answers') int todayAnswers,@JsonKey(name: 'total_duration_ms') int totalDurationMs,@JsonKey(name: 'wrong_count') int wrongCount,@JsonKey(name: 'favorite_count') int favoriteCount,@JsonKey(name: 'week_answers') int weekAnswers,@JsonKey(name: 'prev_week_answers') int prevWeekAnswers,@JsonKey(name: 'streak_days') int streakDays,@JsonKey(name: 'last_practice_day') String? lastPracticeDay,@JsonKey(name: 'heatmap_daily') List<DailyStat> heatmapDaily,@JsonKey(name: 'heatmap_from') String? heatmapFrom,@JsonKey(name: 'heatmap_to') String? heatmapTo,@JsonKey(name: 'active_session') ActiveSessionBrief? activeSession, List<DailyStat> daily,@JsonKey(name: 'qtype_stats') List<QtypeStat> qtypeStats, List<RecentAnswer> recent
 });
 
 
@@ -890,7 +912,7 @@ class __$PracticeDashboardCopyWithImpl<$Res>
 
 /// Create a copy of PracticeDashboard
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? totalAnswers = null,Object? correctAnswers = null,Object? accuracy = null,Object? todayAnswers = null,Object? totalDurationMs = null,Object? wrongCount = null,Object? favoriteCount = null,Object? weekAnswers = null,Object? prevWeekAnswers = null,Object? streakDays = null,Object? lastPracticeDay = freezed,Object? activeSession = freezed,Object? daily = null,Object? qtypeStats = null,Object? recent = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? totalAnswers = null,Object? correctAnswers = null,Object? accuracy = null,Object? todayAnswers = null,Object? totalDurationMs = null,Object? wrongCount = null,Object? favoriteCount = null,Object? weekAnswers = null,Object? prevWeekAnswers = null,Object? streakDays = null,Object? lastPracticeDay = freezed,Object? heatmapDaily = null,Object? heatmapFrom = freezed,Object? heatmapTo = freezed,Object? activeSession = freezed,Object? daily = null,Object? qtypeStats = null,Object? recent = null,}) {
   return _then(_PracticeDashboard(
 totalAnswers: null == totalAnswers ? _self.totalAnswers : totalAnswers // ignore: cast_nullable_to_non_nullable
 as int,correctAnswers: null == correctAnswers ? _self.correctAnswers : correctAnswers // ignore: cast_nullable_to_non_nullable
@@ -903,6 +925,9 @@ as int,weekAnswers: null == weekAnswers ? _self.weekAnswers : weekAnswers // ign
 as int,prevWeekAnswers: null == prevWeekAnswers ? _self.prevWeekAnswers : prevWeekAnswers // ignore: cast_nullable_to_non_nullable
 as int,streakDays: null == streakDays ? _self.streakDays : streakDays // ignore: cast_nullable_to_non_nullable
 as int,lastPracticeDay: freezed == lastPracticeDay ? _self.lastPracticeDay : lastPracticeDay // ignore: cast_nullable_to_non_nullable
+as String?,heatmapDaily: null == heatmapDaily ? _self._heatmapDaily : heatmapDaily // ignore: cast_nullable_to_non_nullable
+as List<DailyStat>,heatmapFrom: freezed == heatmapFrom ? _self.heatmapFrom : heatmapFrom // ignore: cast_nullable_to_non_nullable
+as String?,heatmapTo: freezed == heatmapTo ? _self.heatmapTo : heatmapTo // ignore: cast_nullable_to_non_nullable
 as String?,activeSession: freezed == activeSession ? _self.activeSession : activeSession // ignore: cast_nullable_to_non_nullable
 as ActiveSessionBrief?,daily: null == daily ? _self._daily : daily // ignore: cast_nullable_to_non_nullable
 as List<DailyStat>,qtypeStats: null == qtypeStats ? _self._qtypeStats : qtypeStats // ignore: cast_nullable_to_non_nullable

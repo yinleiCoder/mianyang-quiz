@@ -53,8 +53,6 @@ class PracticeBottomBar extends StatelessWidget {
     return PracticeFeedbackBar(
       correct: runtime.verdict == true,
       isLast: runner.isLast,
-      // 自动跳题由舞台的计时器负责，这里只显示稳定的按钮文案
-      autoAdvanceIn: null,
       // 收藏本题。FavoriteStore 的注释把「练习反馈条」列为收藏按钮的四个入口之一，
       // 但这里一直没接线——组件里的心形按钮存在、tooltip 也有，永远不显示。
       // 答错时尤其需要：刚做完就想把这题收起来，不必先退出练习去题库找。

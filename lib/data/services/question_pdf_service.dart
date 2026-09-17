@@ -3,9 +3,7 @@
 // 为什么是 pdf + printing 这两个包：Flutter 没有内置的打印/PDF 能力，这是事实标准组合，
 // 且 printing 覆盖本客户端的两个目标平台（Android / Windows）。
 //
-// **中文字体**：pdf 包内置的 Helvetica 不含汉字，不显式加载就会印出一片空白（不报错）。
-// 这里用 PdfGoogleFonts 运行时拉 Noto Sans SC（几 MB，按会话缓存一次）——
-// 已实测本项目网络可达 fonts.gstatic.com；拉不到会抛错，由调用方转成「需要联网」的提示。
+// **中文字体：读系统字体文件，不联网**——为什么、候选怎么排，见 pdf_cjk_font.dart。
 //
 // **v1 只排文字**：媒体块（插图/附件）不进 PDF。含图或有表格的题，请用网页端的打印页
 //（/print/question/<id>，浏览器排版什么都支持）。
@@ -18,19 +16,20 @@ import 'package:mianyang_quiz/data/models/content/block.dart';
 import 'package:mianyang_quiz/data/models/content/question_content.dart';
 import 'package:mianyang_quiz/data/models/content/question_option.dart';
 import 'package:mianyang_quiz/data/models/content/server_answer.dart';
+import 'package:mianyang_quiz/data/services/pdf_cjk_font.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
 class QuestionPdfService {
   pw.Font? _regular;
-  pw.Font? _bold;
 
-  /// 字体只拉一次，整个会话复用（PdfGoogleFonts 自己也有缓存，这里再兜一层）。
+  /// 字体只读一次，整个会话复用（读法见 pdf_cjk_font.dart）。
+  ///
+  /// 系统里通常只有一个中文字重的 TTF，标题的粗体就用同一份（层级改由字号体现）。
   Future<(pw.Font, pw.Font)> _fonts() async {
-    _regular ??= await PdfGoogleFonts.notoSansSCRegular();
-    _bold ??= await PdfGoogleFonts.notoSansSCBold();
-    return (_regular!, _bold!);
+    _regular ??= await PdfCjkFont.load();
+    return (_regular!, _regular!);
   }
 
   /// 直接打印一道题（拼元信息 → 生成 PDF → 交给系统打印对话框，在那儿可另存为 PDF）。

@@ -78,9 +78,12 @@ class _MianyangQuizAppState extends State<MianyangQuizApp> {
                 Provider.value(value: deps.listRepository),
                 Provider.value(value: deps.favoriteRepository),
                 Provider.value(value: deps.feedbackRepository),
+                Provider.value(value: deps.paperRepository),
                 Provider.value(value: deps.appUpdateRepository),
                 Provider.value(value: deps.ossUploadService),
                 Provider.value(value: deps.questionPdfService),
+                // 考试作答的本机暂存：不是 Store，只是页面要按依赖注入取到的服务
+                Provider.value(value: deps.examDraftService),
                 ChangeNotifierProvider.value(value: deps.sfxService),
                 // 跨页状态：只有这四个进全局
                 ChangeNotifierProvider.value(value: deps.authStore),

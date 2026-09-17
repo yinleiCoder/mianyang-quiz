@@ -5,9 +5,8 @@
 // 不负责：具体组件的形态——立体按钮、统计卡、粗进度条在 ui/core/design 里自己画，
 // 它们只从 colorScheme 取色，不依赖这里的按钮主题。
 //
-// 配色是 M3 从 deepPurple 派生的默认方案（**不是**多邻国绿）：本方案里可用的
-// 语义色只有 tertiary（对/成功）与 error（错/危险），需要「绿」「红」时请用它们，
-// 不要自己造颜色——否则暗色模式会失配。
+// 配色是 M3 从 deepPurple 派生的方案。要「绿」「红」请走 semantic_colors.dart，
+// 不要用 tertiary 顶替（它是色相旋转出来的粉色），也不要自己写死颜色——否则暗色会失配。
 
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:material_ui/material_ui.dart';
@@ -53,6 +52,12 @@ abstract final class AppTheme {
     final scheme = ColorScheme.fromSeed(
       seedColor: _seed,
       brightness: brightness,
+    ).copyWith(
+      // 亮色下把 surface 定成**纯白**（学生反馈"背景应该是白的"）：fromSeed 从
+      // deepPurple 派生的 surface 是带紫的近白色，整屏铺开就是"发灰发紫"。
+      // 只动亮色——暗色的 surface 本来就是深灰，换成白色会把暗色模式掀翻；
+      // 卡片仍走 surfaceContainerLow，白底上照样分得出层次。
+      surface: brightness == Brightness.light ? Colors.white : null,
     );
     final buttonShape = RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(AppMetrics.radiusButton.r),
@@ -67,8 +72,8 @@ abstract final class AppTheme {
       extensions: [
         brightness == Brightness.dark ? SemanticColors.dark : SemanticColors.light,
       ],
-      // 触控优先：桌面端默认 compact + shrinkWrap 会把可点区域压到 48 以下，
-      // 而平板与触屏一体机是本项目的主要设备，这里统一拉回触控基线。
+      // 触控优先：桌面端默认的 compact + shrinkWrap 会把可点区域压到 48 以下，
+      // 而平板与触屏一体机是主要设备，统一拉回触控基线。
       visualDensity: VisualDensity.standard,
       materialTapTargetSize: MaterialTapTargetSize.padded,
       scaffoldBackgroundColor: scheme.surface,
@@ -173,9 +178,7 @@ abstract final class AppTheme {
     Color? background,
     required OutlinedBorder shape,
   }) => ButtonStyle(
-    backgroundColor: background == null
-        ? null
-        : WidgetStatePropertyAll(background),
+    backgroundColor: background == null ? null : WidgetStatePropertyAll(background),
     foregroundColor: WidgetStatePropertyAll(foreground),
     elevation: const WidgetStatePropertyAll(0),
     minimumSize: WidgetStatePropertyAll(Size(64, AppMetrics.touchTarget.r)),

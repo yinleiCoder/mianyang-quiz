@@ -18,6 +18,7 @@ import 'package:mianyang_quiz/data/models/content/sub_question.dart';
 import 'package:mianyang_quiz/domain/submitted_answer.dart';
 import 'package:mianyang_quiz/ui/core/design/duo_card.dart';
 import 'package:mianyang_quiz/ui/core/design/duo_chip.dart';
+import 'package:mianyang_quiz/ui/core/question/input/short_answer_mode.dart';
 import 'package:mianyang_quiz/ui/core/question/question_view.dart';
 
 class SubQuestionCard extends StatelessWidget {
@@ -29,6 +30,7 @@ class SubQuestionCard extends StatelessWidget {
     required this.onAnswerChanged,
     this.reveal = AnswerReveal.none,
     this.readOnly = false,
+    this.shortAnswerMode = ShortAnswerMode.selfAssess,
   });
 
   /// 子题在 content.sub 里的下标（0 起），决定「第 N 题」的序号。
@@ -45,10 +47,16 @@ class SubQuestionCard extends StatelessWidget {
   final AnswerReveal reveal;
   final bool readOnly;
 
+  /// 主观子题怎么作答。练习是自评（转成 SubMasteredAnswer），考试是手写（原样透传 EssayAnswer）。
+  final ShortAnswerMode shortAnswerMode;
+
   @override
   Widget build(BuildContext context) {
     final current = answer;
-    final isSelfAssessed = questionTypeFrom(sub.type).isSelfAssessed;
+    // 「自评」只在练习成立：考试的主观子题要留下学生的原话，不能压成一个是非。
+    final selfAssessed =
+        questionTypeFrom(sub.type).isSelfAssessed &&
+        shortAnswerMode == ShortAnswerMode.selfAssess;
     final mastered = current is SubMasteredAnswer ? current.mastered : null;
 
     return DuoCard(
@@ -75,16 +83,18 @@ class SubQuestionCard extends StatelessWidget {
             qtype: sub.type,
             content: _asContent(sub),
             // 主观子题没有 TextAnswer 这一说：已自评 = mastered 有值。
-            answer: isSelfAssessed
+            // 考试模式下 current 就是学生写下的 EssayAnswer，原样交给输入框回填。
+            answer: selfAssessed
                 ? (mastered == null ? null : const TextAnswer())
                 : current,
             // 主观子题会先回一个 TextAnswer（「已作答」标记），这里必须丢掉：
-            // 子题位置上的主观作答只能是 SubMasteredAnswer。
-            onAnswerChanged: isSelfAssessed ? _ignoreAnswer : onAnswerChanged,
-            onSelfAssessed: isSelfAssessed
+            // 子题位置上的自评作答只能是 SubMasteredAnswer。
+            onAnswerChanged: selfAssessed ? _ignoreAnswer : onAnswerChanged,
+            onSelfAssessed: selfAssessed
                 ? (mastered) => onAnswerChanged(SubMasteredAnswer(mastered))
                 : null,
             selfMastered: mastered,
+            shortAnswerMode: shortAnswerMode,
             reveal: reveal,
             readOnly: readOnly,
           ),

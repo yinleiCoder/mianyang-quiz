@@ -6,6 +6,11 @@
 //     而复合题里的主观**子题**是 {"mastered": true}——**没有 type 键**。
 // 这份形状由 0029 的 grade_answer 定义，写错的表现是"提交成功但永远判错"。
 //
+// **考试复用同一套形状**（submit_exam_attempt 的 p_answers[].answer）：0051 的
+// grade_exam_units 读的是 `-> 'keys'` / `->> 'value'` / `-> 'values'` / `-> 'subs'`，
+// 不认 `type` 判别键，所以这里多带一个 type 它照样判得对——两边不必各造一套词汇表。
+// 唯一的差别是主观题：练习只要一个标记，考试要学生写的原文（见 EssayAnswer）。
+//
 // 放 domain 而非 data/models：这是纯契约类型，不做反序列化、不依赖任何仓储，
 // 与 answer_grader 是同一份契约的两半，放一起才好对照着改。
 
@@ -50,6 +55,24 @@ final class TextAnswer extends SubmittedAnswer {
 
   @override
   Map<String, dynamic> toJson() => {'type': 'text'};
+}
+
+/// 考试的主观题作答：学生**写下来**的答案，原样交给阅卷人。
+///
+/// 与 [TextAnswer] 的区别不是形状的细节，而是「有没有内容」：练习的主观题没有输入框
+/// （对错由自评决定，写了也没人看），考试则必须留下学生的原话。
+///
+/// 服务端判分不看它（grade_exam_units 对 short_answer 一律返回 manual），
+/// 但**阅卷页要看**——网页端取的是 `answer.samples ?? answer.text`
+/// （见 components/papers/exam-grading-board.jsx 的 AnswerText），
+/// 所以这里的键只能是 `text`，换成 `content` 之类会让阅卷页显示「（未作答）」。
+final class EssayAnswer extends SubmittedAnswer {
+  const EssayAnswer(this.text);
+
+  final String text;
+
+  @override
+  Map<String, dynamic> toJson() => {'type': 'text', 'text': text};
 }
 
 /// 复合题里**主观子题**的自评：注意没有 type 键，这是 SQL 里 `->> 'mastered'` 的约定。
@@ -99,7 +122,11 @@ SubmittedAnswer? submittedAnswerFrom(Map<String, dynamic>? wire) {
     'choice' => ChoiceAnswer(_strings(wire['keys'])),
     'tf' => TrueFalseAnswer(wire['value'] == true),
     'blank' => BlankAnswer(_strings(wire['values'])),
-    'text' => const TextAnswer(),
+    // 练习存下来的 {"type":"text"} 没有 text 键（它只是个「已作答」标记），
+    // 考试的 EssayAnswer 才有。两者靠这一处分开，读到旧数据不会变成空的论述题。
+    'text' => wire['text'] is String
+        ? EssayAnswer(wire['text'] as String)
+        : const TextAnswer(),
     'unknown' => const UnknownAnswer(),
     'composite' => CompositeAnswer([
       for (final raw in (wire['subs'] as List? ?? const []))

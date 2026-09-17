@@ -6,9 +6,7 @@
 // 游戏化只做有数据支撑的部分：连续天数、今日进度、累计正确率、近 14 天趋势。
 // 不编造经验值/等级/体力——后端没有这些数据，编出来的数字不可信也不可比。
 
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:mianyang_quiz/core/router/routes.dart';
 import 'package:mianyang_quiz/core/theme/app_metrics.dart';
 import 'package:mianyang_quiz/core/utils/async_value.dart';
 import 'package:mianyang_quiz/core/utils/formatters.dart';
@@ -16,12 +14,12 @@ import 'package:mianyang_quiz/data/models/stats/practice_dashboard.dart';
 import 'package:mianyang_quiz/state/auth_store.dart';
 import 'package:mianyang_quiz/state/dashboard_store.dart';
 import 'package:mianyang_quiz/ui/core/charts/daily_trend_chart.dart';
-import 'package:mianyang_quiz/ui/core/design/duo_button.dart';
 import 'package:mianyang_quiz/ui/core/design/duo_card.dart';
 import 'package:mianyang_quiz/ui/core/design/duo_stat_tile.dart';
 import 'package:mianyang_quiz/ui/core/feedback/async_view.dart';
 import 'package:mianyang_quiz/ui/core/layout/section_header.dart';
 import 'package:mianyang_quiz/ui/features/home/widgets/active_session_card.dart';
+import 'package:mianyang_quiz/ui/features/home/widgets/home_actions.dart';
 import 'package:mianyang_quiz/ui/features/home/widgets/recent_answers_section.dart';
 import 'package:mianyang_quiz/ui/features/home/widgets/streak_header.dart';
 import 'package:provider/provider.dart';
@@ -87,29 +85,8 @@ class _DashboardBody extends StatelessWidget {
           const SizedBox(height: AppMetrics.gapLg),
           ActiveSessionCard(session: active),
         ],
-        // 两个按钮紧跟今日练习卡，排在统计卡**之前**：新用户首页三项统计全是 0，
-        // 趋势图也是空的，把入口压在下面等于让他先滚过两块空内容才找得到按钮。
-        // 先给动作，再给数据。
-        //
-        // 但必须排在 ActiveSessionCard **之后**：那张卡是护栏，不是便利入口——
-        // 服务端每人只允许一套进行中的会话，用户无视它去点「开始一次练习」，
-        // 这次的进度会被静默作废。
         const SizedBox(height: AppMetrics.gapLg),
-        DuoButton(
-          label: '开始一次练习',
-          icon: Icons.play_arrow,
-          onPressed: () => context.push(AppRoutes.composePath),
-        ),
-        const SizedBox(height: AppMetrics.gapSm),
-        DuoButton(
-          label: '去错题本看看',
-          icon: Icons.history_edu_outlined,
-          variant: DuoButtonVariant.outline,
-          // 直接用查询参数落到错题本页签，不必新建路由
-          onPressed: () => context.go(
-            AppRoutes.recordsOf(AppRoutes.recordsTabWrong),
-          ),
-        ),
+        const HomeActions(),
         const SizedBox(height: AppMetrics.gapXl),
         _StatGrid(dashboard: dashboard),
         const SizedBox(height: AppMetrics.gapXl),

@@ -47,6 +47,14 @@ abstract final class Formatters {
   /// 已答/总数 → 「7/20」。
   static String progress(int answered, int total) => '$answered/$total';
 
+  /// 分数 → 「2」「2.5」。数据库里的分值都是 numeric(6,2)，直接 toString
+  /// 会得到「2.00」——卷面上印的是 2 分，界面上也该是 2。
+  /// 只有真的带小数时才保留（阅卷可以给到 0.5，那种必须显示出来）。
+  static String score(num? value) {
+    if (value == null) return '0';
+    return value.toStringAsFixed(2).replaceFirst(RegExp(r'\.?0+$'), '');
+  }
+
   /// 「2026-09-12」。
   static String date(DateTime? time) {
     if (time == null) return '';

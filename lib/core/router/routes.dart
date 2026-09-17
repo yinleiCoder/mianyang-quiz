@@ -53,6 +53,19 @@ abstract final class AppRoutes {
   static const sessionReviewPath = '/practice/:sessionId/review';
   static const sessionReviewName = 'sessionReview';
 
+  // ---------- 考试 ----------
+  // 入口在首页工作台（不动底部导航）：考试是"被安排的事"，
+  // 不像刷题那样随时发生，占一个常驻 tab 反而会把刷题挤下去。
+
+  static const examsPath = '/exams';
+  static const examsName = 'exams';
+
+  static const examAttemptPath = '/exams/attempt/:attemptId';
+  static const examAttemptName = 'examAttempt';
+
+  static const examResultPath = '/exams/attempt/:attemptId/result';
+  static const examResultName = 'examResult';
+
   static const editProfilePath = '/profile/edit';
   static const editProfileName = 'editProfile';
 
@@ -68,8 +81,22 @@ abstract final class AppRoutes {
   static const String recordsTabWrong = 'wrong';
   static const String recordsTabFavorites = 'favorites';
 
+  // ---------- 考试页的页签 ----------
+  // 「试卷库」与「我的考试」是同一个页面的两个页签，用查询参数指定初始页签，
+  // 与 /records?tab=wrong 同一套做法。
+  static const String examsTabQuery = 'tab';
+  static const String examsTabLibrary = 'library';
+  static const String examsTabMine = 'mine';
+
   // ---------- 带参路径拼接 ----------
   static String questionDetailOf(String questionId) => '/bank/$questionId';
+
+  static String examAttemptOf(String attemptId) => '/exams/attempt/$attemptId';
+
+  static String examResultOf(String attemptId) =>
+      '/exams/attempt/$attemptId/result';
+
+  static String examsOf(String tab) => '$examsPath?$examsTabQuery=$tab';
 
   static String practiceOf(String sessionId) => '/practice/$sessionId';
 

@@ -1,12 +1,12 @@
 // 练习舞台：顶栏 + 当前题 + 底部操作区。
 //
-// 这里是**交互规则**的落点（什么时候自动判题、什么时候自动跳到下一题），
+// 这里是**交互规则**的落点（什么时候自动判题、什么时候可以交卷），
 // 但所有状态变更都转发给 PracticeRunner，本组件自己不持有题目状态。
 //
 // 即时模式（学多邻国）：
 //   · 单选/判断**选完立即判题**——这两类作答"选中即完整"，再让用户点一次检查是多余的
 //   · 多选/填空/主观需要显式点「检查」（作答可能还没结束）
-//   · 答对后 1.5 秒自动进入下一题；答错停住等用户看完（不等同于"惩罚"，是给时间看正确答案）
+//   · 判完停在原地：标准答案与解析就显示在题目下方，看完自己点「继续」（不再自动跳题）
 // 批量模式：只记草稿，上一题/下一题/答题卡自由切换，交卷时才提交。
 
 import 'dart:async';
@@ -34,17 +34,9 @@ class PracticeStage extends StatefulWidget {
 }
 
 class _PracticeStageState extends State<PracticeStage> {
-  /// 答对后的自动跳题倒计时。批量模式不用。
-  Timer? _autoAdvance;
   bool _checking = false;
 
   PracticeRunner get _runner => widget.runner;
-
-  @override
-  void dispose() {
-    _autoAdvance?.cancel();
-    super.dispose();
-  }
 
   /// 单选与判断题选中即完整，可以立刻判。
   bool _isCompleteSubmission(SubmittedAnswer answer) => switch (answer) {
@@ -54,6 +46,12 @@ class _PracticeStageState extends State<PracticeStage> {
   };
 
   void _onAnswerChanged(SubmittedAnswer answer) {
+    // 点选项给一记轻响。**只对"点一下"的题型**：填空/主观题是逐键上抛的，
+    // 每敲一个字响一下就成了噪音。
+    if (answer is ChoiceAnswer || answer is TrueFalseAnswer) {
+      unawaited(context.read<SfxService>().selectOption());
+    }
+
     if (_runner.mode == PracticeMode.batch) {
       _runner.setDraft(answer);
       return;
@@ -82,10 +80,6 @@ class _PracticeStageState extends State<PracticeStage> {
       } else if (verdict == false) {
         unawaited(sfx.wrong());
       }
-      // 答对才自动跳；答错停住，让用户看完正确答案
-      if (verdict == true && !_runner.isLast) {
-        _scheduleAutoAdvance();
-      }
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -98,15 +92,7 @@ class _PracticeStageState extends State<PracticeStage> {
     }
   }
 
-  void _scheduleAutoAdvance() {
-    _autoAdvance?.cancel();
-    _autoAdvance = Timer(const Duration(milliseconds: 1500), () {
-      if (mounted) _runner.advance();
-    });
-  }
-
   void _continue() {
-    _autoAdvance?.cancel();
     if (_runner.isLast) {
       unawaited(_finish());
     } else {
@@ -118,6 +104,7 @@ class _PracticeStageState extends State<PracticeStage> {
     try {
       final summary = await _runner.finish();
       if (!mounted) return;
+      unawaited(context.read<SfxService>().finish());
       // 用 pushReplacement：交卷后不该能"返回"到已结束的答题界面
       context.pushReplacement(
         AppRoutes.practiceResultOf(_runner.sessionId),
@@ -134,6 +121,8 @@ class _PracticeStageState extends State<PracticeStage> {
   Future<void> _confirmQuit() async {
     final action = await showQuitConfirmSheet(context);
     if (!mounted || action == null) return;
+    // 两条分支都是"离开答题"，都放退出音（用户选完才响，取消不响）
+    unawaited(context.read<SfxService>().quit());
     if (action == QuitAction.abandon) {
       await _runner.abandon();
       if (mounted) Navigator.of(context).pop();

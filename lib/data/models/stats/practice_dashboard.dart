@@ -58,6 +58,15 @@ abstract class PracticeDashboard with _$PracticeDashboard {
     @JsonKey(name: 'streak_days') @Default(0) int streakDays,
     @JsonKey(name: 'last_practice_day') String? lastPracticeDay,
 
+    /// 热力图逐日答题数（**近 20 周**）。只含有作答的日子，没作答的那天客户端按 0 处理。
+    /// 与 [daily] 的区别：daily 是近 14 天且补过零（趋势图要连续），这个是 140 天、只给有数据的。
+    @JsonKey(name: 'heatmap_daily') @Default(<DailyStat>[]) List<DailyStat> heatmapDaily,
+
+    /// 热力图窗口的起止（`YYYY-MM-DD`，含两端）。服务端按**服务器时区**算，
+    /// 客户端不自己推——本机时区与服务器差一天时，两边各算一次就会错位。
+    @JsonKey(name: 'heatmap_from') String? heatmapFrom,
+    @JsonKey(name: 'heatmap_to') String? heatmapTo,
+
     /// 进行中的会话；非空时首页显示「继续练习」。
     /// **注意**：开始新练习会静默作废它，所以入口处要先问用户。
     @JsonKey(name: 'active_session') ActiveSessionBrief? activeSession,
