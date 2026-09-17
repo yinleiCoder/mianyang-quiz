@@ -18,6 +18,7 @@ import 'package:mianyang_quiz/data/models/bank/question_filter.dart';
 import 'package:mianyang_quiz/data/models/practice/practice_session.dart';
 import 'package:mianyang_quiz/data/repositories/practice_repository.dart';
 import 'package:mianyang_quiz/state/dashboard_store.dart';
+import 'package:mianyang_quiz/data/services/sfx_service.dart';
 import 'package:mianyang_quiz/state/practice_draft_store.dart';
 import 'package:mianyang_quiz/ui/core/design/duo_button.dart';
 import 'package:mianyang_quiz/ui/core/design/duo_card.dart';
@@ -122,9 +123,11 @@ class _ComposePageState extends State<ComposePage> {
                         mode: draft.mode,
                         limit: draft.limit,
                         shuffle: draft.shuffleOptions,
+                        sound: context.watch<SfxService>().enabled,
                         onModeChanged: draft.setMode,
                         onLimitChanged: draft.setLimit,
                         onShuffleChanged: draft.setShuffleOptions,
+                        onSoundChanged: context.read<SfxService>().setEnabled,
                       ),
                       if (draft.filterApplies) ...[
                         const SectionHeader(

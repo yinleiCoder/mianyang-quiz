@@ -22,6 +22,8 @@ import 'package:mianyang_quiz/data/repositories/subject_repository.dart';
 import 'package:mianyang_quiz/data/repositories/user_repository.dart';
 import 'package:mianyang_quiz/data/services/auth_service.dart';
 import 'package:mianyang_quiz/data/services/oss_upload_service.dart';
+import 'package:mianyang_quiz/data/services/question_pdf_service.dart';
+import 'package:mianyang_quiz/data/services/sfx_service.dart';
 import 'package:mianyang_quiz/state/auth_store.dart';
 import 'package:mianyang_quiz/state/dashboard_store.dart';
 import 'package:mianyang_quiz/state/favorite_store.dart';
@@ -39,7 +41,9 @@ class AppDependencies {
       favoriteRepository = FavoriteRepository(client),
       feedbackRepository = FeedbackRepository(client),
       appUpdateRepository = AppUpdateRepository(Dio()),
-      ossUploadService = OssUploadService(client);
+      ossUploadService = OssUploadService(client),
+      sfxService = SfxService(),
+      questionPdfService = QuestionPdfService();
 
   /// 由 bootstrap() 在 Supabase.initialize 之后调用。
   factory AppDependencies.create(SupabaseClient client) {
@@ -64,6 +68,8 @@ class AppDependencies {
   final FeedbackRepository feedbackRepository;
   final AppUpdateRepository appUpdateRepository;
   final OssUploadService ossUploadService;
+  final SfxService sfxService;
+  final QuestionPdfService questionPdfService;
 
   /// 四个跨页 Store。赋值在 create() 里完成（它们彼此之间与仓储有依赖顺序）。
   late final AuthStore authStore;
@@ -75,6 +81,8 @@ class AppDependencies {
   /// 路由守卫已经在 isReady 为 false 时挂起，页面自己显示加载态即可。
   void startSession() {
     authStore.bootstrap();
+    // 音效开关存本地，启动时恢复一次（失败保持默认开）
+    sfxService.load();
   }
 
   void dispose() {
@@ -82,5 +90,6 @@ class AppDependencies {
     dashboardStore.dispose();
     favoriteStore.dispose();
     practiceDraftStore.dispose();
+    sfxService.dispose();
   }
 }

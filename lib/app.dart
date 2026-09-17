@@ -80,6 +80,8 @@ class _MianyangQuizAppState extends State<MianyangQuizApp> {
                 Provider.value(value: deps.feedbackRepository),
                 Provider.value(value: deps.appUpdateRepository),
                 Provider.value(value: deps.ossUploadService),
+                Provider.value(value: deps.questionPdfService),
+                ChangeNotifierProvider.value(value: deps.sfxService),
                 // 跨页状态：只有这四个进全局
                 ChangeNotifierProvider.value(value: deps.authStore),
                 ChangeNotifierProvider.value(value: deps.dashboardStore),

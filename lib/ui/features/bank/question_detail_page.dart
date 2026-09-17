@@ -14,6 +14,7 @@ import 'package:mianyang_quiz/core/error/app_exception.dart';
 import 'package:mianyang_quiz/core/theme/app_metrics.dart';
 import 'package:mianyang_quiz/core/utils/async_value.dart';
 import 'package:mianyang_quiz/data/repositories/question_repository.dart';
+import 'package:mianyang_quiz/data/services/question_pdf_service.dart';
 import 'package:mianyang_quiz/state/favorite_store.dart';
 import 'package:mianyang_quiz/ui/core/design/duo_card.dart';
 import 'package:mianyang_quiz/ui/core/feedback/async_view.dart';
@@ -46,14 +47,33 @@ class _QuestionDetailPageState extends State<QuestionDetailPage> {
   Future<void> _load() async {
     setState(() => _state = const AsyncLoading());
     try {
-      final detail = await context
-          .read<QuestionRepository>()
-          .fetchDetail(widget.questionId);
+      final detail = await context.read<QuestionRepository>().fetchDetail(
+        widget.questionId,
+      );
       if (!mounted) return;
       setState(() => _state = AsyncData(detail));
     } on AppException catch (error) {
       if (!mounted) return;
       setState(() => _state = AsyncFailure(error));
+    }
+  }
+
+  /// 打印这道题。中文字体是运行时从 Google Fonts 拉的（见 QuestionPdfService 文件头），
+  /// 拉不到就提示需要联网，而不是印出一片空白。
+  Future<void> _print() async {
+    final detail = _state.valueOrNull;
+    if (detail == null) return;
+    try {
+      await context.read<QuestionPdfService>().printQuestion(
+        title: '题目打印',
+        brief: detail.brief,
+        content: detail.content,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('生成 PDF 失败：中文字体需要联网下载，请检查网络后重试')),
+      );
     }
   }
 
@@ -70,6 +90,12 @@ class _QuestionDetailPageState extends State<QuestionDetailPage> {
       appBar: AppBar(
         title: const Text('题目详情'),
         actions: [
+          // 打印：排成 A4 交给系统打印对话框（在那儿可「另存为 PDF」）
+          IconButton(
+            onPressed: _print,
+            tooltip: '打印',
+            icon: const Icon(Icons.print_outlined),
+          ),
           // 分享：把这道题发给别人（系统分享 / 复制链接）。题干摘要一并传下去，
           // 让分享文案和弹层预览都能看出是哪道题
           IconButton(
@@ -134,36 +160,33 @@ class _Body extends StatelessWidget {
       padding: EdgeInsets.all(AppMetrics.pagePadding.r),
       children: [
         Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // 署名交给元信息条：标签与署名同一行两端对齐（见该组件注释）
-                      QuestionMetaHeader(brief: brief, credits: detail.credits),
-                      SizedBox(height: AppMetrics.gapMd.r),
-                      DuoCard(
-                        child: QuestionView(
-                          qtype: brief.qtype,
-                          content: detail.content,
-                          // 背题不给作答：answer 恒为 null，回调是空实现
-                          answer: null,
-                          onAnswerChanged: (_) {},
-                          reveal: AnswerReveal.answerOnly,
-                          readOnly: true,
-                        ),
-                      ),
-                      SizedBox(height: AppMetrics.gapMd.r),
-                      // showAnswer: false —— answerOnly 已在选项/填空上标出标准答案，
-                      // 再让 AnswerSummaryView 说一遍就是重复。
-                      // 无解析时不渲染这张卡：AnalysisView 只会给出一个空盒子，
-                      // 空卡片比"没有解析"更让人觉得是加载失败。
-                      if (detail.content.analysis.isNotEmpty)
-                        DuoCard(
-                          child: AnalysisView(
-                            content: detail.content,
-                            showAnswer: false,
-                          ),
-                        ),
-                    ],
-                  ),
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // 署名交给元信息条：标签与署名同一行两端对齐（见该组件注释）
+            QuestionMetaHeader(brief: brief, credits: detail.credits),
+            SizedBox(height: AppMetrics.gapMd.r),
+            DuoCard(
+              child: QuestionView(
+                qtype: brief.qtype,
+                content: detail.content,
+                // 背题不给作答：answer 恒为 null，回调是空实现
+                answer: null,
+                onAnswerChanged: (_) {},
+                reveal: AnswerReveal.answerOnly,
+                readOnly: true,
+              ),
+            ),
+            SizedBox(height: AppMetrics.gapMd.r),
+            // showAnswer: false —— answerOnly 已在选项/填空上标出标准答案，
+            // 再让 AnswerSummaryView 说一遍就是重复。
+            // 无解析时不渲染这张卡：AnalysisView 只会给出一个空盒子，
+            // 空卡片比"没有解析"更让人觉得是加载失败。
+            if (detail.content.analysis.isNotEmpty)
+              DuoCard(
+                child: AnalysisView(content: detail.content, showAnswer: false),
+              ),
+          ],
+        ),
       ],
     );
   }

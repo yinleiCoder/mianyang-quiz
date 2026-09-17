@@ -25,7 +25,9 @@ abstract final class AppRoutes {
   static const bankName = 'bank';
 
   static const recordsPath = '/records';
+  static const aiPath = '/ai';
   static const recordsName = 'records';
+  static const aiName = 'ai';
 
   static const profilePath = '/profile';
   static const profileName = 'profile';
@@ -78,5 +80,11 @@ abstract final class AppRoutes {
   static String recordsOf(String tab) => '$recordsPath?$recordsTabQuery=$tab';
 
   /// 底部导航展示顺序（与 app_shell 的 tab 顺序一致）。
-  static const List<String> shellPaths = [homePath, bankPath, recordsPath, profilePath];
+  static const List<String> shellPaths = [
+    homePath,
+    bankPath,
+    aiPath,
+    recordsPath,
+    profilePath,
+  ];
 }

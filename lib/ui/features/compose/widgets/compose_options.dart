@@ -16,17 +16,23 @@ class ComposeOptions extends StatelessWidget {
     required this.mode,
     required this.limit,
     required this.shuffle,
+    required this.sound,
     required this.onModeChanged,
     required this.onLimitChanged,
     required this.onShuffleChanged,
+    required this.onSoundChanged,
   });
 
   final PracticeMode mode;
   final int limit;
   final bool shuffle;
+
+  /// 答题音效开关（存在本地偏好里，跨会话记住）。
+  final bool sound;
   final ValueChanged<PracticeMode> onModeChanged;
   final ValueChanged<int> onLimitChanged;
   final ValueChanged<bool> onShuffleChanged;
+  final ValueChanged<bool> onSoundChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -54,17 +60,33 @@ class ComposeOptions extends StatelessWidget {
           // may be invisible"（debug 下这里会变成红框）。垫一层透明 Material 即可。
           Material(
             type: MaterialType.transparency,
-            child: SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              value: shuffle,
-              onChanged: onShuffleChanged,
-              title: const Text('打乱选项顺序'),
-              subtitle: Text(
-                '同一道题反复练时，记住「A 是对的」没有意义',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+            child: Column(
+              children: [
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: shuffle,
+                  onChanged: onShuffleChanged,
+                  title: const Text('打乱选项顺序'),
+                  subtitle: Text(
+                    '同一道题反复练时，记住「A 是对的」没有意义',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
                 ),
-              ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: sound,
+                  onChanged: onSoundChanged,
+                  title: const Text('答题音效'),
+                  subtitle: Text(
+                    '答对、答错各有一记提示音（开关记在这台设备上）',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],

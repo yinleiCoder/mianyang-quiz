@@ -44,6 +44,10 @@ dependencies:
   url_launcher: ^6.3.2
   share_plus: ^13.3.0
   flutter_svg: ^2.3.0
+  webview_flutter: ^4.14.1
+  audioplayers: ^6.8.1
+  pdf: ^3.13.0
+  printing: ^5.15.0
 
 dev_dependencies:
   flutter_test:
@@ -62,6 +66,8 @@ flutter:
     # 品牌标识：与网页端 public/mianyang.svg 同一张图（两端一致），
     # 用矢量是因为它在 36~56px 之间变化，不必按尺寸各出一档位图。
     - assets/mianyang.svg
+    # 答题音效（程序合成，见 data/services/sfx_service.dart 文件头）
+    - assets/sounds/
 
 # 应用图标：源图 assets/app_icon.png（由 assets/mianyang.svg 渲染而来，见 AGENTS.md 第七节）。
 # 改图标 = 换源图 + `dart run flutter_launcher_icons`，Windows 的 .ico 与 Android 的各档

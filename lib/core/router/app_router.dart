@@ -22,6 +22,7 @@ import 'package:mianyang_quiz/ui/core/feedback/empty_state.dart';
 import 'package:mianyang_quiz/ui/features/auth/email_verify_page.dart';
 import 'package:mianyang_quiz/ui/features/auth/login_page.dart';
 import 'package:mianyang_quiz/ui/features/auth/register_page.dart';
+import 'package:mianyang_quiz/ui/features/ai/ai_page.dart';
 import 'package:mianyang_quiz/ui/features/bank/bank_page.dart';
 import 'package:mianyang_quiz/ui/features/bank/question_detail_page.dart';
 import 'package:mianyang_quiz/ui/features/compose/compose_page.dart';
@@ -80,6 +81,15 @@ GoRouter createAppRouter(AuthStore auth) {
                 path: AppRoutes.bankPath,
                 name: AppRoutes.bankName,
                 builder: (context, state) => const BankPage(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.aiPath,
+                name: AppRoutes.aiName,
+                builder: (context, state) => const AiPage(),
               ),
             ],
           ),

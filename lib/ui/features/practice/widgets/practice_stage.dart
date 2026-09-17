@@ -17,10 +17,12 @@ import 'package:mianyang_quiz/core/constants/qtype_meta.dart';
 import 'package:mianyang_quiz/core/error/error_mapper.dart';
 import 'package:mianyang_quiz/core/router/routes.dart';
 import 'package:mianyang_quiz/domain/submitted_answer.dart';
+import 'package:mianyang_quiz/data/services/sfx_service.dart';
 import 'package:mianyang_quiz/state/practice_mode.dart';
 import 'package:mianyang_quiz/ui/features/practice/state/practice_runner.dart';
 import 'package:mianyang_quiz/ui/features/practice/widgets/practice_layout.dart';
 import 'package:mianyang_quiz/ui/features/practice/widgets/quit_confirm_sheet.dart';
+import 'package:provider/provider.dart';
 
 class PracticeStage extends StatefulWidget {
   const PracticeStage({super.key, required this.runner});
@@ -71,8 +73,17 @@ class _PracticeStageState extends State<PracticeStage> {
     try {
       await _runner.check();
       if (!mounted) return;
+      // 音效跟着判定结果走（多邻国式即时反馈）。用 context.read 取一次、不监听：
+      // 开关只影响后续播放，不需要它触发重建。
+      final verdict = _runner.current.verdict;
+      final sfx = context.read<SfxService>();
+      if (verdict == true) {
+        unawaited(sfx.correct());
+      } else if (verdict == false) {
+        unawaited(sfx.wrong());
+      }
       // 答对才自动跳；答错停住，让用户看完正确答案
-      if (_runner.current.verdict == true && !_runner.isLast) {
+      if (verdict == true && !_runner.isLast) {
         _scheduleAutoAdvance();
       }
     } catch (error) {

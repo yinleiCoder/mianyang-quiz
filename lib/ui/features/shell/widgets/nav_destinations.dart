@@ -29,6 +29,12 @@ const List<NavDestination> kNavDestinations = [
     icon: Icons.auto_stories_outlined,
     activeIcon: Icons.auto_stories,
   ),
+  // AI 答疑：站外能力（duck.ai），放在题库旁边——学生查问题的手势就是"看完题顺手问一句"
+  NavDestination(
+    label: 'AI 答疑',
+    icon: Icons.auto_awesome_outlined,
+    activeIcon: Icons.auto_awesome,
+  ),
   // 记录用「打勾的清单」。原来是 insights（锯齿趋势线），既像股票图又和首页
   // 那张趋势图语义打架；fact_check 的选中态是实心块，不靠颜色也分得清选中。
   NavDestination(
