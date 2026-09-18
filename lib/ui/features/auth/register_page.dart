@@ -47,7 +47,8 @@ class RegisterPage extends StatefulWidget {
 class _RegisterPageState extends State<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
   final _name = TextEditingController();
-  final _email = TextEditingController();
+  // 登录账号：学生填手机号，教师手机号或邮箱都行（换算与理由见 core/utils/phone.dart）
+  final _identifier = TextEditingController();
   final _password = TextEditingController();
   // 班级是下拉，值是 id 而不是文本（专业大类/专业已由班级派生，不再单独选）
   String? _classId;
@@ -72,7 +73,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   void dispose() {
-    for (final controller in [_name, _email, _password]) {
+    for (final controller in [_name, _identifier, _password]) {
       controller.dispose();
     }
     super.dispose();
@@ -121,7 +122,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
     try {
       final needsVerify = await context.read<AuthStore>().signUp(
-        email: _email.text,
+        identifier: _identifier.text,
         password: _password.text,
         name: _name.text,
         // 选教师时传 teacherPending：它表达的正是「申请教师」的意图，
@@ -133,10 +134,11 @@ class _RegisterPageState extends State<RegisterPage> {
       );
       if (!mounted) return;
       if (needsVerify) {
-        // 邮箱走 query 传过去：验证页是深链可达的，参数从 URI 读才不会丢。
+        // 账号走 query 传过去：验证页是深链可达的，参数从 URI 读才不会丢。
+        // 传的是**合成邮箱**（手机号账号）或真实邮箱，页面上会过 displayEmail 展示。
         context.go(
           '${AppRoutes.emailVerifyPath}'
-          '?email=${Uri.encodeQueryComponent(_email.text.trim())}',
+          '?email=${Uri.encodeQueryComponent(_identifier.text.trim())}',
         );
       } else {
         context.go(AppRoutes.homePath);
@@ -168,8 +170,10 @@ class _RegisterPageState extends State<RegisterPage> {
           children: [
             BasicInfoFields(
               nameController: _name,
-              emailController: _email,
+              identifierController: _identifier,
               passwordController: _password,
+              // 学生强制手机号、教师两种皆可 —— 校验与 label 都跟着它变
+              isStudent: _isStudent,
               enabled: !_busy,
             ),
             SizedBox(height: AppMetrics.gapXl.r),

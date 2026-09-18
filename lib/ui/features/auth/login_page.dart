@@ -17,6 +17,7 @@ import 'package:mianyang_quiz/core/error/error_mapper.dart';
 import 'package:mianyang_quiz/core/router/routes.dart';
 import 'package:mianyang_quiz/core/theme/app_metrics.dart';
 import 'package:mianyang_quiz/core/theme/app_text_styles.dart';
+import 'package:mianyang_quiz/core/utils/phone.dart';
 import 'package:mianyang_quiz/state/auth_store.dart';
 import 'package:mianyang_quiz/ui/core/design/duo_button.dart';
 import 'package:mianyang_quiz/ui/features/auth/widgets/auth_scaffold.dart';
@@ -31,7 +32,9 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
-  final _email = TextEditingController();
+  // 一个输入框收两种标识：学生用手机号，教师/管理员多用邮箱。
+  // 分流规则在 core/utils/phone.dart 的 toAuthIdentifier —— 含 @ 走邮箱，否则走手机号。
+  final _identifier = TextEditingController();
   final _password = TextEditingController();
 
   bool _busy = false;
@@ -39,7 +42,7 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   void dispose() {
-    _email.dispose();
+    _identifier.dispose();
     _password.dispose();
     super.dispose();
   }
@@ -55,7 +58,7 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       await context.read<AuthStore>().signIn(
-        email: _email.text,
+        identifier: _identifier.text,
         password: _password.text,
       );
       if (!mounted) return;
@@ -75,7 +78,7 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return AuthScaffold(
       title: '登录',
-      subtitle: '用注册时的邮箱和密码继续刷题',
+      subtitle: '用注册时的手机号（或邮箱）和密码继续刷题',
       error: _error,
       footer: _footer(context),
       child: Form(
@@ -85,16 +88,19 @@ class _LoginPageState extends State<LoginPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             TextFormField(
-              controller: _email,
+              controller: _identifier,
               enabled: !_busy,
-              keyboardType: TextInputType.emailAddress,
+              // 用 text 而不是 emailAddress：后者会弹带 @ 的键盘，而学生大多数时候
+              // 要输的是纯数字。也不用 phone —— 那个键盘打不出字母，教师输邮箱会被卡住。
+              keyboardType: TextInputType.text,
               textInputAction: TextInputAction.next,
-              autofillHints: const [AutofillHints.email],
+              // 不填 autofillHints: email —— 手机号账号占多数，填了会让系统
+              // 优先弹邮箱自动填充，反而碍事。
               decoration: const InputDecoration(
-                labelText: '邮箱',
-                prefixIcon: Icon(Icons.mail_outline_rounded),
+                labelText: '手机号 / 邮箱',
+                prefixIcon: Icon(Icons.person_outline_rounded),
               ),
-              validator: _validateEmail,
+              validator: _validateIdentifier,
             ),
             SizedBox(height: AppMetrics.gapLg.r),
             TextFormField(
@@ -141,14 +147,22 @@ class _LoginPageState extends State<LoginPage> {
   );
 }
 
-/// 邮箱校验。只做「像不像邮箱」这一层，真正的判定在服务端。
-/// 太严的本地正则会把合法但少见的地址挡在门外，得不偿失。
-String? _validateEmail(String? input) {
+/// 账号标识校验：手机号或邮箱，二选一。真正的判定在服务端。
+String? _validateIdentifier(String? input) {
   final value = input?.trim() ?? '';
-  if (value.isEmpty) return '请输入邮箱';
-  final at = value.indexOf('@');
-  if (at <= 0 || at == value.length - 1 || !value.contains('.')) {
-    return '邮箱格式不正确';
+  if (value.isEmpty) return '请输入手机号或邮箱';
+
+  if (value.contains('@')) {
+    // 邮箱只做最宽松的形状检查 —— 太严的本地正则会把合法但少见的地址挡在门外。
+    final at = value.indexOf('@');
+    if (at <= 0 || at == value.length - 1 || !value.contains('.')) {
+      return '邮箱格式不正确';
+    }
+    return null;
   }
-  return null;
+
+  // 不含 @ 一律当手机号处理（与 core/utils/phone.dart 的 looksLikePhone 同口径）。
+  // **少打一位也要在这里报"手机号格式不正确"**，而不是放过去让服务端当邮箱查 ——
+  // 那样报回来的是「密码不正确」，用户根本想不到是自己号码打错了。
+  return normalizePhone(value) == null ? '手机号格式不正确' : null;
 }

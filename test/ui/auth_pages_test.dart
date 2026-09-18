@@ -34,8 +34,42 @@ void main() {
     await tester.tap(find.widgetWithText(DuoButton, '登录'));
     await tester.pump();
 
-    expect(find.text('请输入邮箱'), findsOneWidget);
+    expect(find.text('请输入手机号或邮箱'), findsOneWidget);
     expect(find.text('请输入密码'), findsOneWidget);
+  });
+
+  testWidgets('登录页：手机号少一位报"手机号格式不正确"，不能被当成邮箱查', (tester) async {
+    await _pump(tester, '/login');
+
+    await tester.enterText(find.byType(TextFormField).first, '1380013800');
+    await tester.tap(find.widgetWithText(DuoButton, '登录'));
+    await tester.pump();
+
+    // 关键：**不能**放过去让服务端当邮箱查 —— 那样报回来的是「密码不正确」，
+    // 用户根本想不到是自己号码少打了一位。
+    expect(find.text('手机号格式不正确'), findsOneWidget);
+  });
+
+  testWidgets('登录页：合法手机号不再报标识错误', (tester) async {
+    await _pump(tester, '/login');
+
+    await tester.enterText(find.byType(TextFormField).first, '13800138000');
+    await tester.tap(find.widgetWithText(DuoButton, '登录'));
+    await tester.pump();
+
+    expect(find.text('手机号格式不正确'), findsNothing);
+    expect(find.text('请输入手机号或邮箱'), findsNothing);
+  });
+
+  testWidgets('登录页：邮箱走邮箱这条路（含 @ 时不按手机号校验）', (tester) async {
+    await _pump(tester, '/login');
+
+    await tester.enterText(find.byType(TextFormField).first, 'teacher@example.com');
+    await tester.tap(find.widgetWithText(DuoButton, '登录'));
+    await tester.pump();
+
+    expect(find.text('手机号格式不正确'), findsNothing);
+    expect(find.text('邮箱格式不正确'), findsNothing);
   });
 
   testWidgets('登录页：底部链接去注册', (tester) async {
@@ -73,8 +107,47 @@ void main() {
   testWidgets('验证页：显示 query 里的邮箱与关闭说明', (tester) async {
     await _pump(tester, '/verify-email?email=student%40example.com');
 
-    expect(find.text('注册邮箱：student@example.com'), findsOneWidget);
+    expect(find.text('注册账号：student@example.com'), findsOneWidget);
     expect(find.text('本项目已关闭邮箱验证，请直接登录。'), findsOneWidget);
+  });
+
+  testWidgets('验证页：合成邮箱还原成手机号，不把假地址印给学生', (tester) async {
+    await _pump(tester, '/verify-email?email=13800138000%40phone.myquiz.cn');
+
+    // 13800138000@phone.myquiz.cn 是实现细节（见 core/utils/phone.dart），
+    // 学生看到只会困惑"我什么时候有这个邮箱了"
+    expect(find.text('注册账号：138 0013 8000'), findsOneWidget);
+    expect(find.textContaining('@phone.myquiz.cn'), findsNothing);
+  });
+
+  testWidgets('注册页：学生填邮箱会被拦下（学生必须用手机号）', (tester) async {
+    await _pump(tester, '/register');
+
+    await tester.enterText(find.byType(TextFormField).at(0), '张三');
+    // 账号栏故意填邮箱：学生没有邮箱、也记不住邮箱，用邮箱注册等于给自己埋一个
+    // 「找不回账号」的坑（何况免短信方案下密码只能找管理员重置）
+    await tester.enterText(find.byType(TextFormField).at(1), 'zhangsan@example.com');
+    // 注册表单很长，390×844 下按钮在折叠线以下 —— 不先滚过去，tap 会落在屏幕外
+    await tester.ensureVisible(find.widgetWithText(DuoButton, '注册'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(DuoButton, '注册'));
+    await tester.pump();
+
+    expect(find.text('请输入 11 位手机号'), findsOneWidget);
+  });
+
+  testWidgets('注册页：学生填手机号不报错', (tester) async {
+    await _pump(tester, '/register');
+
+    await tester.enterText(find.byType(TextFormField).at(0), '张三');
+    await tester.enterText(find.byType(TextFormField).at(1), '13800138000');
+    await tester.ensureVisible(find.widgetWithText(DuoButton, '注册'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(DuoButton, '注册'));
+    await tester.pump();
+
+    expect(find.text('请输入 11 位手机号'), findsNothing);
+    expect(find.text('手机号格式不正确'), findsNothing);
   });
 
   testWidgets('验证页：回登录页', (tester) async {

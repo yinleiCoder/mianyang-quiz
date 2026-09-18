@@ -19,6 +19,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/core/router/routes.dart';
 import 'package:mianyang_quiz/core/theme/app_metrics.dart';
 import 'package:mianyang_quiz/core/theme/app_text_styles.dart';
+import 'package:mianyang_quiz/core/utils/phone.dart';
 import 'package:mianyang_quiz/ui/core/design/duo_button.dart';
 import 'package:mianyang_quiz/ui/features/auth/widgets/auth_scaffold.dart';
 import 'package:mianyang_quiz/core/theme/semantic_colors.dart';
@@ -72,7 +73,13 @@ class EmailVerifyPage extends StatelessWidget {
           if (email != null && email.isNotEmpty) ...[
             SizedBox(height: AppMetrics.gapLg.r),
             Text(
-              '注册邮箱：$email',
+              // 注册页传过来的可能是手机号账号的**合成邮箱**（138…@phone.myquiz.cn）。
+              // 学生看到那串东西只会困惑，所以走 displayIdentifier：合成邮箱会被还原成
+              // 手机号，真实邮箱原样显示，本来就是纯手机号的输入也原样显示。
+              //
+              // 注意别写成 `displayEmail(email).isEmpty ? email : ...` —— 那样合成邮箱
+              // 恰好落进"空"分支，等于原样把假地址印出来，白折叠一场。
+              '注册账号：${displayIdentifier(email: email)}',
               style: AppTextStyles.body(
                 context,
               ).copyWith(color: scheme.onSurfaceVariant),

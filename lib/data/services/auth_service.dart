@@ -8,7 +8,9 @@
 // 页面不要各自轮询 currentSession。
 
 import 'package:mianyang_quiz/core/constants/identity_meta.dart';
+import 'package:mianyang_quiz/core/error/app_exception.dart';
 import 'package:mianyang_quiz/core/error/error_mapper.dart';
+import 'package:mianyang_quiz/core/utils/phone.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthService {
@@ -26,13 +28,29 @@ class AuthService {
   /// 登录状态变化（登录 / 登出 / token 刷新）。**记得 cancel 订阅**。
   Stream<AuthState> get authStateChanges => _client.auth.onAuthStateChange;
 
-  /// 邮箱密码登录。失败文案已由 mapError 翻成中文
-  /// （「邮箱或密码不正确」「邮箱尚未验证，请先完成验证」…）。
-  /// 邮箱两端去空白——用户从聊天工具里复制常带空格。
-  Future<void> signIn({required String email, required String password}) async {
+  /// 登录。[identifier] **可以是手机号或邮箱** —— 学生用手机号，教师/管理员多用邮箱。
+  ///
+  /// 分流与换算见 core/utils/phone.dart：含 `@` 走邮箱，否则规范化成手机号再折成
+  /// 合成邮箱。两条路最终都交给 signInWithPassword 的 email 参数 ——
+  /// 手机号账号在 auth.users 里存的就是合成邮箱（理由见 phone.dart 顶部）。
+  ///
+  /// 失败文案已由 mapError 翻成中文（「手机号/邮箱或密码不正确」…）。
+  /// 输入两端去空白——用户从聊天工具里复制常带空格。
+  Future<void> signIn({required String identifier, required String password}) async {
+    final id = toAuthIdentifier(identifier);
+    // 走到这里说明既不像邮箱、也不是合法手机号。**不能**原样丢给 Supabase ——
+    // 它会把 "1380013" 当成邮箱去查，报回 "Invalid login credentials"，
+    // 用户看到「密码不对」却根本没意识到是号码打错了。
+    //
+    // 用 UnknownException 而不是 AuthException：后者在路由层是「会话失效、踢回登录页」
+    // 的信号（见 core/router/app_router.dart），拿它做表单校验会触发一次语义错误的跳转。
+    // 登录页的 validator 会先拦一道，这里是兜底。
+    if (id.email == null) {
+      throw const UnknownException(message: '请输入正确的手机号或邮箱');
+    }
     try {
       await _client.auth.signInWithPassword(
-        email: email.trim(),
+        email: id.email!,
         password: password,
       );
     } catch (error) {
@@ -60,7 +78,7 @@ class AuthService {
   /// （其余一律落 student），所以这里把 teacherPending 也归一成 'teacher'，
   /// 避免调用方传 teacherPending 反而注册成学生。
   Future<bool> signUp({
-    required String email,
+    required String identifier,
     required String password,
     required String name,
     Identity identity = Identity.student,
@@ -68,13 +86,23 @@ class AuthService {
     int? enrollYear,
     String? classId,
   }) async {
+    final id = toAuthIdentifier(identifier);
+    // 同 signIn：既不是邮箱也不是合法手机号时不能原样丢给 Supabase。
+    if (id.email == null) {
+      throw const UnknownException(message: '请输入正确的手机号或邮箱');
+    }
     try {
       final response = await _client.auth.signUp(
-        email: email.trim(),
+        // 手机号账号在这里存成合成邮箱（换算与理由见 core/utils/phone.dart）
+        email: id.email!,
         password: password,
         data: {
           'name': name.trim(),
           'identity': identity == Identity.student ? 'student' : 'teacher',
+          // phone 随元数据下发，供数据库的 handle_new_user 落进 profiles.phone（0064）。
+          // 邮箱账号这里不传 —— 传空串会让触发器把 phone 落成 '' 而不是 NULL，
+          // 于是"没绑手机号"和"绑了个空号"就分不清了。
+          'phone': ?id.phone,
           // 空值整条不传：触发器对缺键与空串的处理一致（都落 null），
           // 但少传几个键能让 metadata 干净些。
           'school_id': ?schoolId,

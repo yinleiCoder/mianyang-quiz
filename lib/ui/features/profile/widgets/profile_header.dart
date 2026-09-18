@@ -12,6 +12,7 @@ import 'package:mianyang_quiz/core/constants/identity_meta.dart';
 import 'package:mianyang_quiz/core/theme/app_metrics.dart';
 import 'package:mianyang_quiz/core/theme/app_text_styles.dart';
 import 'package:mianyang_quiz/core/utils/formatters.dart';
+import 'package:mianyang_quiz/core/utils/phone.dart';
 import 'package:mianyang_quiz/data/models/user/profile.dart';
 import 'package:mianyang_quiz/ui/core/design/duo_card.dart';
 import 'package:mianyang_quiz/ui/core/design/duo_chip.dart';
@@ -55,14 +56,39 @@ class ProfileHeader extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: AppTextStyles.sectionTitle(context),
                     ),
+                    // 手机号与邮箱**分开显示**，不是一个笼统的"登录标识" ——
+                    // 它们是两个独立字段：学生大多只有手机号、没有邮箱。
+                    // 邮箱走 displayEmail 折叠合成地址（138…@phone.myquiz.cn，见
+                    // core/utils/phone.dart）—— 直接印出来学生会以为自己有个怪邮箱。
                     SizedBox(height: AppMetrics.gapXs.r),
-                    Text(
-                      profile.email,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.caption(context)
-                          .copyWith(color: scheme.onSurfaceVariant),
-                    ),
+                    if (profile.phone.isNotEmpty)
+                      Text(
+                        formatPhone(profile.phone),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.caption(context)
+                            .copyWith(color: scheme.onSurfaceVariant),
+                      ),
+                    if (profile.phone.isNotEmpty &&
+                        displayEmail(profile.email).isNotEmpty)
+                      SizedBox(height: AppMetrics.gapXs.r),
+                    if (displayEmail(profile.email).isNotEmpty)
+                      Text(
+                        displayEmail(profile.email),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.caption(context)
+                            .copyWith(color: scheme.onSurfaceVariant),
+                      ),
+                    if (profile.phone.isEmpty &&
+                        displayEmail(profile.email).isEmpty)
+                      Text(
+                        '未绑定手机号 / 邮箱',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.caption(context)
+                            .copyWith(color: scheme.onSurfaceVariant),
+                      ),
                     SizedBox(height: AppMetrics.gapMd.r),
                     Wrap(
                       spacing: AppMetrics.gapXs.r,

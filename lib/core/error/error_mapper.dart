@@ -60,9 +60,11 @@ String _authMessage(sb.AuthException error) {
   // Supabase 的鉴权错误文案是英文，挑常见的翻一下，其余原样透传（便于排查）。
   final raw = error.message;
   final lower = raw.toLowerCase();
-  if (lower.contains('invalid login credentials')) return '邮箱或密码不正确';
-  if (lower.contains('email not confirmed')) return '邮箱尚未验证，请先完成验证';
-  if (lower.contains('user already registered')) return '该邮箱已被注册';
+  // 文案里写「手机号/邮箱」而不是单说邮箱：账号现在两种都有，学生绝大多数是手机号，
+  // 提示里只出现"邮箱"会让人以为走错了入口。（与网页端 lib/auth-errors.js 同口径）
+  if (lower.contains('invalid login credentials')) return '手机号/邮箱或密码不正确';
+  if (lower.contains('email not confirmed')) return '账号尚未验证，请先完成验证';
+  if (lower.contains('user already registered')) return '该手机号/邮箱已被注册';
   if (lower.contains('password should be at least')) return '密码长度至少 6 位';
   if (lower.contains('signups not allowed')) return '当前不允许自助注册，请联系管理员';
   if (lower.contains('token has expired') || lower.contains('invalid token')) {

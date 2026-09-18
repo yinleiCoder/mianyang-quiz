@@ -83,16 +83,17 @@ class AuthStore extends ChangeNotifier {
     });
   }
 
-  Future<void> signIn({required String email, required String password}) =>
+  /// [identifier] 可以是手机号或邮箱（分流与换算在 AuthService 里，见 core/utils/phone.dart）。
+  Future<void> signIn({required String identifier, required String password}) =>
       _run(() async {
-        await _auth.signIn(email: email, password: password);
+        await _auth.signIn(identifier: identifier, password: password);
         await _loadProfile();
       });
 
   /// 返回 true 表示注册后还需邮箱验证（本项目已关闭邮箱验证，通常为 false）。
   /// 参数直接透传给 AuthService.signUp，键名与可选性都见那边的注释。
   Future<bool> signUp({
-    required String email,
+    required String identifier,
     required String password,
     required String name,
     Identity identity = Identity.student,
@@ -103,7 +104,7 @@ class AuthStore extends ChangeNotifier {
     var needsVerification = false;
     await _run(() async {
       needsVerification = await _auth.signUp(
-        email: email,
+        identifier: identifier,
         password: password,
         name: name,
         identity: identity,

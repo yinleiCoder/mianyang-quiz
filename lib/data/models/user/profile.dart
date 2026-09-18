@@ -27,6 +27,11 @@ abstract class Profile with _$Profile {
     @JsonKey(name: 'user_id') required String userId,
     @Default('') String name,
     @Default('') String email,
+    // 手机号（0064）。与 email 是**两个独立字段**，不是二选一：
+    // 手机号账号没有真实邮箱，它的 email 列存的是合成地址 `138…@phone.myquiz.cn`。
+    // 展示前必须过 core/utils/phone.dart 的 displayEmail（折叠合成地址）；
+    // 紧凑处用 displayIdentifier（有手机号出手机号，否则出邮箱）。
+    @Default('') String phone,
     @JsonKey(name: 'school_id') String? schoolId,
     @JsonKey(name: 'is_admin') @Default(false) bool isAdmin,
     @JsonKey(name: 'avatar_url') String? avatarUrl,
