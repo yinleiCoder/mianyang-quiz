@@ -55,8 +55,8 @@ jobs:
         # Release 的 tag 比，两边同源才不会误报。
         run: |
           $config = [ordered]@{
-            SUPABASE_URL      = "https://jmsryficskggsruhicys.supabase.co"
-            SUPABASE_ANON_KEY = "sb_publishable_eGWYuQXE8Y8WlLdaPULAxA_6ngyyx-y"
+            SUPABASE_URL      = "https://jwbczaoevrcrdqqvkfaz.supabase.co"
+            SUPABASE_ANON_KEY = "sb_publishable_sKDyEQXOuKnG0pcNcJBTNg_OFB1PAM7"
             OSS_PUBLIC_HOST   = "mianyang-question-bank.oss-cn-chengdu.aliyuncs.com"
             API_BASE_URL      = "https://myquiz.cn"
             SHARE_BASE_URL    = "https://myquiz.cn"
@@ -131,8 +131,8 @@ jobs:
         run: |
           cat > config/ci.local.json <<JSON
           {
-            "SUPABASE_URL": "https://jmsryficskggsruhicys.supabase.co",
-            "SUPABASE_ANON_KEY": "sb_publishable_eGWYuQXE8Y8WlLdaPULAxA_6ngyyx-y",
+            "SUPABASE_URL": "https://jwbczaoevrcrdqqvkfaz.supabase.co",
+            "SUPABASE_ANON_KEY": "sb_publishable_sKDyEQXOuKnG0pcNcJBTNg_OFB1PAM7",
             "OSS_PUBLIC_HOST": "mianyang-question-bank.oss-cn-chengdu.aliyuncs.com",
             "API_BASE_URL": "https://myquiz.cn",
             "SHARE_BASE_URL": "https://myquiz.cn",

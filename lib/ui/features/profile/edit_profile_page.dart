@@ -4,10 +4,13 @@
 // 不负责：头像上传（AvatarPickerField 自己直传 OSS）、学校列表（SchoolPickerField）、
 // 申请教师身份（资料页的事）。
 //
-// 服务端语义：update_own_profile 与 update_my_enrollment 都是**全量覆盖**——
-// avatarUrl 传的就是「当前头像」，改名时也要原样带上，漏传（null）等于清空头像。
+// 服务端语义：update_own_profile 与 update_my_study_info 都是**全量覆盖**——
+// avatarUrl 传的就是「当前头像」，改名时也要原样带上，漏传（null）等于清空头像；
+// classId 传 null 也是「清掉班级」而不是「不改」。
 // 换校/解绑学校还有身份限制（教研组长、学校管理员），那些拒绝由服务端给中文文案；
 // 照实提示即可，不要在端上预判。
+
+import 'dart:async';
 
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
@@ -17,9 +20,8 @@ import 'package:mianyang_quiz/core/error/app_exception.dart';
 import 'package:mianyang_quiz/core/theme/app_metrics.dart';
 import 'package:mianyang_quiz/core/theme/app_text_styles.dart';
 import 'package:mianyang_quiz/core/utils/async_value.dart';
-import 'package:mianyang_quiz/data/models/bank/subject_node.dart';
 import 'package:mianyang_quiz/data/models/user/profile.dart';
-import 'package:mianyang_quiz/data/repositories/subject_repository.dart';
+import 'package:mianyang_quiz/data/models/user/school_class.dart';
 import 'package:mianyang_quiz/data/repositories/user_repository.dart';
 import 'package:mianyang_quiz/state/auth_store.dart';
 import 'package:mianyang_quiz/ui/core/design/duo_button.dart';
@@ -39,13 +41,12 @@ class EditProfilePage extends StatefulWidget {
 
 class _EditProfilePageState extends State<EditProfilePage> {
   final _name = TextEditingController();
-  final _className = TextEditingController();
-  // 入学年份/专业大类/专业都改成"选"而不是"填"（与注册页同一套组件）
+  // 入学年份与班级都是"选"而不是"填"（与注册页同一套组件）；专业由班级派生，不在这儿选
   int? _enrollYear;
-  String? _majorCategory;
-  String? _major;
-  // 与注册页同一套：失败不阻断保存，只让两个下拉不可用
-  AsyncValue<List<SubjectNode>> _nodes = const AsyncLoading<List<SubjectNode>>();
+  String? _classId;
+  // 所选学校的班级。与注册页同一套：拉不到不阻断保存，只让班级下拉不可用。
+  // 没绑学校时是"有数据的空列表"，好让下拉落进"禁用 + 说明"而不是一直转圈
+  AsyncValue<List<SchoolClass>> _classes = const AsyncData<List<SchoolClass>>([]);
 
   String? _schoolId;
   String? _avatarUrl;
@@ -59,30 +60,49 @@ class _EditProfilePageState extends State<EditProfilePage> {
   @override
   void initState() {
     super.initState();
-    // 专业目录（登录后读，权限本来就有）：失败只让两个下拉禁用，不阻断本页
-    asAsyncValue(context.read<SubjectRepository>().fetchNodes).then((v) {
-      if (mounted) setState(() => _nodes = v);
-    });
     final profile = context.read<AuthStore>().profile;
     if (profile != null) {
       _name.text = profile.name;
       _enrollYear = profile.enrollYear;
-      _majorCategory = profile.majorCategory;
-      _major = profile.major;
-      _className.text = profile.className ?? '';
+      _classId = profile.classId;
       _schoolId = profile.schoolId;
       _avatarUrl = profile.avatarUrl;
       _initial = profile.initial;
       // 教师没有班级与专业，就读信息收起（服务端也只对学生有意义）。
       _showEnrollment = profile.identityValue != Identity.teacher;
     }
+    // 班级按档案里的学校拉（登录后读，权限本来就有）：失败只让班级下拉禁用，不阻断本页
+    final schoolId = _schoolId;
+    if (schoolId != null) unawaited(_loadClasses(schoolId));
   }
 
   @override
   void dispose() {
     _name.dispose();
-    _className.dispose();
     super.dispose();
+  }
+
+  /// 换学校必须清掉班级：旧班级属于原学校，服务端 update_my_study_info 会直接拒
+  /// （「该班级不属于你所在的学校，或已停用」），留着只会让人白存一次。
+  /// 学校清空后班级也归零——没有学校就没有可选的班。
+  void _onSchoolChanged(String? schoolId) {
+    if (schoolId == _schoolId) return;
+    setState(() {
+      _schoolId = schoolId;
+      _classId = null;
+      _classes = const AsyncData<List<SchoolClass>>([]);
+    });
+    if (schoolId != null) unawaited(_loadClasses(schoolId));
+  }
+
+  Future<void> _loadClasses(String schoolId) async {
+    setState(() => _classes = const AsyncLoading<List<SchoolClass>>());
+    final classes = await asAsyncValue(
+      () => context.read<UserRepository>().fetchClasses(schoolId: schoolId),
+    );
+    // 期间又换了学校：这份结果已经是上一所学校的，丢掉（否则会盖住新学校的班级）
+    if (!mounted || _schoolId != schoolId) return;
+    setState(() => _classes = classes);
   }
 
   Future<void> _submit() async {
@@ -103,13 +123,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
         schoolId: _schoolId,
         avatarUrl: _avatarUrl,
       );
-      if (_showEnrollment) {
-        await users.updateEnrollment(
-          enrollYear: _enrollYear,
-          majorCategory: _majorCategory,
-          major: _major,
-          className: optionalText(_className.text),
-        );
+      // 没绑学校时不发这次请求：update_my_study_info 的第一道断言就是「已绑定学校」，
+      // 连"只改入学年份"都会被拒（「请先绑定所属学校后再选择班级」），
+      // 那会让没绑校的学生连改个名字都存不下去。班级在没学校时本来就无从选起，
+      // 入学年份也就跟着一起留着——就读信息这一段在页面上是禁用 + 说明的。
+      if (_showEnrollment && _schoolId != null) {
+        await users.updateStudyInfo(enrollYear: _enrollYear, classId: _classId);
       }
       await auth.refreshProfile();
       if (!mounted) return;
@@ -163,7 +182,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       SizedBox(height: AppMetrics.gapMd.r),
                       SchoolPickerField(
                         schoolId: _schoolId,
-                        onChanged: (id) => setState(() => _schoolId = id),
+                        onChanged: _onSchoolChanged,
                       ),
                       if (_showEnrollment) ...[
                         SizedBox(height: AppMetrics.gapXl.r),
@@ -171,14 +190,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           enrollYear: _enrollYear,
                           onEnrollYearChanged: (v) =>
                               setState(() => _enrollYear = v),
-                          majorCategory: _majorCategory,
-                          onMajorCategoryChanged: (v) =>
-                              setState(() => _majorCategory = v),
-                          major: _major,
-                          onMajorChanged: (v) => setState(() => _major = v),
-                          classNameController: _className,
-                          nodes: _nodes.valueOrNull ?? const [],
-                          nodesLoading: _nodes.isLoading,
+                          classId: _classId,
+                          onClassIdChanged: (v) =>
+                              setState(() => _classId = v),
+                          classes: _classes.valueOrNull ?? const [],
+                          hasSchool: _schoolId != null,
+                          classesLoading: _classes.isLoading,
                           enabled: !_saving,
                         ),
                       ],

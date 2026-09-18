@@ -90,6 +90,7 @@ class AuthStore extends ChangeNotifier {
       });
 
   /// 返回 true 表示注册后还需邮箱验证（本项目已关闭邮箱验证，通常为 false）。
+  /// 参数直接透传给 AuthService.signUp，键名与可选性都见那边的注释。
   Future<bool> signUp({
     required String email,
     required String password,
@@ -97,9 +98,7 @@ class AuthStore extends ChangeNotifier {
     Identity identity = Identity.student,
     String? schoolId,
     int? enrollYear,
-    String? majorCategory,
-    String? major,
-    String? className,
+    String? classId,
   }) async {
     var needsVerification = false;
     await _run(() async {
@@ -110,9 +109,7 @@ class AuthStore extends ChangeNotifier {
         identity: identity,
         schoolId: schoolId,
         enrollYear: enrollYear,
-        majorCategory: majorCategory,
-        major: major,
-        className: className,
+        classId: classId,
       );
       if (!needsVerification) await _loadProfile();
     });

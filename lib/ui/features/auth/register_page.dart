@@ -11,7 +11,10 @@
 //     就读信息当成学生档案。
 //
 // 学校列表在本页拉：它是注册流程的一部分，失败时页面上给一次重试即可，
-// 不为它单开一个 Store（没有第二个页面要写它）。
+// 不为它单开一个 Store（没有第二个页面要写它）。班级列表**跟着所选学校走**，
+// 所以在换校时按需拉（见 _onSchoolChanged）——学校没选之前没有"哪个学校的班"可言。
+
+import 'dart:async';
 
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
@@ -21,9 +24,8 @@ import 'package:mianyang_quiz/core/error/error_mapper.dart';
 import 'package:mianyang_quiz/core/router/routes.dart';
 import 'package:mianyang_quiz/core/theme/app_metrics.dart';
 import 'package:mianyang_quiz/core/utils/async_value.dart';
-import 'package:mianyang_quiz/data/models/bank/subject_node.dart';
 import 'package:mianyang_quiz/data/models/user/school.dart';
-import 'package:mianyang_quiz/data/repositories/subject_repository.dart';
+import 'package:mianyang_quiz/data/models/user/school_class.dart';
 import 'package:mianyang_quiz/data/repositories/user_repository.dart';
 import 'package:mianyang_quiz/state/auth_store.dart';
 import 'package:mianyang_quiz/ui/core/design/duo_button.dart';
@@ -47,17 +49,16 @@ class _RegisterPageState extends State<RegisterPage> {
   final _name = TextEditingController();
   final _email = TextEditingController();
   final _password = TextEditingController();
-  final _className = TextEditingController();
-  // 专业大类/专业改成从科目树里选，所以是值而不是控制器
-  String? _majorCategory;
-  String? _major;
+  // 班级是下拉，值是 id 而不是文本（专业大类/专业已由班级派生，不再单独选）
+  String? _classId;
 
   Identity _identity = Identity.student;
   String? _schoolId;
   int? _enrollYear;
   AsyncValue<List<School>> _schools = const AsyncLoading<List<School>>();
-  // 专业目录（subject_nodes 的专业树）：注册时还没登录，靠迁移 0039 对 anon 开的只读
-  AsyncValue<List<SubjectNode>> _nodes = const AsyncLoading<List<SubjectNode>>();
+  // 所选学校的班级（0063，表对 anon 开了只读，注册前就能拉）。
+  // 没选学校时是"有数据的空列表"，好让班级下拉落进"禁用 + 说明"而不是一直转圈。
+  AsyncValue<List<SchoolClass>> _classes = const AsyncData<List<SchoolClass>>([]);
   bool _busy = false;
   String? _error;
 
@@ -71,29 +72,44 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   void dispose() {
-    for (final controller in [_name, _email, _password, _className]) {
+    for (final controller in [_name, _email, _password]) {
       controller.dispose();
     }
     super.dispose();
   }
 
-  /// 注册要用的两份参考数据：学校名单 + 专业目录（后者供专业大类/专业下拉）。
-  /// 两份并行拉、各自独立失败——任何一份拉不到都不该阻断注册（对应的选择项禁用即可）。
+  /// 注册要用的参考数据：学校名单。失败不阻断注册（学校是可选项，页面上给一次重试）。
+  /// 班级不在这里拉——它随所选学校而变，见 [_onSchoolChanged]。
   Future<void> _loadReferenceData() async {
-    setState(() {
-      _schools = const AsyncLoading<List<School>>();
-      _nodes = const AsyncLoading<List<SubjectNode>>();
-    });
-    // 两个 future 同时起，再依次 await：并行取数、类型清晰、任一失败都不影响另一个
-    final schoolsFuture = asAsyncValue(context.read<UserRepository>().fetchSchools);
-    final nodesFuture = asAsyncValue(context.read<SubjectRepository>().fetchNodes);
-    final schools = await schoolsFuture;
-    final nodes = await nodesFuture;
+    setState(() => _schools = const AsyncLoading<List<School>>());
+    final schools = await asAsyncValue(
+      context.read<UserRepository>().fetchSchools,
+    );
     if (!mounted) return;
+    setState(() => _schools = schools);
+  }
+
+  /// 换学校必须清掉班级：旧班级属于另一所学校，留着提交上去服务端会静默丢弃
+  /// （handle_new_user 里不 raise，只退化成"未分班"），学生却以为自己分好班了。
+  void _onSchoolChanged(String? schoolId) {
+    if (schoolId == _schoolId) return;
     setState(() {
-      _schools = schools;
-      _nodes = nodes;
+      _schoolId = schoolId;
+      _classId = null;
+      _classes = const AsyncData<List<SchoolClass>>([]);
     });
+    if (schoolId != null) unawaited(_loadClasses(schoolId));
+  }
+
+  /// 拉某所学校的班级。失败只让班级下拉禁用，不影响注册主流程。
+  Future<void> _loadClasses(String schoolId) async {
+    setState(() => _classes = const AsyncLoading<List<SchoolClass>>());
+    final classes = await asAsyncValue(
+      () => context.read<UserRepository>().fetchClasses(schoolId: schoolId),
+    );
+    // 期间又换了学校：这份结果已经是上一所学校的，丢掉（否则会盖住新学校的班级）
+    if (!mounted || _schoolId != schoolId) return;
+    setState(() => _classes = classes);
   }
 
   Future<void> _submit() async {
@@ -113,9 +129,7 @@ class _RegisterPageState extends State<RegisterPage> {
         identity: _identity,
         schoolId: _schoolId,
         enrollYear: _isStudent ? _enrollYear : null,
-        majorCategory: _isStudent ? _majorCategory : null,
-        major: _isStudent ? _major : null,
-        className: _isStudent ? optionalText(_className.text) : null,
+        classId: _isStudent ? _classId : null,
       );
       if (!mounted) return;
       if (needsVerify) {
@@ -171,7 +185,7 @@ class _RegisterPageState extends State<RegisterPage> {
               value: _schoolId,
               enabled: !_busy,
               onRetry: _loadReferenceData,
-              onChanged: (schoolId) => setState(() => _schoolId = schoolId),
+              onChanged: _onSchoolChanged,
             ),
             if (_isStudent) ...[
               SizedBox(height: AppMetrics.gapXl.r),
@@ -179,14 +193,11 @@ class _RegisterPageState extends State<RegisterPage> {
                 enrollYear: _enrollYear,
                 onEnrollYearChanged: (year) =>
                     setState(() => _enrollYear = year),
-                majorCategory: _majorCategory,
-                onMajorCategoryChanged: (v) =>
-                    setState(() => _majorCategory = v),
-                major: _major,
-                onMajorChanged: (v) => setState(() => _major = v),
-                classNameController: _className,
-                nodes: _nodes.valueOrNull ?? const [],
-                nodesLoading: _nodes.isLoading,
+                classId: _classId,
+                onClassIdChanged: (v) => setState(() => _classId = v),
+                classes: _classes.valueOrNull ?? const [],
+                hasSchool: _schoolId != null,
+                classesLoading: _classes.isLoading,
                 enabled: !_busy,
               ),
             ],

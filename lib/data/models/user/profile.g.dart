@@ -22,6 +22,8 @@ _Profile _$ProfileFromJson(Map<String, dynamic> json) => $checkedCreate(
       majorCategory: $checkedConvert('major_category', (v) => v as String?),
       major: $checkedConvert('major', (v) => v as String?),
       className: $checkedConvert('class_name', (v) => v as String?),
+      classId: $checkedConvert('class_id', (v) => v as String?),
+      majorNodeId: $checkedConvert('major_node_id', (v) => v as String?),
     );
     return val;
   },
@@ -33,6 +35,8 @@ _Profile _$ProfileFromJson(Map<String, dynamic> json) => $checkedCreate(
     'enrollYear': 'enroll_year',
     'majorCategory': 'major_category',
     'className': 'class_name',
+    'classId': 'class_id',
+    'majorNodeId': 'major_node_id',
   },
 );
 
@@ -48,4 +52,6 @@ Map<String, dynamic> _$ProfileToJson(_Profile instance) => <String, dynamic>{
   'major_category': instance.majorCategory,
   'major': instance.major,
   'class_name': instance.className,
+  'class_id': instance.classId,
+  'major_node_id': instance.majorNodeId,
 };

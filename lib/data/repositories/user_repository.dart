@@ -4,11 +4,13 @@
 // 写入一律走 RPC（客户端没有 DML 权限，见 AGENTS.md 第四条）。
 //
 // 学校列表也放这里：它只在「填档案」的两处用到（注册选校、档案改校），
-// 跟着档案走比单开一个仓储更省跳转。
+// 跟着档案走比单开一个仓储更省跳转。班级列表（0063）同理——它也是「先学校后班级」
+// 这一段流程里选一次的东西，不另开仓储。
 
 import 'package:mianyang_quiz/core/error/error_mapper.dart';
 import 'package:mianyang_quiz/data/models/user/profile.dart';
 import 'package:mianyang_quiz/data/models/user/school.dart';
+import 'package:mianyang_quiz/data/models/user/school_class.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class UserRepository {
@@ -20,7 +22,7 @@ class UserRepository {
   /// 前端拿到的字段永远是这里列出来的那些。
   static const _profileColumns =
       'user_id, name, email, school_id, is_admin, avatar_url, identity, '
-      'enroll_year, major_category, major, class_name';
+      'enroll_year, major_category, major, class_name, class_id, major_node_id';
 
   /// 本人档案。未登录（或档案还没被注册触发器建出来）时返回 null。
   /// 调用方拿到后应自己缓存——档案在一次会话里几乎不变，
@@ -75,6 +77,26 @@ class UserRepository {
     }
   }
 
+  /// 班级列表（0063）。给了 [schoolId] 就只列该校的班——注册与改就读信息都是
+  /// 「先学校后班级」，只有一个学校的名单才配得上下拉框。
+  ///
+  /// **刻意不过滤 is_active**：停用的班不能再被选进去（服务端 update_my_study_info
+  /// 也只认启用中的班），但已经被分到停用班里的学生还得看见自己那个班——
+  /// 过滤掉会让下拉框的当前值不在选项里，那个是断言级别的错误。
+  /// 排不排、能不能选，交给调用方按 SchoolClass.isActive 决定。
+  Future<List<SchoolClass>> fetchClasses({String? schoolId}) async {
+    try {
+      var query = _client
+          .from('classes')
+          .select('id, school_id, major_node_id, name, is_active');
+      if (schoolId != null) query = query.eq('school_id', schoolId);
+      final rows = await query.order('name');
+      return rows.map(SchoolClass.fromJson).toList();
+    } catch (error) {
+      throw mapError(error);
+    }
+  }
+
   /// 改姓名 / 换校 / 换头像。
   ///
   /// **[avatarUrl] 必须显式传「当前头像地址」**：RPC 的 p_avatar_url 默认 null 且写库
@@ -123,6 +145,28 @@ class UserRepository {
           'p_major': major,
           'p_class_name': className,
         },
+      );
+    } catch (error) {
+      throw mapError(error);
+    }
+  }
+
+  /// 就读信息（学生），0063 起的写法：入学年份 + 班级。
+  ///
+  /// 为什么另起一个而不是改 [updateEnrollment]：专业大类/专业不再由学生自己填，
+  /// 改由所选班级派生（服务端算好写进那三列文本镜像），端上只管提交班级 id。
+  /// 旧的 update_my_enrollment 仍在服务端保留给未升级的客户端，所以两个都在。
+  ///
+  /// [classId] 传 null = **主动清班**（不是"不改"）：换校后必须显式清，
+  /// 否则留下的旧班级会被服务端拒（「该班级不属于你所在的学校，或已停用」）。
+  ///
+  /// 服务端另有一道前置断言：本人**已绑定学校**。没绑校时连"只改入学年份"都会被拒
+  /// （「请先绑定所属学校后再选择班级」），所以调用方得先判断该不该发这次请求。
+  Future<void> updateStudyInfo({int? enrollYear, String? classId}) async {
+    try {
+      await _client.rpc<void>(
+        'update_my_study_info',
+        params: {'p_enroll_year': enrollYear, 'p_class_id': classId},
       );
     } catch (error) {
       throw mapError(error);

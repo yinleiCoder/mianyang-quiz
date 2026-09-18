@@ -121,14 +121,18 @@ DuoChipTone _identityTone(Identity identity) => switch (identity) {
   Identity.student => DuoChipTone.neutral,
 };
 
-/// 就读信息拼成一行；四项都没填时给一句可行动的提示，而不是留白。
+/// 就读信息拼成一行；一项都没填时给一句可行动的提示，而不是留白。
 String _enrollmentText(Profile profile) {
   final parts = <String>[
     if (profile.enrollYear != null)
       Formatters.enrollmentYear(profile.enrollYear),
     if (profile.majorCategory?.isNotEmpty ?? false) profile.majorCategory!,
-    if (profile.major?.isNotEmpty ?? false) profile.major!,
-    if (profile.className?.isNotEmpty ?? false) profile.className!,
+    // 0063 起班级是实体、专业由它派生：有班级就报班级名，
+    // 只有老数据（未分班、专业还是自由文本）才退回报专业名。
+    if (profile.className?.isNotEmpty ?? false)
+      profile.className!
+    else if (profile.major?.isNotEmpty ?? false)
+      profile.major!,
   ];
   return parts.isEmpty ? '就读信息还没填，点「修改就读信息」补上' : parts.join(' · ');
 }

@@ -44,9 +44,17 @@ class AuthService {
   /// false 表示已直接登录（关闭了邮箱验证时）。
   ///
   /// 资料会随 user_metadata 一起提交，由数据库的 handle_new_user 触发器写进 profiles
-  /// （0032）——因此**键名不能改**（name / identity / school_id / enroll_year /
-  /// major_category / major / class_name），值一律传字符串：触发器是用 `->>` 取文本
-  /// 之后再 ::uuid / ::smallint。
+  /// （0032 / 0063）。**这里并存两套契约**，改键名之前先认清自己动的是哪一套：
+  ///   · 旧键 name / identity / school_id / enroll_year / major_category / major /
+  ///     class_name —— 触发器仍照读（未升级的客户端还在传），**一个都不能改**；
+  ///   · 新键 class_id（0063）—— 传了它，服务端就**忽略** major_category / major /
+  ///     class_name 这三个派生值，改由所选班级算出来。所以新客户端只传
+  ///     name / identity / school_id / enroll_year / class_id。
+  /// 值一律传字符串：触发器是用 `->>` 取文本之后再 ::uuid / ::smallint。
+  ///
+  /// 过期的 class_id（班已停用、不属于所选学校、压根不存在）服务端**静默丢弃**，
+  /// 注册照常成功，学生落成「未分班」——所以选班是可选项，端上也不做任何拦截：
+  /// 学校可能还没建班，注册后再由学校管理员分配就是了。
   ///
   /// [identity] 只区分「学生 / 申请教师」两种意图：触发器只认字面量 'teacher'
   /// （其余一律落 student），所以这里把 teacherPending 也归一成 'teacher'，
@@ -58,9 +66,7 @@ class AuthService {
     Identity identity = Identity.student,
     String? schoolId,
     int? enrollYear,
-    String? majorCategory,
-    String? major,
-    String? className,
+    String? classId,
   }) async {
     try {
       final response = await _client.auth.signUp(
@@ -73,9 +79,7 @@ class AuthService {
           // 但少传几个键能让 metadata 干净些。
           'school_id': ?schoolId,
           'enroll_year': ?enrollYear?.toString(),
-          'major_category': ?majorCategory,
-          'major': ?major,
-          'class_name': ?className,
+          'class_id': ?classId,
         },
       );
       return response.session == null;
