@@ -27,9 +27,15 @@ class AppUpdateRepository {
 
   /// 当前平台的安装包资产名。与流水线里的资产名**逐字一致**（那边特意不带版本号，
   /// 这样 /releases/latest/download/<名字> 永远指向最新版）。
+  ///
+  /// Windows 给**安装包**而不是 zip：让用户下载完还要自己解压、自己建桌面快捷方式，
+  /// 是这一整套体验里最别扭的一环。zip 仍在 Release 里，只是不再推荐给普通用户。
+  ///
+  /// 名字对不上时 [fetchLatest] 会拿不到 assetUrl，界面退回 Release 页 —— 是有意留的兜底：
+  /// 万一某次发布没构建出安装包，用户还能从 Release 页自己找 zip，而不是卡在一个死链上。
   static String? assetNameFor(String platform) => switch (platform) {
     'android' => 'mianyang_quiz-android.apk',
-    'windows' => 'mianyang_quiz-windows-x64.zip',
+    'windows' => 'mianyang_quiz-windows-x64-setup.exe',
     _ => null,
   };
 
