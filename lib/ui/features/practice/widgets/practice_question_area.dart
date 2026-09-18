@@ -9,6 +9,7 @@ import 'package:mianyang_quiz/core/theme/app_metrics.dart';
 import 'package:mianyang_quiz/domain/submitted_answer.dart';
 import 'package:mianyang_quiz/ui/core/question/analysis_view.dart';
 import 'package:mianyang_quiz/ui/core/question/question_view.dart';
+import 'package:mianyang_quiz/ui/features/bank/widgets/question_report_sheet.dart';
 import 'package:mianyang_quiz/ui/features/practice/state/practice_runner.dart';
 
 class PracticeQuestionArea extends StatelessWidget {
@@ -70,6 +71,26 @@ class PracticeQuestionArea extends StatelessWidget {
                 optionOrder: runtime.displayOrder,
               ),
             ],
+            // 纠错入口放在题目**下方**，两个理由：
+            //   · 学生得看完整道题（含答案/解析）才可能发现"答案给错了"；
+            //   · 顶栏是刻意做空的（学多邻国，只有退出/进度/计时），
+            //     往里塞一个旗标会破坏那条视觉主线。
+            // 提交结果只弹 SnackBar：练习页没有"我的反馈"展示位，
+            // 回音在题库详情页看（那页专门有一块）。
+            SizedBox(height: AppMetrics.gapXl.r),
+            Center(
+              child: TextButton.icon(
+                onPressed: () => showQuestionReportSheet(
+                  context,
+                  questionId: runtime.item.questionId,
+                  versionId: runtime.item.versionId,
+                  // 练习条目不带 version_no（快照里只有 version_id），弹层对 null 有兜底文案
+                  versionNo: null,
+                ),
+                icon: Icon(Icons.flag_outlined, size: 16.r),
+                label: const Text('这题有问题'),
+              ),
+            ),
           ],
         ),
       ),

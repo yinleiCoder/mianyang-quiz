@@ -17,6 +17,7 @@ import 'package:mianyang_quiz/data/repositories/feedback_repository.dart';
 import 'package:mianyang_quiz/data/repositories/list_repository.dart';
 import 'package:mianyang_quiz/data/repositories/paper_repository.dart';
 import 'package:mianyang_quiz/data/repositories/practice_repository.dart';
+import 'package:mianyang_quiz/data/repositories/question_report_repository.dart';
 import 'package:mianyang_quiz/data/repositories/question_repository.dart';
 import 'package:mianyang_quiz/data/repositories/stats_repository.dart';
 import 'package:mianyang_quiz/data/repositories/subject_repository.dart';
@@ -37,6 +38,7 @@ class AppDependencies {
       userRepository = UserRepository(client),
       subjectRepository = SubjectRepository(client),
       questionRepository = QuestionRepository(client),
+      questionReportRepository = QuestionReportRepository(client),
       practiceRepository = PracticeRepository(client),
       statsRepository = StatsRepository(client),
       listRepository = ListRepository(client),
@@ -65,6 +67,10 @@ class AppDependencies {
   final UserRepository userRepository;
   final SubjectRepository subjectRepository;
   final QuestionRepository questionRepository;
+
+  /// 题目纠错（学生 → 本题作者）。与 feedbackRepository 是两回事：
+  /// 那边的收件人是系统管理员且没有回复闭环，这个有（见仓库文件头）。
+  final QuestionReportRepository questionReportRepository;
   final PracticeRepository practiceRepository;
   final StatsRepository statsRepository;
   final ListRepository listRepository;
