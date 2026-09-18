@@ -80,15 +80,36 @@ jobs:
       - name: 补上 MSVC 运行库（app-local）
         # Flutter **不打包 C 运行时**，它假定目标机器装过 Visual Studio。
         # 没装过的电脑双击 exe 完全没有反应（连错误框都不弹），这是"别的电脑打不开"的头号原因。
-        # 微软明确允许把这几个 dll 随应用一起分发，随包带上最省事 ——
+        # 微软明确允许把这组 dll 随应用一起分发，随包带上最省事 ——
         # 让用户自己去装一次 VC++ Redistributable，在学校机房里是不现实的。
+        #
+        # **不要写死 VS 的版本与路径**：runner 镜像升级时 VS 的大版本会变
+        # （2022 → 后续版本），路径也跟着变，曾因此让整个发布挂在"找不到目录"上。
+        # 用微软官方的 vswhere 定位，再兜一层通配。
         run: |
-          $crt = Get-ChildItem "C:\Program Files\Microsoft Visual Studio\2022\*\VC\Redist\MSVC\*\x64\Microsoft.VC*.CRT" -Directory -ErrorAction SilentlyContinue |
-                 Sort-Object FullName -Descending | Select-Object -First 1
-          if (-not $crt) { throw "找不到 VC 运行时目录 —— 不补这几个 dll，包发出去在别人电脑上打不开" }
-          Copy-Item "$($crt.FullName)\msvcp140.dll", "$($crt.FullName)\vcruntime140.dll", "$($crt.FullName)\vcruntime140_1.dll" `
-            "build/windows/x64/runner/Release/" -Force
-          Write-Host "已补入：$($crt.FullName)"
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vsPath = $null
+          if (Test-Path $vswhere) { $vsPath = & $vswhere -latest -products * -property installationPath }
+          # 打进日志：出问题时一眼能看出这一跑用的是什么 VS
+          Write-Host "VS: $vsPath"
+
+          $crt = $null
+          if ($vsPath) {
+            $crt = Get-ChildItem "$vsPath\VC\Redist\MSVC\*\x64\Microsoft.VC*.CRT" -Directory -ErrorAction SilentlyContinue |
+                   Sort-Object Name -Descending | Select-Object -First 1
+          }
+          if (-not $crt) {
+            $crt = Get-ChildItem "C:\Program Files\Microsoft Visual Studio\*\*\VC\Redist\MSVC\*\x64\Microsoft.VC*.CRT" -Directory -ErrorAction SilentlyContinue |
+                   Sort-Object Name -Descending | Select-Object -First 1
+          }
+          if (-not $crt) { throw "找不到 VC 运行时目录（vswhere 与通配都没命中）—— 不补这组 dll，包发出去在别人电脑上打不开" }
+
+          # **整个 CRT 目录一起拷**（约 10 个 dll / 2 MB）。
+          # 只拷 msvcp140 + vcruntime140 + vcruntime140_1 是不够的：新版 STL 还会用到
+          # msvcp140_1 / _2 / _threads / _atomic_wait，缺哪个都是同样的"双击没反应"。
+          # 2 MB 换掉这类靠人猜的缺失，划算。
+          Copy-Item "$($crt.FullName)\*.dll" "build/windows/x64/runner/Release/" -Force
+          Write-Host "已从 $($crt.FullName) 补入 $((Get-ChildItem "$($crt.FullName)\*.dll").Count) 个 dll"
         shell: pwsh
 
       - name: 打包（整个 Release 目录一起，exe 只是入口）
