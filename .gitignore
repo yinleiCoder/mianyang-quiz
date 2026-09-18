@@ -60,3 +60,6 @@ symbols/
 android/key.properties
 *.keystore
 *.jks
+
+# CI 编译安装器时下载的中文语言文件（Inno 官方发行版不含中文）
+windows/ChineseSimplified.isl

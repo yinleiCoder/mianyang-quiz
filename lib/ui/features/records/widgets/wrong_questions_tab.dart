@@ -11,6 +11,7 @@
 
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:mianyang_quiz/core/router/route_observer.dart';
 import 'package:mianyang_quiz/core/router/routes.dart';
 import 'package:mianyang_quiz/data/models/list/question_row.dart';
 import 'package:mianyang_quiz/data/models/practice/practice_session.dart';
@@ -31,10 +32,37 @@ class WrongQuestionsTab extends StatefulWidget {
 }
 
 class _WrongQuestionsTabState extends State<WrongQuestionsTab>
-    with AutomaticKeepAliveClientMixin, PagedListState<WrongQuestion, WrongQuestionsTab> {
-  /// TabBarView 切走会销毁页面；错题不会自己变，保活更顺手。
+    with
+        AutomaticKeepAliveClientMixin,
+        PagedListState<WrongQuestion, WrongQuestionsTab>,
+        RouteAware {
+  /// TabBarView 切走会销毁页面，保活能留住滚动位置 —— 但**错题是会变的**：
+  /// 学生答对之后这道题就该从列表里消失，所以光靠保活会让列表停在旧数据上。
+  /// 正确性由下面的 RouteAware 兜（从练习页返回时重拉）。
   @override
   bool get wantKeepAlive => true;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    // 只有真正的 PageRoute 才能订阅；拿不到就放弃订阅，不能因此崩掉整页
+    if (route is PageRoute) appRouteObserver.subscribe(this, route);
+  }
+
+  @override
+  void dispose() {
+    appRouteObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  /// 从练习页返回时重拉第一页。
+  ///
+  /// **本文件原来写着「错题不会自己变」——那个前提是错的**，正是它让答对的题
+  /// 一直挂在错题本里：列表被练习页盖住时没有销毁，回来 initState 不重跑，
+  /// 显示的还是进练习之前那份数据。didPopNext 才是"回来了"的正确时机。
+  @override
+  void didPopNext() => refresh();
 
   @override
   Future<List<WrongQuestion>> fetchPage({required int limit, required int offset}) =>

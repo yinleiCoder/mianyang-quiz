@@ -1,4 +1,8 @@
-// 题库页头部：标题 + 「共 N 题」+ 筛选条。
+// 题库页头部：筛选条 + 「共 N 题」。
+//
+// **标题「题库」已去掉**：底部导航已经标了这是题库，页面顶部再写一遍是重复。
+// 但题量数留着 —— 它是学生判断"这个筛选条件命中多少"的唯一依据。
+// 位置放在筛选条**下方**：它描述的正是下面那个列表，紧挨着才读得通。
 //
 // 从 BankPage 里抽出来：一是单文件行数（AGENTS.md 第三条），二是"当前筛选条件显示成
 // 什么文案"（科目路径链、标签名）本来就只服务于这块界面，放在一起才读得通。
@@ -44,22 +48,6 @@ class BankHeader extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Expanded(
-              child: Text('题库', style: AppTextStyles.pageTitle(context)),
-            ),
-            if (total > 0)
-              Text(
-                '共 $total 题',
-                style: AppTextStyles.caption(
-                  context,
-                ).copyWith(color: theme.colorScheme.onSurfaceVariant),
-              ),
-          ],
-        ),
-        SizedBox(height: AppMetrics.gapMd.r),
         BankFilterBar(
           filter: filter,
           nodePath: _nodePath,
@@ -67,6 +55,19 @@ class BankHeader extends StatelessWidget {
           onOpenSheet: onOpenSheet,
           onClear: onClear,
         ),
+        // 0 时不显示计数：空题库还标「共 0 题」很刺眼
+        if (total > 0) ...[
+          SizedBox(height: AppMetrics.gapSm.r),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Text(
+              '共 $total 题',
+              style: AppTextStyles.caption(
+                context,
+              ).copyWith(color: theme.colorScheme.onSurfaceVariant),
+            ),
+          ),
+        ],
       ],
     );
   }

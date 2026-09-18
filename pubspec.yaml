@@ -80,6 +80,18 @@ flutter:
 flutter_launcher_icons:
   image_path: "assets/app_icon.png"
   android: true
+
+  # 安卓 8+ 的**自适应图标**。不配这一组的话，系统拿 legacy 方形图标去套启动器的
+  # 圆形/方形遮罩 —— 源图的 logo 几乎铺满整张，四角会被裁掉，看起来就是"图标太大、显示不全"。
+  #
+  # 规范：108dp 画布里只有**中间 72dp（66.7%）是安全区**，外围随时可能被遮罩吃掉。
+  # 源图（1024×1024，绵阳 logo，自带约 5% 白边）用 `inset: 18` 内缩后，
+  # logo 实际落在画布的 64% 左右 —— 正好填满安全区且留一点余量，各家的圆/方遮罩都不会切到。
+  # 背景取白色：源图本来就是白底，换成别的颜色会在 logo 边缘露出一圈异色。
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/app_icon.png"
+  adaptive_icon_foreground_inset: 18
+
   windows:
     generate: true
     image_path: "assets/app_icon.png"

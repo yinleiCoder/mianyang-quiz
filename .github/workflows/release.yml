@@ -77,6 +77,20 @@ jobs:
             --dart-define-from-file=config/ci.local.json
         shell: pwsh
 
+      - name: 补上 MSVC 运行库（app-local）
+        # Flutter **不打包 C 运行时**，它假定目标机器装过 Visual Studio。
+        # 没装过的电脑双击 exe 完全没有反应（连错误框都不弹），这是"别的电脑打不开"的头号原因。
+        # 微软明确允许把这几个 dll 随应用一起分发，随包带上最省事 ——
+        # 让用户自己去装一次 VC++ Redistributable，在学校机房里是不现实的。
+        run: |
+          $crt = Get-ChildItem "C:\Program Files\Microsoft Visual Studio\2022\*\VC\Redist\MSVC\*\x64\Microsoft.VC*.CRT" -Directory -ErrorAction SilentlyContinue |
+                 Sort-Object FullName -Descending | Select-Object -First 1
+          if (-not $crt) { throw "找不到 VC 运行时目录 —— 不补这几个 dll，包发出去在别人电脑上打不开" }
+          Copy-Item "$($crt.FullName)\msvcp140.dll", "$($crt.FullName)\vcruntime140.dll", "$($crt.FullName)\vcruntime140_1.dll" `
+            "build/windows/x64/runner/Release/" -Force
+          Write-Host "已补入：$($crt.FullName)"
+        shell: pwsh
+
       - name: 打包（整个 Release 目录一起，exe 只是入口）
         run: |
           # 资产名固定不带版本号：这样 /releases/latest/download/<名字> 永远指向最新版，
@@ -87,10 +101,53 @@ jobs:
           Compress-Archive -Path "build/dist/$name" -DestinationPath "build/dist/$name.zip" -Force
         shell: pwsh
 
+      - name: 编译安装器（Inno Setup）
+        # Inno Setup 不在 runner 的预装列表里，用 Chocolatey 装（runner 自带 choco）。
+        # 中文语言文件**不在 Inno 官方发行版里**（官方翻译只到土耳其语），从 issrc 仓库取；
+        # 取不到就退回英文界面 —— 安装器照常能装，不该为一个翻译文件卡死整条发布链。
+        run: |
+          choco install innosetup -y --no-progress
+          $iscc = Get-ChildItem "C:\Program Files*\Inno Setup*\ISCC.exe" -ErrorAction SilentlyContinue |
+                  Select-Object -First 1
+          if (-not $iscc) { throw "Inno Setup 安装后找不到 ISCC.exe" }
+          # 把版本打出来：脚本用的是 6.3+ 通用指令（x64compatible / WizardStyle / {autopf}），
+          # 6 和 7 都能编；万一将来 choco 换了版本导致编译失败，日志里能直接看出是哪一版。
+          Write-Host "ISCC 版本：$((Get-Item $iscc.FullName).VersionInfo.FileVersion)"
+
+          $msg = "compiler:Default.isl"
+          $cached = Join-Path $PWD "windows\ChineseSimplified.isl"
+          try {
+            Invoke-WebRequest -UseBasicParsing `
+              -Uri "https://raw.githubusercontent.com/jrsoftware/issrc/main/Files/Languages/Unofficial/ChineseSimplified.isl" `
+              -OutFile $cached
+            $msg = $cached
+            Write-Host "已取到中文语言文件"
+          } catch {
+            Write-Host "::warning::中文语言文件下载失败，安装器将使用英文界面"
+          }
+
+          # exe 的版本属性必须是纯数字：Inno 不接受 "1.0.1-dev" 这类后缀，格式不对会**编译失败**，
+          # 而这一步失败等于整个发布挂掉（连 zip 都发不出去）。所以这里把非数字后缀砍掉，
+          # 砍完仍不成形就用 0.0.0 兜底 —— 宁可版本号朴素，也不能让发布链断在一个显示字段上。
+          $numeric = "${{ steps.ver.outputs.name }}" -replace '[^0-9.].*$', ''
+          if ($numeric -notmatch '^\d+(\.\d+){1,3}$') { $numeric = "0.0.0" }
+          Write-Host "文件版本号：$numeric"
+
+          & $iscc.FullName `
+            "/DAppVersion=${{ steps.ver.outputs.name }}" `
+            "/DNumericVersion=$numeric" `
+            "/DSourceDir=$PWD\build\windows\x64\runner\Release" `
+            "/DMessagesFile=$msg" `
+            "windows\installer.iss"
+        shell: pwsh
+
       - uses: actions/upload-artifact@v4
         with:
           name: windows-bundle
-          path: build/dist/*.zip
+          # 两种形态都给：安装器给普通用户（双击就装完），zip 留给需要免安装/绿色版的人
+          path: |
+            build/dist/*.zip
+            build/dist/*-setup.exe
           if-no-files-found: error
 
       - uses: actions/upload-artifact@v4
@@ -198,6 +255,7 @@ jobs:
         run: |
           mkdir -p assets
           cp dist/windows-bundle/*.zip assets/
+          cp dist/windows-bundle/*-setup.exe assets/
           cp dist/android-apk/*.apk "assets/mianyang_quiz-android.apk"
           ls -la assets
 
@@ -210,7 +268,9 @@ jobs:
             绵阳市中职共建题库客户端 ${{ github.ref_name }}
 
             - **Android**：下载 `mianyang_quiz-android.apk` 直接安装（首次需允许「安装未知来源应用」）
-            - **Windows**：下载 `mianyang_quiz-windows-x64.zip`，**解压后运行整个目录里的 exe**（不能只拷 exe）
-              - 若提示缺少 `vcruntime140.dll` 等，装一次 Microsoft Visual C++ Redistributable
+            - **Windows**：下载 `mianyang_quiz-windows-x64-setup.exe`，双击安装即可
+              - 默认按当前用户安装，**不需要管理员权限**；会创建桌面与开始菜单快捷方式
+              - 免安装版：`mianyang_quiz-windows-x64.zip`，**解压后运行整个目录里的 exe**（不能只拷 exe）
+              - 两种形态都已带上 C 运行库，目标电脑无需另装 Visual C++ Redistributable
           files: assets/*
           fail_on_unmatched_files: true

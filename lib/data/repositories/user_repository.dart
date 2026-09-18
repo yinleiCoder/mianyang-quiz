@@ -20,8 +20,12 @@ class UserRepository {
 
   /// 档案里界面要用到的列。**显式列名而不是 `*`**：新加的列不会悄悄进模型，
   /// 前端拿到的字段永远是这里列出来的那些。
+  ///
+  /// ⚠️ **给 Profile 加字段时必须同时加到这里**，否则模型里那个字段恒为默认值 ——
+  /// 不报错、不崩，只是界面上永远显示成"没有"。`phone` 就这么漏过一次：
+  /// 模型加了、迁移加了、界面也读了，唯独这里没加，于是手机号账号一律显示「未绑定手机号」。
   static const _profileColumns =
-      'user_id, name, email, school_id, is_admin, avatar_url, identity, '
+      'user_id, name, email, phone, school_id, is_admin, avatar_url, identity, '
       'enroll_year, major_category, major, class_name, class_id, major_node_id';
 
   /// 本人档案。未登录（或档案还没被注册触发器建出来）时返回 null。

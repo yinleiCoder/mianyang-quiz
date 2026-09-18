@@ -15,7 +15,6 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/core/theme/app_metrics.dart';
 import 'package:mianyang_quiz/core/theme/app_text_styles.dart';
 import 'package:mianyang_quiz/ui/core/design/brand_mark.dart';
-import 'package:mianyang_quiz/ui/core/design/duo_card.dart';
 import 'package:mianyang_quiz/ui/core/layout/max_width_box.dart';
 
 class AuthScaffold extends StatelessWidget {
@@ -77,33 +76,30 @@ class AuthScaffold extends StatelessWidget {
                     children: [
                       const _Brand(),
                       SizedBox(height: AppMetrics.gapXl.r),
-                      DuoCard(
-                        padding: EdgeInsets.all(AppMetrics.gapXl.r),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
+                      // **不套 DuoCard**：登录/注册页整屏就这一件事，再给它一圈圆角卡片
+                      // 背景反而像"页面里嵌了一个组件"，而它本来就该是这一屏本身。
+                      // 表单直接落在页面底色上，靠留白与字号分层，不靠容器。
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(title, style: AppTextStyles.pageTitle(context)),
+                          if (subtitle != null) ...[
+                            SizedBox(height: AppMetrics.gapXs.r),
                             Text(
-                              title,
-                              style: AppTextStyles.pageTitle(context),
-                            ),
-                            if (subtitle != null) ...[
-                              SizedBox(height: AppMetrics.gapXs.r),
-                              Text(
-                                subtitle!,
-                                style: AppTextStyles.body(context).copyWith(
-                                  color: scheme.onSurfaceVariant,
-                                ),
+                              subtitle!,
+                              style: AppTextStyles.body(context).copyWith(
+                                color: scheme.onSurfaceVariant,
                               ),
-                            ],
-                            if (error != null) ...[
-                              SizedBox(height: AppMetrics.gapLg.r),
-                              _ErrorBanner(message: error!),
-                            ],
-                            SizedBox(height: AppMetrics.gapXl.r),
-                            child,
+                            ),
                           ],
-                        ),
+                          if (error != null) ...[
+                            SizedBox(height: AppMetrics.gapLg.r),
+                            _ErrorBanner(message: error!),
+                          ],
+                          SizedBox(height: AppMetrics.gapXl.r),
+                          child,
+                        ],
                       ),
                       if (footer != null) ...[
                         SizedBox(height: AppMetrics.gapLg.r),

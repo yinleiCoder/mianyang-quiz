@@ -35,6 +35,7 @@ import 'package:mianyang_quiz/ui/features/practice/practice_page.dart';
 import 'package:mianyang_quiz/ui/features/practice/practice_result_page.dart';
 import 'package:mianyang_quiz/ui/features/practice/recite_page.dart';
 import 'package:mianyang_quiz/ui/features/profile/edit_profile_page.dart';
+import 'package:mianyang_quiz/core/router/route_observer.dart';
 import 'package:mianyang_quiz/ui/features/profile/feedback_page.dart';
 import 'package:mianyang_quiz/ui/features/profile/profile_page.dart';
 import 'package:mianyang_quiz/ui/features/records/records_page.dart';
@@ -52,6 +53,8 @@ GoRouter createAppRouter(AuthStore auth) {
   return GoRouter(
     initialLocation: AppRoutes.homePath,
     refreshListenable: auth,
+    // 给"从子页面返回时该重拉"的页面用（如错题本，见 route_observer.dart）
+    observers: [appRouteObserver],
     redirect: (context, state) {
       // 会话还没恢复完就别急着判断——否则冷启动会闪一下登录页
       if (!auth.isReady) return null;

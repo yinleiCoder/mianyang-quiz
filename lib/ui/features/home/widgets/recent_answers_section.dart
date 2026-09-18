@@ -8,7 +8,6 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/core/theme/app_metrics.dart';
 import 'package:mianyang_quiz/core/utils/formatters.dart';
 import 'package:mianyang_quiz/data/models/stats/recent_answer.dart';
-import 'package:mianyang_quiz/ui/core/design/duo_card.dart';
 import 'package:mianyang_quiz/core/theme/semantic_colors.dart';
 
 class RecentAnswersSection extends StatelessWidget {
@@ -23,11 +22,8 @@ class RecentAnswersSection extends StatelessWidget {
     final scheme = theme.colorScheme;
 
     if (answers.isEmpty) {
-      return DuoCard(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppMetrics.gapLg,
-          vertical: AppMetrics.gapXl,
-        ),
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppMetrics.gapXl),
         child: Center(
           child: Text(
             '还没有练习记录，去做几道题吧',
@@ -41,14 +37,13 @@ class RecentAnswersSection extends StatelessWidget {
 
     final shown = answers.take(limit).toList();
 
-    return DuoCard(
-      padding: const EdgeInsets.symmetric(vertical: AppMetrics.gapSm),
-      child: Column(
-        children: [
-          for (final answer in shown)
-            _AnswerRow(answer: answer, isLast: answer == shown.last),
-        ],
-      ),
+    // **不套卡片**：这是一条流水列表，卡片背景只是给它多包一层没有信息量的框。
+    // 行与行之间用细分隔线已经足够分组，去掉卡片后文字还能和上方的小标题左对齐。
+    return Column(
+      children: [
+        for (final answer in shown)
+          _AnswerRow(answer: answer, isLast: answer == shown.last),
+      ],
     );
   }
 }
@@ -71,10 +66,8 @@ class _AnswerRow extends StatelessWidget {
             ? null
             : Border(bottom: BorderSide(color: scheme.outlineVariant, width: 0.5)),
       ),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppMetrics.gapLg,
-        vertical: AppMetrics.gapMd,
-      ),
+      // 横向不留内边距：整页已经有 pagePadding，再缩进一次会与上方小标题错开
+      padding: const EdgeInsets.symmetric(vertical: AppMetrics.gapMd),
       child: Row(
         children: [
           Icon(

@@ -15,11 +15,13 @@ abstract final class AppMetrics {
   /// 页面左右安全边距。
   static const double pagePadding = 20;
 
-  /// 卡片圆角。
-  static const double radiusCard = 18;
+  /// 卡片圆角。18 → 12：18 在宽屏上接近"药丸"观感，卡片一多整页显得软塌塌；
+  /// 12 仍明显是圆角，但更接近工具类应用的克制感。
+  static const double radiusCard = 12;
 
-  /// 按钮圆角。
-  static const double radiusButton = 16;
+  /// 按钮圆角。跟着卡片一起收 —— 卡片 12 而按钮仍是 16 的话，
+  /// 同一屏里两种圆角会显得没对齐。
+  static const double radiusButton = 12;
 
   /// 标签圆角（999 = 胶囊形）。
   static const double radiusChip = 999;

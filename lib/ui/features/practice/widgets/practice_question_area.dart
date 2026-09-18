@@ -5,8 +5,10 @@
 
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:mianyang_quiz/core/constants/qtype_meta.dart';
 import 'package:mianyang_quiz/core/theme/app_metrics.dart';
 import 'package:mianyang_quiz/domain/submitted_answer.dart';
+import 'package:mianyang_quiz/ui/core/design/duo_chip.dart';
 import 'package:mianyang_quiz/ui/core/question/analysis_view.dart';
 import 'package:mianyang_quiz/ui/core/question/question_view.dart';
 import 'package:mianyang_quiz/ui/features/bank/widgets/question_report_sheet.dart';
@@ -49,6 +51,18 @@ class PracticeQuestionArea extends StatelessWidget {
           key: ValueKey('${runner.index}-${runtime.item.questionId}'),
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // 题型标注在题干**之前**。答题卡在宽屏是右侧常驻面板、窄屏要拉开才看得到，
+            // 而题型直接决定"选一个还是选多个" —— 不摆在眼前就会出现多选当单选做。
+            // 考试页一直有这个标签（见 exam_question_area 的 _ItemHeader），练习页漏了。
+            Align(
+              alignment: Alignment.centerLeft,
+              child: DuoChip(
+                label: questionTypeFrom(runtime.item.qtype).label,
+                tone: DuoChipTone.neutral,
+                dense: true,
+              ),
+            ),
+            SizedBox(height: AppMetrics.gapMd.r),
             QuestionView(
               qtype: runtime.item.qtype,
               content: runtime.item.content,

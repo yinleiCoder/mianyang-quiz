@@ -222,16 +222,17 @@ class _Body extends StatelessWidget {
             // 署名交给元信息条：标签与署名同一行两端对齐（见该组件注释）
             QuestionMetaHeader(brief: brief, credits: detail.credits),
             SizedBox(height: AppMetrics.gapMd.r),
-            DuoCard(
-              child: QuestionView(
-                qtype: brief.qtype,
-                content: detail.content,
-                // 背题不给作答：answer 恒为 null，回调是空实现
-                answer: null,
-                onAnswerChanged: (_) {},
-                reveal: AnswerReveal.answerOnly,
-                readOnly: true,
-              ),
+            // **题干不套卡片**：详情页整屏就是这一道题，卡片只是给它多包一层框，
+            // 还把题干挤窄了。解析那一段仍保留卡片 —— 它与题干是两块不同性质的内容，
+            // 需要一个分界。
+            QuestionView(
+              qtype: brief.qtype,
+              content: detail.content,
+              // 背题不给作答：answer 恒为 null，回调是空实现
+              answer: null,
+              onAnswerChanged: (_) {},
+              reveal: AnswerReveal.answerOnly,
+              readOnly: true,
             ),
             SizedBox(height: AppMetrics.gapMd.r),
             // showAnswer: false —— answerOnly 已在选项/填空上标出标准答案，

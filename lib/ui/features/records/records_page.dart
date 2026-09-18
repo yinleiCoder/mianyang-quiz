@@ -11,7 +11,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/core/router/routes.dart';
 import 'package:mianyang_quiz/core/theme/app_metrics.dart';
-import 'package:mianyang_quiz/core/theme/app_text_styles.dart';
 import 'package:mianyang_quiz/ui/features/records/widgets/favorites_tab.dart';
 import 'package:mianyang_quiz/ui/features/records/widgets/practice_history_tab.dart';
 import 'package:mianyang_quiz/ui/features/records/widgets/wrong_questions_tab.dart';
@@ -57,8 +56,8 @@ class RecordsPage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('我的记录', style: AppTextStyles.pageTitle(context)),
-                    SizedBox(height: AppMetrics.gapMd.r),
+                    // 标题「我的记录」去掉了：底部导航已经标了「记录」，
+                    // 三个页签（练习记录/错题本/收藏）本身就说清了这页是干什么的。
                     TabBar(
                       labelColor: scheme.primary,
                       unselectedLabelColor: scheme.onSurfaceVariant,

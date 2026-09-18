@@ -21,7 +21,6 @@ import 'dart:math' as math;
 import 'package:contribution_heatmap/contribution_heatmap.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:mianyang_quiz/core/theme/semantic_colors.dart';
 import 'package:mianyang_quiz/data/models/stats/practice_dashboard.dart';
 
 class PracticeHeatmap extends StatelessWidget {
@@ -131,22 +130,46 @@ class PracticeHeatmap extends StatelessWidget {
     return widest + 8;
   }
 
-  /// 0 题 = 空槽（浅灰）；1 题起明显可见，越多越深，10 题以上到最深档。
+  /// GitHub 贡献图的五档配色，**逐字取自 GitHub 的 primer 变量**
+  /// （`--color-calendar-graph-day-bg` 与 `-L1-bg` … `-L4-bg`）。
+  ///
+  /// 不再像原来那样从语义色 lerp 出来：需求就是"要 GitHub 那个绿"，
+  /// 而算出来的绿和这一套对不上，摆在一起一眼看得出不是。
+  ///
+  /// 亮暗各一套 —— GitHub 自己也分两套，深色下那五个绿是完全不同的值
+  /// （最深档在亮色里是近黑的墨绿，在暗色里反而最亮）。
+  static const _githubLight = [
+    Color(0xFFEBEDF0), // 0 题
+    Color(0xFF9BE9A8),
+    Color(0xFF40C463),
+    Color(0xFF30A14E),
+    Color(0xFF216E39), // 最深
+  ];
+  static const _githubDark = [
+    Color(0xFF161B22),
+    Color(0xFF0E4429),
+    Color(0xFF006D32),
+    Color(0xFF26A641),
+    Color(0xFF39D353),
+  ];
+
+  /// 0 题 = 空槽；1 题起明显可见，越多越深，10 题以上到最深档。
+  ///
+  /// **分档沿用本项目的固定阈值，没照搬 GitHub 的分位法**：GitHub 是按当天最大值
+  /// 的四分位切档，而学生一天的题量普遍在 20 以内，按最大值切会把绝大多数日子
+  /// 压进同一档、看不出差别。固定阈值在这个量级上区分度更好。
   Color _shadeOf(BuildContext context, int count) {
-    final scheme = Theme.of(context).colorScheme;
-    if (count <= 0) return scheme.surfaceContainerHighest;
-    final intensity = switch (count) {
-      <= 2 => 0.3,
-      <= 5 => 0.5,
-      <= 10 => 0.72,
-      _ => 1.0,
+    final palette = Theme.of(context).brightness == Brightness.dark
+        ? _githubDark
+        : _githubLight;
+    final level = switch (count) {
+      <= 0 => 0,
+      <= 2 => 1,
+      <= 5 => 2,
+      <= 10 => 3,
+      _ => 4,
     };
-    // 从浅绿到深绿，两档都取自语义色（全站只有这一种绿，见 semantic_colors.dart）
-    return Color.lerp(
-      context.semantic.successContainer,
-      context.semantic.success,
-      intensity,
-    )!;
+    return palette[level];
   }
 
   /// `YYYY-MM-DD` → DateTime。形状不对返回 null（脏数据不该让热力图崩掉）。

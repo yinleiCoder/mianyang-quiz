@@ -18,7 +18,6 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/core/theme/app_metrics.dart';
 import 'package:mianyang_quiz/core/theme/semantic_colors.dart';
 import 'package:mianyang_quiz/data/models/stats/practice_dashboard.dart';
-import 'package:mianyang_quiz/ui/core/design/duo_card.dart';
 import 'package:mianyang_quiz/ui/core/design/duo_progress_bar.dart';
 import 'package:mianyang_quiz/ui/features/home/widgets/heatmap_block.dart';
 
@@ -49,48 +48,47 @@ class StreakHeader extends StatelessWidget {
           ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: AppMetrics.gapLg),
-        DuoCard(
-          padding: const EdgeInsets.all(AppMetrics.gapLg),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final heatmap = HeatmapBlock(dashboard: dashboard);
-              final stats = _TodayProgress(dashboard: dashboard, goal: dailyGoal);
-              final title = _StreakTitle(dashboard: dashboard);
+        // **不套卡片**：这一块是"今天的状态"，它就该是页面本身的开头，
+        // 而不是页面里的一个组件。加一圈卡片背景反而把它和下面的动作按钮割开。
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final heatmap = HeatmapBlock(dashboard: dashboard);
+            final stats = _TodayProgress(dashboard: dashboard, goal: dailyGoal);
+            final title = _StreakTitle(dashboard: dashboard);
 
-              if (constraints.maxWidth < _minWidthForRow) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    title,
-                    const SizedBox(height: AppMetrics.gapLg),
-                    heatmap,
-                    const SizedBox(height: AppMetrics.gapLg),
-                    stats,
-                  ],
-                );
-              }
-              return Row(
+            if (constraints.maxWidth < _minWidthForRow) {
+              return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 热力图占三分之二：它自己会按拿到的宽度算格子大小，
-                  // 给多少用多少，所以这么分就是"图上占三分之二"。
-                  Expanded(flex: 2, child: heatmap),
-                  SizedBox(width: AppMetrics.gapXl.r),
-                  Expanded(
-                    flex: 1,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        title,
-                        const SizedBox(height: AppMetrics.gapLg),
-                        stats,
-                      ],
-                    ),
-                  ),
+                  title,
+                  const SizedBox(height: AppMetrics.gapLg),
+                  heatmap,
+                  const SizedBox(height: AppMetrics.gapLg),
+                  stats,
                 ],
               );
-            },
-          ),
+            }
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 热力图占三分之二：它自己会按拿到的宽度算格子大小，
+                // 给多少用多少，所以这么分就是"图上占三分之二"。
+                Expanded(flex: 2, child: heatmap),
+                SizedBox(width: AppMetrics.gapXl.r),
+                Expanded(
+                  flex: 1,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      title,
+                      const SizedBox(height: AppMetrics.gapLg),
+                      stats,
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ],
     );

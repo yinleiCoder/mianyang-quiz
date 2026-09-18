@@ -46,9 +46,27 @@ class _PracticeStageState extends State<PracticeStage> {
   };
 
   void _onAnswerChanged(SubmittedAnswer answer) {
-    // 点选项给一记轻响。**只对"点一下"的题型**：填空/主观题是逐键上抛的，
-    // 每敲一个字响一下就成了噪音。
-    if (answer is ChoiceAnswer || answer is TrueFalseAnswer) {
+    // 只有"选中即完整"的题型才自动判，否则用户在多选/填空题上会被反复打断
+    final type = questionTypeFrom(_runner.current.item.qtype);
+    final autoCheck =
+        type == QuestionType.singleChoice || type == QuestionType.trueFalse;
+    // setDraft 只改 draft，不碰 verdict/selfMastered，所以这里先算与后算等价
+    final willGradeNow =
+        _runner.mode != PracticeMode.batch &&
+        autoCheck &&
+        _isCompleteSubmission(answer) &&
+        !_runner.current.isGraded;
+
+    // 点选项给一记轻响 —— **只在紧接着不会响判定音的时候放**。
+    //
+    // 单选/判断在即时模式下是选中即判的：「答对」「答错」紧接着就会响，
+    // 再叠一记「选择一个选项」两段音频糊成一团，听感很乱（用户反馈过）。
+    // 这两种题型本来就立刻有反馈音，不需要再补一记。
+    //
+    // 注意判据不是「题型是不是多选」：**批量模式与考试同样不判题**，
+    // 那里的单选若也静音，点选项就成了哑巴 —— 那记轻响是唯一反馈。
+    // 填空/主观题是逐键上抛的，每敲一个字响一下会变成噪音，一并排除。
+    if (!willGradeNow && (answer is ChoiceAnswer || answer is TrueFalseAnswer)) {
       unawaited(context.read<SfxService>().selectOption());
     }
 
@@ -57,10 +75,7 @@ class _PracticeStageState extends State<PracticeStage> {
       return;
     }
     _runner.setDraft(answer);
-    // 只有"选中即完整"的题型才自动判，否则用户在多选/填空题上会被反复打断
-    final type = questionTypeFrom(_runner.current.item.qtype);
-    final autoCheck = type == QuestionType.singleChoice || type == QuestionType.trueFalse;
-    if (autoCheck && _isCompleteSubmission(answer) && !_runner.current.isGraded) {
+    if (willGradeNow) {
       unawaited(_check());
     }
   }

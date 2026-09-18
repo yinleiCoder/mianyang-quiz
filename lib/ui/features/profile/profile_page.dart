@@ -14,7 +14,6 @@ import 'package:mianyang_quiz/core/constants/identity_meta.dart';
 import 'package:mianyang_quiz/core/error/app_exception.dart';
 import 'package:mianyang_quiz/core/router/routes.dart';
 import 'package:mianyang_quiz/core/theme/app_metrics.dart';
-import 'package:mianyang_quiz/core/theme/app_text_styles.dart';
 import 'package:mianyang_quiz/data/models/user/profile.dart';
 import 'package:mianyang_quiz/data/models/user/school.dart';
 import 'package:mianyang_quiz/data/repositories/user_repository.dart';
@@ -139,8 +138,9 @@ class _ProfilePageState extends State<ProfilePage> {
     return ListView(
       padding: EdgeInsets.all(AppMetrics.pagePadding.r),
       children: [
-        Text('个人资料', style: AppTextStyles.pageTitle(context)),
-        SizedBox(height: AppMetrics.gapLg.r),
+        // 标题「个人资料」去掉了：底部导航已经标了这是「我的」，
+        // 页面顶部再写一遍只是把内容往下推。下面 ProfileHeader 里的姓名与身份
+        // 已经足够说明"这是谁"。
         ProfileHeader(
           profile: profile,
           schoolName: _schoolName(profile.schoolId),
