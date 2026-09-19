@@ -21,11 +21,15 @@ class PracticeFeedbackBar extends StatelessWidget {
     required this.onContinue,
     this.summary,
     this.isLast = false,
+    this.busy = false,
     this.onToggleFavorite,
     this.isFavorite = false,
   });
 
   final bool correct;
+
+  /// 主按钮在途（末题就是交卷）。转圈并挡重复点击，见 PracticeStage._finishing。
+  final bool busy;
 
   /// 一句话说明（如「正确答案：B」或主观题的提示）。可为空。
   final String? summary;
@@ -112,6 +116,7 @@ class PracticeFeedbackBar extends StatelessWidget {
             DuoButton(
               label: isLast ? '完成' : '继续',
               onPressed: onContinue,
+              loading: busy,
               icon: isLast ? Icons.flag_outlined : Icons.arrow_forward,
             ),
           ],

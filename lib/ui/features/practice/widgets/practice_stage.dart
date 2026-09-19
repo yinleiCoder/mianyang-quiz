@@ -20,6 +20,7 @@ import 'package:mianyang_quiz/domain/submitted_answer.dart';
 import 'package:mianyang_quiz/data/services/sfx_service.dart';
 import 'package:mianyang_quiz/state/practice_mode.dart';
 import 'package:mianyang_quiz/ui/features/practice/state/practice_runner.dart';
+import 'package:mianyang_quiz/ui/features/practice/widgets/practice_ended_view.dart';
 import 'package:mianyang_quiz/ui/features/practice/widgets/practice_layout.dart';
 import 'package:mianyang_quiz/ui/features/practice/widgets/quit_confirm_sheet.dart';
 import 'package:provider/provider.dart';
@@ -35,6 +36,11 @@ class PracticeStage extends StatefulWidget {
 
 class _PracticeStageState extends State<PracticeStage> {
   bool _checking = false;
+
+  /// 交卷在途。交卷**必须防重入**：服务端一次只结算一次，重复的那次报
+  /// 「本次练习已交卷或已作废」，于是屏幕上会同时出现"交卷成功"（导航去了结果页）
+  /// 和"交卷失败"（重发的那次弹的提示）。实测有用户 350ms 内发出 22 次交卷请求。
+  bool _finishing = false;
 
   PracticeRunner get _runner => widget.runner;
 
@@ -97,6 +103,10 @@ class _PracticeStageState extends State<PracticeStage> {
       }
     } catch (error) {
       if (!mounted) return;
+      // 失败了先问一句"这场练习还活着吗"：已经结束的话界面会换成结束态并说明原因，
+      // 再叠一句"提交失败：……"只会让人以为再点一次就能好（见 _runner.syncEndedState）
+      await _runner.syncEndedState();
+      if (!mounted || _runner.ended != null) return;
       ScaffoldMessenger.of(context).showSnackBar(
         // 用 mapError 取文案，不要插值原始异常：AppException.toString() 是
         // '$runtimeType: $message'，用户会看到「ServerException: …」。
@@ -116,9 +126,13 @@ class _PracticeStageState extends State<PracticeStage> {
   }
 
   Future<void> _finish() async {
+    if (_finishing) return;
+    setState(() => _finishing = true);
     try {
       final summary = await _runner.finish();
       if (!mounted) return;
+      // null = 会话在批量提交那一步就被发现已经结束，界面已换成结束态，没有成绩可给
+      if (summary == null) return;
       unawaited(context.read<SfxService>().finish());
       // 用 pushReplacement：交卷后不该能"返回"到已结束的答题界面
       context.pushReplacement(
@@ -127,23 +141,14 @@ class _PracticeStageState extends State<PracticeStage> {
       );
     } catch (error) {
       if (!mounted) return;
+      // 同 _check：会话已结束时界面自己会说明，不再叠一句"交卷失败"
+      await _runner.syncEndedState();
+      if (!mounted || _runner.ended != null) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('交卷失败：${mapError(error).message}')),
       );
-    }
-  }
-
-  Future<void> _confirmQuit() async {
-    final action = await showQuitConfirmSheet(context);
-    if (!mounted || action == null) return;
-    // 两条分支都是"离开答题"，都放退出音（用户选完才响，取消不响）
-    unawaited(context.read<SfxService>().quit());
-    if (action == QuitAction.abandon) {
-      await _runner.abandon();
-      if (mounted) Navigator.of(context).pop();
-    } else if (action == QuitAction.keepAndLeave) {
-      // 保留会话：不放弃，下次可从"继续练习"回来
-      if (mounted) Navigator.of(context).pop();
+    } finally {
+      if (mounted) setState(() => _finishing = false);
     }
   }
 
@@ -151,17 +156,26 @@ class _PracticeStageState extends State<PracticeStage> {
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: _runner,
-      builder: (context, _) => PracticeLayout(
-        runner: _runner,
-        graded: _runner.current.isGraded,
-        instant: _runner.mode == PracticeMode.instant,
-        checking: _checking,
-        onAnswerChanged: _onAnswerChanged,
-        onExit: _confirmQuit,
-        onCheck: _check,
-        onContinue: _continue,
-        onFinish: _finish,
-      ),
+      builder: (context, _) {
+        // 会话结束（打开时就已经结束，或作答途中在别处被结束）：换成结束态，
+        // **一道题都不许再答** —— 服务端会拒绝之后每一次提交，而本地判分照样显示对错，
+        // 让人答下去等于白答一整场（见 PracticeEndedView 的说明）
+        final ended = _runner.ended;
+        if (ended != null) return PracticeEndedView(snapshot: ended);
+
+        return PracticeLayout(
+          runner: _runner,
+          graded: _runner.current.isGraded,
+          instant: _runner.mode == PracticeMode.instant,
+          checking: _checking,
+          finishing: _finishing,
+          onAnswerChanged: _onAnswerChanged,
+          onExit: () => confirmQuitPractice(context, _runner),
+          onCheck: _check,
+          onContinue: _continue,
+          onFinish: _finish,
+        );
+      },
     );
   }
 }

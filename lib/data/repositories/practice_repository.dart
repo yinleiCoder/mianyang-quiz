@@ -57,6 +57,10 @@ class PracticeRepository {
   /// 续练：按 id 取回会话（题面快照 + 已作答记录，用 answersByQuestion 还原每题状态）。
   /// 会话不存在或不属于本人时服务端直接报错，不会返回 null；已交卷/已作废的会话照样能读，
   /// 由调用方看 status 决定是继续作答还是只展示成绩。
+  ///
+  /// **"看 status"不是可选项**：非 active 的会话再提交，服务端每一次都拒
+  /// （「本次练习已结束，无法继续作答」），而本地判分照样显示对错，用户会白答一整场。
+  /// 练习页的落点是 PracticeRunner.ended / PracticeEndedView。
   Future<PracticeSessionSnapshot> fetchSession(String sessionId) async {
     try {
       final data = await _client.rpc<Map<String, dynamic>>(
@@ -104,7 +108,10 @@ class PracticeRepository {
   /// 交卷结算。返回的 accuracy 分母是**总题数**（含未作答），
   /// 与看板的「已答数」口径不同——那是服务端的定义，客户端照实展示，不要换算。
   /// [durationMs] 传 null 时由服务端按 started_at 推算整卷用时。
-  /// 会话已交卷或已作废时报「本次练习已交卷或已作废」。
+  ///
+  /// **幂等**（0068）：会话已经交过卷时返回上一次的结算，不报错——交卷可能被重发
+  /// （弱网重试、用户连点），报错会让用户以为白考一场。只有已作废的会话才报
+  /// 「本次练习已作废，无法交卷」。
   Future<FinishSummary> finishSession({
     required String sessionId,
     int? durationMs,

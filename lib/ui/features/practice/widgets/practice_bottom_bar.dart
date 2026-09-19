@@ -21,6 +21,7 @@ class PracticeBottomBar extends StatelessWidget {
     super.key,
     required this.runner,
     required this.checking,
+    required this.finishing,
     required this.onCheck,
     required this.onContinue,
     required this.onFinish,
@@ -31,6 +32,9 @@ class PracticeBottomBar extends StatelessWidget {
   /// 正在提交（即时模式的"检查"之后）。
   final bool checking;
 
+  /// 正在交卷（整卷）。
+  final bool finishing;
+
   final VoidCallback onCheck;
   final VoidCallback onContinue;
   final VoidCallback onFinish;
@@ -38,7 +42,7 @@ class PracticeBottomBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (runner.mode == PracticeMode.batch) {
-      return BatchNavBar(runner: runner, onFinish: onFinish);
+      return BatchNavBar(runner: runner, busy: finishing, onFinish: onFinish);
     }
 
     // 即时模式：未判定给「检查」，已判定给反馈条
@@ -53,6 +57,8 @@ class PracticeBottomBar extends StatelessWidget {
     return PracticeFeedbackBar(
       correct: runtime.verdict == true,
       isLast: runner.isLast,
+      // 末题的「完成」就是交卷：慢网络下必须让用户看出"点到了、正在交"
+      busy: finishing,
       // 收藏本题。FavoriteStore 的注释把「练习反馈条」列为收藏按钮的四个入口之一，
       // 但这里一直没接线——组件里的心形按钮存在、tooltip 也有，永远不显示。
       // 答错时尤其需要：刚做完就想把这题收起来，不必先退出练习去题库找。

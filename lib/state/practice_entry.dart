@@ -21,7 +21,19 @@ import 'package:provider/provider.dart';
 
 /// 以 [source] 为来源打开组卷页。调用方负责保证这个来源下有题可练
 /// （空错题本/空收藏不要接这个入口——服务端抽不到题会报错）。
-void startPracticeFrom(BuildContext context, PracticeSource source) {
+///
+/// [replace] 为 true 时用 pushReplacement 换掉当前页。练习页的"已结束"面板要用它：
+/// 那张面板就长在练习页里，用 push 的话组卷页下面压着一场已经结束的练习，
+/// 用户从组卷页返回就会回到那个死页面。
+void startPracticeFrom(
+  BuildContext context,
+  PracticeSource source, {
+  bool replace = false,
+}) {
   context.read<PracticeDraftStore>().startFrom(source: source);
-  context.push(AppRoutes.composePath);
+  if (replace) {
+    context.pushReplacement(AppRoutes.composePath);
+  } else {
+    context.push(AppRoutes.composePath);
+  }
 }

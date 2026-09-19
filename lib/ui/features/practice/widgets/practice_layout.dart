@@ -45,6 +45,7 @@ class PracticeLayout extends StatelessWidget {
     required this.graded,
     required this.instant,
     required this.checking,
+    required this.finishing,
     required this.onAnswerChanged,
     required this.onExit,
     required this.onCheck,
@@ -56,6 +57,9 @@ class PracticeLayout extends StatelessWidget {
   final bool graded;
   final bool instant;
   final bool checking;
+
+  /// 交卷在途（按钮转圈并挡住重复点击，见 PracticeStage._finishing）。
+  final bool finishing;
   final ValueChanged<SubmittedAnswer> onAnswerChanged;
   final VoidCallback onExit;
   final VoidCallback onCheck;
@@ -93,6 +97,7 @@ class PracticeLayout extends StatelessWidget {
             PracticeBottomBar(
               runner: runner,
               checking: checking,
+              finishing: finishing,
               onCheck: onCheck,
               onContinue: onContinue,
               onFinish: onFinish,

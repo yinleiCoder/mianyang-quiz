@@ -9,10 +9,13 @@
 //   · 即时模式：本地判分抢先显示 → 异步提交 → 用服务端结果对账
 //   · 批量模式：只记草稿，交卷时才逐题提交
 //   · 计时与进度
+//   · **认得出会话已经结束**（见 [ended]/[syncEndedState]）：服务端只接受 status = active
+//     的会话，认不出来的话用户会在一个死会话里白答一整场
 //
 // 不负责：界面、导航、提示文案。
 
 import 'package:flutter/foundation.dart';
+import 'package:mianyang_quiz/core/error/app_exception.dart';
 import 'package:mianyang_quiz/core/error/error_mapper.dart';
 import 'package:mianyang_quiz/data/models/practice/practice_results.dart';
 import 'package:mianyang_quiz/data/models/practice/practice_session.dart';
@@ -30,6 +33,7 @@ class PracticeRunner extends ChangeNotifier {
     required this.mode,
     bool shuffleOptions = true,
   }) : _sessionId = snapshot.sessionId,
+       _ended = snapshot.isActive ? null : snapshot,
        _runtimes = buildQuestionRuntimes(snapshot, shuffleOptions: shuffleOptions) {
     // 续练时定位到第一道未作答的题；全答完则停在最后一题
     final pending = _runtimes.indexWhere((r) => !r.isSubmitted);
@@ -45,6 +49,17 @@ class PracticeRunner extends ChangeNotifier {
   int _index = 0;
   final DateTime _startedAt = DateTime.now();
 
+  /// 会话结束时的快照；为 null 表示还能作答。
+  ///
+  /// 两种来源：进页面时取回的会话本来就不是 active（首页「继续练习」卡片用的是
+  /// 看板缓存，可以指到一场早就结束的练习），以及作答途中会话在别处被结束
+  /// （同一账号在另一台设备上开始了新练习——服务端每人只允许一套进行中，
+  /// 开新的会**静默作废**旧的）。
+  ///
+  /// 非空之后**一个字都不能再提交**：服务端 submit/finish 两处守卫都要求
+  /// status = 'active'，再提交只会换来一句「本次练习已结束」。
+  PracticeSessionSnapshot? _ended;
+
   /// 页面是否已经关掉。提交是异步的：用户完全可能在"检查"发出后、结果回来前
   /// 退出练习页，此时 Runner 已 dispose，再调 notifyListeners() 会在 debug 下抛
   /// 「A ChangeNotifier was used after being disposed」。判定结果仍照常写回
@@ -56,6 +71,9 @@ class PracticeRunner extends ChangeNotifier {
   }
 
   String get sessionId => _sessionId;
+
+  /// 会话已结束时的快照；非空即"不能再答"（界面据此换成结束态）。见 [_ended]。
+  PracticeSessionSnapshot? get ended => _ended;
 
   int get index => _index;
 
@@ -127,7 +145,16 @@ class PracticeRunner extends ChangeNotifier {
       _notify();
     }
 
-    final result = await _submit(runtime);
+    final SubmitResult result;
+    try {
+      result = await _submit(runtime);
+    } catch (error) {
+      // 失败要把 submitting 收回来。留着它，「检查」按钮会一直转圈，
+      // 用户看不出这一题还能再点一次，于是它再也交不上去。
+      _runtimes[index] = _runtimes[index].copyWith(submitting: false);
+      _notify();
+      rethrow;
+    }
 
     if (local != null && local != result.isCorrect) {
       debugPrint(
@@ -156,20 +183,48 @@ class PracticeRunner extends ChangeNotifier {
     selfMastered: runtime.item.type.isSelfAssessed ? runtime.selfMastered : null,
   );
 
+  /// 提交失败后回查会话状态，确认"是不是这场练习已经结束了"。
+  ///
+  /// 为什么要在**失败之后**多问一次服务端，而不是直接拿错误文案去认：
+  /// 文案是给人看的（服务端 raise 的中文），拿它做分支迟早会因为改一句话而失效。
+  /// 状态本身才是事实，而事实只能查。调用点都在已经失败的路径上，不欠正常作答的时间。
+  ///
+  /// 回查自己也失败（断网）就什么都不做：拿不到结论就不要乱改界面，
+  /// 上层照常把那句错误提示显示出来。
+  Future<void> syncEndedState() async {
+    if (_ended != null) return;
+    try {
+      final snapshot = await _repository.fetchSession(_sessionId);
+      if (snapshot.isActive) return;
+      _ended = snapshot;
+      _notify();
+    } catch (error) {
+      debugPrint('回查会话状态失败：${mapError(error).message}');
+    }
+  }
+
   /// 批量模式：交卷前把整卷未提交的作答逐题送上去。
   ///
   /// 逐题串行而不是并发：服务端每题都会刷新会话进度，并发写同一行容易相互覆盖；
   /// 而且卷子通常十几二十题，串行的额外耗时可以接受。
   Future<void> submitAll() async {
     for (var i = 0; i < _runtimes.length; i++) {
+      // 会话已经结束：后面的每一题都注定被拒，别再打——界面正在换成结束态
+      if (_ended != null) return;
       final runtime = _runtimes[i];
       if (runtime.isSubmitted || runtime.draft == null) continue;
       try {
         final result = await _submit(runtime);
         _runtimes[i] = runtime.copyWith(verdict: result.isCorrect);
       } catch (error) {
-        // 单题失败不中断整卷：已提交的仍然算数，把失败的留给用户重试
-        debugPrint('提交失败（题 ${runtime.item.questionId}）：${mapError(error).message}');
+        // 单题失败不中断整卷：已提交的仍然算数，把失败的留给用户重试。
+        // **但会话结束是例外**——那不是"这一题"的问题，整卷都送不进去了，
+        // 必须当场认出来并停下：批量模式下这一场答的题只存在本机，
+        // 让循环蒙头跑完，用户会在交卷时才发现全丢了。
+        final mapped = mapError(error);
+        debugPrint('提交失败（题 ${runtime.item.questionId}）：${mapped.message}');
+        // 断网就不必回查了：查也查不通，只会让"整卷失败"变成"两倍的失败请求"
+        if (mapped is! NetworkException) await syncEndedState();
       }
       _notify();
     }
@@ -194,8 +249,13 @@ class PracticeRunner extends ChangeNotifier {
   }
 
   /// 交卷。批量模式会先把未提交的作答送上去。
-  Future<FinishSummary> finish() async {
+  ///
+  /// 返回 null 表示**这次交卷没有结果可给**：会话在 [submitAll] 那一步就被发现已经结束
+  /// （见 [ended]）。此时再去打一次交卷必然被服务端拒（它要求 status = 'active'），
+  /// 换回来的只是一句错误提示，而界面正在换成结束态——调用方看到 null 就别再导航了。
+  Future<FinishSummary?> finish() async {
     if (mode == PracticeMode.batch) await submitAll();
+    if (_ended != null) return null;
     final elapsed = DateTime.now().difference(_startedAt).inMilliseconds;
     return _repository.finishSession(sessionId: _sessionId, durationMs: elapsed);
   }

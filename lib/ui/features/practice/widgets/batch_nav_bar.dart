@@ -11,10 +11,18 @@ import 'package:mianyang_quiz/ui/core/design/duo_button.dart';
 import 'package:mianyang_quiz/ui/features/practice/state/practice_runner.dart';
 
 class BatchNavBar extends StatelessWidget {
-  const BatchNavBar({super.key, required this.runner, required this.onFinish});
+  const BatchNavBar({
+    super.key,
+    required this.runner,
+    required this.onFinish,
+    this.busy = false,
+  });
 
   final PracticeRunner runner;
   final VoidCallback onFinish;
+
+  /// 交卷在途：右按钮转圈并挡住重复点击（见 PracticeStage._finishing）。
+  final bool busy;
 
   @override
   Widget build(BuildContext context) {
@@ -55,6 +63,8 @@ class BatchNavBar extends StatelessWidget {
                       : DuoButtonVariant.outline,
                   icon: runner.isLast ? Icons.flag_outlined : Icons.arrow_forward,
                   compact: true,
+                  // 只有交卷那一档会转圈：翻页是本地动作，不该被交卷的在途状态拖住
+                  loading: runner.isLast && busy,
                   // 最后一题时右按钮变成交卷；否则到末题前都能往后
                   onPressed: runner.isLast ? onFinish : runner.advance,
                 ),

@@ -49,7 +49,18 @@ class _ComposePageState extends State<ComposePage> {
       draft.updateFilter(const QuestionFilter());
     }
 
-    final active = context.read<DashboardStore>().data?.activeSession;
+    // 看板还没到手就先等它一次。**没有这张看板就看不见进行中的会话**，
+    // 而开始新练习会把那场练习静默作废 —— 冷启动直奔组卷页时（看板还挂在
+    // 第一个请求上）正好落在这个窗口里。宁可多等一个往返，也不能在用户
+    // 不知情时丢掉进度。
+    //
+    // 「看板有数据但已经过期」这一种窗口仍在（静默刷新失败时 Store 会保留旧数据）。
+    // 兜它的是练习页那一侧：会话被作废之后再打开看到的是「已作废」，而不是接着答题。
+    final dashboard = context.read<DashboardStore>();
+    if (dashboard.data == null) await dashboard.refresh(silent: true);
+    if (!mounted) return;
+
+    final active = dashboard.data?.activeSession;
     if (active != null) {
       final choice = await showActiveSessionBanner(context, active);
       if (!mounted || choice == null) return;
