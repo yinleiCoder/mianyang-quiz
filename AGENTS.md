@@ -195,6 +195,26 @@ PDF 阅读器，拿它开 PDF 在手机上只会白屏。
 **PDF 阅读器在 Windows 上要开发者模式**：pdfrx 用符号链接装 PDFium 的 native assets，
 构建机会直接报错并给出开启指引（本机已开）。
 
+**pdfrx 在构建时要从 GitHub Releases 下 PDFium 预编译包**（`bblanchon/pdfium-binaries`，
+每个平台-架构一个 `.tgz`，Android 三个 ABI 各几 MB）。这条路国内经常超时，
+报错长这样：
+
+```
+PDFium download failed (ClientException ... github.com ...); retrying in 1s.
+Target build_hooks failed: Error: Building native assets failed.
+```
+
+`-> 过不去时**先把包下好放进缓存**`，构建钩子见文件已存在就跳过下载：
+
+```
+.dart_tool/hooks_runner/shared/pdfium_dart/build/chromium_7811/<平台>-<架构>/<库名>
+   Windows: win-x64/pdfium.dll        （包内路径 bin/pdfium.dll）
+   Android: android-{arm,arm64,x64}/libpdfium.so（包内路径 lib/libpdfium.so，三个 ABI 都要）
+   macOS:   mac-<arch>/libpdfium.dylib / Linux: linux-<arch>/libpdfium.so
+```
+
+CI（GitHub Actions）能直连 GitHub，不需要这一步。
+
 **「保存到本地」两端不是一个动作**：Windows 写系统下载目录；Android **没有**等价写法
 （`getDownloadsDirectory()` 在 Android 抛 UnsupportedError，写应用外部目录 Android 11+
 对其他应用不可见，`file_selector` 的 `getSaveLocation()` 官方支持表里 Android 是 ❌），
@@ -360,7 +380,7 @@ error C2338: static assertion failed: 'error STL1011: The /await compiler option
 插件在 pub cache 里、不能直接改，所以只能从这里注入。**注意这只是个有期限的续命**——
 那个头文件"将被移除"，将来得等插件升 WIL 或改用 C++20 `<coroutine>`。
 
-### Android：AGP 9 与 flutter_inappwebview 稳定版不兼容
+### Android：flutter_inappwebview 必须用 6.2 的 beta（AGP 9 不兼容稳定版）
 
 稳定版 `flutter_inappwebview_android` **1.1.3** 自己的 `build.gradle` 第 44/48 行用了
 `getDefaultProguardFile('proguard-android.txt')`，而 **AGP 9.0 起这个写法直接报错**
@@ -371,15 +391,41 @@ A problem occurred evaluating project ':flutter_inappwebview_android'.
 > `getDefaultProguardFile('proguard-android.txt')` is no longer supported ...
 ```
 
-报错发生在**求值插件自己的 build.gradle 时**，插件在 pub cache 里改不动，
-所以只能在 `android/gradle.properties` 里把这道闸门关掉（见那个文件里的注释）。
+报错发生在**求值插件自己的 build.gradle 时**，插件在 pub cache 里改不动。
 
-**这是临时口子，有两处要注意**：
-- 谷歌发布说明里讲这条时**给的退回属性名是错的**（串到了下一行的
-  `globalOptionsInConsumerRules`），所以两个属性都写了——Gradle 对拼错的属性名静默忽略。
-- 插件 **1.2.0-beta.3** 已经改成 `proguard-android-optimize.txt`、
-  并把 `compileSdk` 改为跟随 Flutter（不再钉死 34）。等它转正就该删掉这两行、升插件。
-  （升级要**两个平台一起验**：umbrella 包会把 Windows 端也带到 0.7.0-beta.3。）
+**已经试过、无效的路（别再走一遍）**：在 `android/gradle.properties` 里设
+`android.r8.proguardAndroidTxt.disallowed=false`（以及发布说明里那个串了行的
+`android.r8.globalOptionsInConsumerRules.disallowed=false`）。两个都设上、也确实推到了
+CI，**报错一字不变**——这个逃生口在 AGP 9.1 上已经不起作用。
+
+**正解是升到 `flutter_inappwebview: ^6.2.0-beta.3`**：作者自己的前向修复，
+改用 `proguard-android-optimize.txt`，并且 `compileSdk` 跟随 Flutter 而不钉死 34。
+两个平台都已验证通过（Android `assembleRelease` 出包 84.4MB、Windows release 构建通过）。
+
+**别回退到 6.1.5** —— 它 23 个月没更新且编译不过，"留在稳定版"在这里不是更安全的选择。
+等 6.2.0 转正（`^6.2.0-beta.3` 会自动升上去）再确认一次即可。
+
+**这一条与混淆无关**：`--obfuscate` 改的是 Dart 符号名，而报错来自插件 Java 侧的
+R8 规则文件，是构建链上不同的两步。关掉混淆解决不了它。
+
+### 本地在 Windows 上构建 Android：Kotlin 增量缓存写不进去
+
+```
+Execution failed for task ':audioplayers_android:compileReleaseKotlin'.
+> Could not close incremental caches in ...\build\<模块>\kotlin\compileReleaseKotlin\
+  cacheable\caches-jvm\jvm\kotlin: class-fq-name-to-source.tab, ...
+```
+
+**Windows 特有**（Kotlin 2.4 的 Build Tools API 写 .tab 表时撞上文件锁，多半是杀软实时扫描）。
+清缓存、杀 Gradle 与 Kotlin 守护进程都试过，重建后照样复现。
+解法是在 **用户级** `~/.gradle/gradle.properties` 里加：
+
+```properties
+kotlin.incremental=false
+```
+
+**不要写进仓库**——CI 的 Android job 跑在 ubuntu-latest，没这个问题，
+写进去只会让 CI 的 Kotlin 编译变成全量、白白变慢。
 
 符号文件（`app.*.symbols` + `obfuscation-map.json`）只作为 Actions artifact 上传，**不进 Release**：
 它们能反解混淆，公开挂出去等于白混淆。
