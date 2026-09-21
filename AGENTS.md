@@ -360,6 +360,27 @@ error C2338: static assertion failed: 'error STL1011: The /await compiler option
 插件在 pub cache 里、不能直接改，所以只能从这里注入。**注意这只是个有期限的续命**——
 那个头文件"将被移除"，将来得等插件升 WIL 或改用 C++20 `<coroutine>`。
 
+### Android：AGP 9 与 flutter_inappwebview 稳定版不兼容
+
+稳定版 `flutter_inappwebview_android` **1.1.3** 自己的 `build.gradle` 第 44/48 行用了
+`getDefaultProguardFile('proguard-android.txt')`，而 **AGP 9.0 起这个写法直接报错**
+（它带 `-dontoptimize`，会挡住 R8 优化）：
+
+```
+A problem occurred evaluating project ':flutter_inappwebview_android'.
+> `getDefaultProguardFile('proguard-android.txt')` is no longer supported ...
+```
+
+报错发生在**求值插件自己的 build.gradle 时**，插件在 pub cache 里改不动，
+所以只能在 `android/gradle.properties` 里把这道闸门关掉（见那个文件里的注释）。
+
+**这是临时口子，有两处要注意**：
+- 谷歌发布说明里讲这条时**给的退回属性名是错的**（串到了下一行的
+  `globalOptionsInConsumerRules`），所以两个属性都写了——Gradle 对拼错的属性名静默忽略。
+- 插件 **1.2.0-beta.3** 已经改成 `proguard-android-optimize.txt`、
+  并把 `compileSdk` 改为跟随 Flutter（不再钉死 34）。等它转正就该删掉这两行、升插件。
+  （升级要**两个平台一起验**：umbrella 包会把 Windows 端也带到 0.7.0-beta.3。）
+
 符号文件（`app.*.symbols` + `obfuscation-map.json`）只作为 Actions artifact 上传，**不进 Release**：
 它们能反解混淆，公开挂出去等于白混淆。
 
