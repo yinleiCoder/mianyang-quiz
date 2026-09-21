@@ -14,8 +14,8 @@ import 'package:mianyang_quiz/core/constants/qtype_meta.dart';
 import 'package:mianyang_quiz/core/theme/app_metrics.dart';
 import 'package:mianyang_quiz/core/theme/app_text_styles.dart';
 import 'package:mianyang_quiz/data/models/bank/question_tag.dart';
-import 'package:mianyang_quiz/ui/features/bank/widgets/filter_chip_group.dart';
-import 'package:mianyang_quiz/ui/features/bank/widgets/subject_picker_row.dart';
+import 'package:mianyang_quiz/ui/core/design/filter_chip_group.dart';
+import 'package:mianyang_quiz/ui/core/subject/subject_picker_row.dart';
 
 class BankFilterSections extends StatelessWidget {
   const BankFilterSections({

@@ -19,7 +19,7 @@ import 'package:mianyang_quiz/data/models/bank/subject_node.dart';
 import 'package:mianyang_quiz/domain/subject_tree.dart';
 import 'package:mianyang_quiz/ui/core/design/duo_button.dart';
 import 'package:mianyang_quiz/ui/features/bank/widgets/bank_filter_sections.dart';
-import 'package:mianyang_quiz/ui/features/bank/widgets/subject_tree_sheet.dart';
+import 'package:mianyang_quiz/ui/core/subject/subject_tree_sheet.dart';
 import 'package:mianyang_quiz/ui/core/layout/max_width_box.dart';
 
 class BankFilterSheet extends StatefulWidget {

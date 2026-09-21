@@ -12,6 +12,7 @@ import 'package:mianyang_quiz/data/models/bank/question_filter.dart';
 import 'package:mianyang_quiz/data/models/practice/practice_results.dart';
 import 'package:mianyang_quiz/data/models/practice/practice_session.dart';
 import 'package:mianyang_quiz/data/models/practice/session_record.dart';
+import 'package:mianyang_quiz/data/models/practice/start_outcome.dart';
 import 'package:mianyang_quiz/domain/submitted_answer.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -20,23 +21,29 @@ class PracticeRepository {
 
   final SupabaseClient _client;
 
-  /// 组卷并开始一次练习，返回**完整题面快照**（items 已带 content，不必再查题库）。
+  /// 组卷并开始一次练习。**返回两种结局**（见 StartPracticeOutcome）：
+  /// PracticeStarted 拿快照进练习页；PracticeNothingDue 表示今天该练的都练完了。
   ///
-  /// 调用方必须知道两件事：
+  /// 调用方必须知道三件事：
   ///   · 服务端每人同时只允许一套 active 会话，本方法会**静默作废**旧的 active 会话，
   ///     旧进度不可恢复也不报错。进练习前先看 practice_dashboard 的 active_session，
   ///     非空时问用户「继续练习 / 重新开始（当前进度将作废）」。
-  ///   · [limit] 服务端限制 1~50，越界直接报错；抽不到题时报「没有符合条件的题目」，
-  ///     此时服务端已把刚建的空会话删掉，不必再收拾。
+  ///   · [limit] 服务端限制 1~100，越界报错；筛选条件一道题都没命中时报
+  ///     「没有符合条件的题目」（此时服务端已把刚建的空会话删掉，不必再收拾）。
+  ///   · **「今天练过的题当天不再发」是 0069 的硬规则**：符合条件但今天全练过时，
+  ///     服务端不建会话、也不动进行中的练习，返回 PracticeNothingDue。
+  ///     把 [allowSameDay] 传 true 再调一次，就是面板上那个「仍然加练」——
+  ///     它会把今天练过的题放进来（排序按最久没练的靠前）。
   ///
   /// [filter] 与 [questionIds] 只在 [source] 为 all 时生效——错题/收藏两条分支由服务端
   /// 自己定题，不看筛选条件。参数名与类型统一由 QuestionFilter.toRpcParams() 给出
   /// （题型传的是线格式字符串，不是枚举名）。
-  Future<PracticeSessionSnapshot> startSession({
+  Future<StartPracticeOutcome> startSession({
     QuestionFilter filter = const QuestionFilter(),
     int limit = 20,
     PracticeSource source = PracticeSource.all,
     List<String>? questionIds,
+    bool allowSameDay = false,
   }) async {
     try {
       final data = await _client.rpc<Map<String, dynamic>>(
@@ -46,9 +53,18 @@ class PracticeRepository {
           'p_limit': limit,
           'p_source': source.wire,
           'p_question_ids': questionIds,
+          'p_allow_same_day': allowSameDay,
         },
       );
-      return PracticeSessionSnapshot.fromJson(data);
+      // 这一支的 session_id 是 null（服务端没建会话），不能交给快照模型解析。
+      if (data['status'] == 'nothing_due') {
+        return PracticeNothingDue(
+          // next_due_at 可能缺字段/为 null：'$null' 解析不出来就是 null，正是想要的
+          nextDueAt: DateTime.tryParse('${data['next_due_at']}'),
+          sameDayCount: (data['same_day_count'] as num?)?.toInt() ?? 0,
+        );
+      }
+      return PracticeStarted(PracticeSessionSnapshot.fromJson(data));
     } catch (error) {
       throw mapError(error);
     }

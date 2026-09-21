@@ -35,6 +35,16 @@ class HomeActions extends StatelessWidget {
         ),
         const SizedBox(height: AppMetrics.gapSm),
         DuoButton(
+          // 复习资料入口同样放首页而不是底部导航（与考试同一个判断）：
+          // 底部导航已经 5 个（Material 的上限），再挤一个每个都变窄；
+          // 资料是"考前集中看"的东西，不像刷题那样天天点。
+          label: '复习资料',
+          icon: Icons.folder_open_outlined,
+          variant: DuoButtonVariant.outline,
+          onPressed: () => context.push(AppRoutes.materialsPath),
+        ),
+        const SizedBox(height: AppMetrics.gapSm),
+        DuoButton(
           label: '去错题本看看',
           icon: Icons.history_edu_outlined,
           variant: DuoButtonVariant.outline,

@@ -145,9 +145,26 @@ widget 测试断言不了"字是不是大得离谱"。
 `INTERNET` 权限只在模板的 debug/profile manifest 里，已手工补进 `android/app/src/main/AndroidManifest.xml`。
 漏掉它的表现是：**release 包所有网络请求失败，而 debug 下完全正常**。
 
+**签名**：`android/app/build.gradle.kts` 在 `android/key.properties` 不存在时会
+**静默回退到 debug 签名**。debug 签名的包能装能跑、看不出任何异常，但**签名会随构建机变**——
+下一版就盖不上去（Android 要求同包名同签名），用户只能卸载重装。所以流水线在打 tag 时
+缺密钥直接失败，构建完还有一步 `apksigner` 回头看产物上的章（见第七节）。
+
 ### 数据库侧的坑
 - `start_practice_session` 会自动作废旧 active 会话（每人同时至多一套）。进组卷页前先看
   `practice_dashboard().active_session`，非空要问「继续练习 / 重新开始（当前进度将作废）」。
+- **抽题按遗忘曲线落闸（0069）：当天练过的题，当天不再发。** 分四层
+  （新题 → 到期复习 → 今天之前练过的最久没练的补位 → 今天练过的），
+  第四层只在 `p_allow_same_day=true` 时才进得来。池子干了**不报错**，返回
+  `status='nothing_due'` + `next_due_at`，客户端据此弹「今天的题都练完了」面板，
+  上面那个「仍然加练」就是带开关再调一次。所以
+  `PracticeRepository.startSession` 返的是 `StartPracticeOutcome` 两种结局，
+  不是快照——**别再写回 `PracticeSessionSnapshot`**。
+  另外：`p_allow_same_day` 是新参数，函数签名从 8 参变成 9 参，
+  改这个函数时必须 `drop` 旧签名，否则两个重载并存，PostgREST 解析 RPC 直接报歧义。
+- **"当天"的日界一律用 `practice_day_start()`（北京时间）**，不要用库里的
+  `date_trunc('day', now())` —— 库的时区是 **UTC**，它的"今天"从北京时间早上 8 点起算，
+  7 点早自习练的题会被算成昨天。（看板那几个函数还在用 UTC 日界，是同一类问题的另一处。）
 - 复合题的 `submit_practice_answer` 返回 `correct_answer` 是 **null**——答案在 `content.sub[].answer`，
   顶层没有。答案展示组件必须逐子题渲染。
 - `update_own_profile` 的 `p_avatar_url` 默认 null 且写库时 `nullif(trim())`：
@@ -155,6 +172,39 @@ widget 测试断言不了"字是不是大得离谱"。
 - `accuracy` 分母不一致：`finish_practice_session` 用总题数，`practice_dashboard` 用已答数。
 - 题库列表查询**必须带外键 hint** `questions!question_versions_question_id_fkey`——
   questions ↔ question_versions 是双外键，不带会 300 崩溃。
+
+### 复习资料（0070）
+
+**与题库媒体是两套东西，别混。** 资料的 OSS 前缀是 `materials/`（`lib/media-spec.js` 的
+`PURPOSES.material`），落库在 `review_materials`；`media_objects` 那张表绑在题目版本上
+（`version_media` 引用计数 GC），资料不挂版本，硬塞进去语义不通。`register_media`
+还硬拒非 `qbank/` 前缀，根本登记不进去。
+
+**删除必须走 `/api/materials/delete`，客户端只传 id。** 不要照抄 `/api/oss/delete`
+（头像那条）——它的模型是"key 从浏览器传进来"，而它自己的注释就承认了残余风险。
+资料这条是**服务端调 RPC 判归属拿到 key、再删 OSS**，key 全程不出服务端。
+顺序是**先删行、后删对象**：反过来一旦 OSS 删成功而行没删掉，学生点开就是坏链；
+现在最坏只留个孤儿对象。
+
+**只有 PDF 与图片能在应用内看**，其余（Office / 音视频）一律交给系统程序。
+这条口径两端各有一份、必须一致：客户端 `core/constants/material_meta.dart` 的
+`opensInline`，网页端 `lib/materials.js` 的 `INLINE_KINDS`。
+PDF 用 **pdfrx**（PDFium）：**不要改用 WebView** —— Android 的系统 WebView 没有内置
+PDF 阅读器，拿它开 PDF 在手机上只会白屏。
+
+**PDF 阅读器在 Windows 上要开发者模式**：pdfrx 用符号链接装 PDFium 的 native assets，
+构建机会直接报错并给出开启指引（本机已开）。
+
+**「保存到本地」两端不是一个动作**：Windows 写系统下载目录；Android **没有**等价写法
+（`getDownloadsDirectory()` 在 Android 抛 UnsupportedError，写应用外部目录 Android 11+
+对其他应用不可见，`file_selector` 的 `getSaveLocation()` 官方支持表里 Android 是 ❌），
+所以走系统分享面板。见 `data/services/material_download_service.dart` 文件头。
+
+**入口在首页工作台，不做底部导航的第 6 个 tab**：底部导航已经 5 个（Material 的上限），
+与考试放首页是同一个判断。
+
+**下载次数只在真的「保存到本地」时 +1**，打开查看不计数——老师看的是"这份资料被拿走了几次"，
+混进浏览数就没意义了。
 
 ### 代码生成
 - `build.yaml` 里的 `explicit_to_json: true` **不能删**，否则嵌套对象会被原样塞进 `toJson()`。
@@ -238,8 +288,71 @@ git tag v1.0.1 && git push origin v1.0.1
 跑完在 GitHub Releases 上得到两个资产，**名字固定不带版本号**（这样
 `/releases/latest/download/<名字>` 永远指向最新版，产品页与客户端都能写死链接）：
 
-- `mianyang_quiz-android.apk` —— Android 直接装（未配 `ANDROID_KEYSTORE_BASE64` 时是 debug 签名，仅适合内测）
+- `mianyang_quiz-android.apk` —— Android 直接装（**必须已配正式签名**，见下）
 - `mianyang_quiz-windows-x64.zip` —— 整个目录解压后运行
+
+### Android 正式签名（一次性配好）
+
+**没配 `ANDROID_KEYSTORE_BASE64` 时，打 tag 会直接失败**（这是刻意的：debug 签名的包
+签名会变，老用户下一版就装不上，而这种包外表看不出任何异常）。
+
+```powershell
+# 1) 生成密钥库（只做一次）。口令与别名自己定，务必存进密码管理器。
+keytool -genkeypair -v -keystore mianyang-quiz-release.jks `
+  -keyalg RSA -keysize 2048 -validity 10950 -alias mianyang `
+  -dname "CN=Mianyang Quiz, OU=Dev, O=Mianyang, L=Mianyang, ST=Sichuan, C=CN"
+
+# 2) 转成 base64（-Encoding ascii 单行输出；**不要带换行**，否则 CI 解码出来是坏文件）
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("mianyang-quiz-release.jks")) |
+  Set-Content -Encoding ascii mianyang-quiz-release.jks.b64
+```
+
+把 `.jks` 与 `.b64` **离线备份两份**（换机器、重装都会用到；`*.jks` 已被 `.gitignore` 忽略）。
+然后在 GitHub 仓库 Settings → Secrets and variables → Actions 里加四个 secret：
+
+| secret | 取值 |
+|---|---|
+| `ANDROID_KEYSTORE_BASE64` | 第 2 步那个 `.b64` 文件的全部内容 |
+| `ANDROID_KEYSTORE_PASSWORD` | 第 1 步的 `storePassword` |
+| `ANDROID_KEY_ALIAS` | `mianyang` |
+| `ANDROID_KEY_PASSWORD` | 第 1 步的 `keyPassword` |
+
+流水线在配置签名后会先 `keytool -list` 验一遍密钥库与别名（base64 传坏了、别名写错了
+都在这一步就停），构建完再用 `apksigner verify --print-certs` **回头看产物**——
+只要证书里出现 `Android Debug` 就判失败。
+
+> **已经装过 debug 签名版本的用户，换正式签名后必须先卸载再装。** Android 不允许
+> 换签名覆盖安装。发布说明里要写清楚，否则那批用户会卡在「应用未安装」。
+
+### Windows 构建机要装 NuGet
+
+`flutter_inappwebview` 的 Windows 端在**构建期**用 NuGet 拉三个包
+（WIL / WebView2 SDK / nlohmann.json），插件 CMake 走 `find_program(NUGET nuget)`：
+
+```powershell
+winget install Microsoft.NuGet        # 或 choco install nuget.commandline
+```
+
+漏了它的报错是 `NUGET-NOTFOUND`。工作流里已显式补了一步。另外构建需要能访问
+nuget.org（拉包），以及 `CL=/utf-8`（中文 Windows 上 C++ 源码会触发 C4819，见第四节）。
+
+**还有一个编译开关必须加，否则构建必挂**（与语言环境无关，CI 也一样）：
+
+```powershell
+$env:CL = "/utf-8 /D_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS"
+```
+
+`flutter_inappwebview` 的 Windows 端固定拉 **WIL 1.0.231216.1**（2023-12），它还在
+`include <experimental/coroutine>`；而 **VS 2022 17.14（MSVC 14.51）起那个头文件直接当错误报**：
+
+```
+error C2338: static assertion failed: 'error STL1011: The /await compiler option,
+<experimental/coroutine>, ... are deprecated by Microsoft and will be REMOVED SOON.
+```
+
+微软给的抑制宏就是上面那个 `_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS`。
+插件在 pub cache 里、不能直接改，所以只能从这里注入。**注意这只是个有期限的续命**——
+那个头文件"将被移除"，将来得等插件升 WIL 或改用 C++20 `<coroutine>`。
 
 符号文件（`app.*.symbols` + `obfuscation-map.json`）只作为 Actions artifact 上传，**不进 Release**：
 它们能反解混淆，公开挂出去等于白混淆。

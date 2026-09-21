@@ -65,8 +65,25 @@ jobs:
           $config | ConvertTo-Json | Set-Content -Encoding utf8 "config/ci.local.json"
         shell: pwsh
 
+      - name: 安装 NuGet CLI
+        # **flutter_inappwebview 的 Windows 端在构建期强制要求它**：
+        # 插件的 CMakeLists 走 `find_program(NUGET nuget)`，再用 nuget 从 nuget.org
+        # 拉 WIL / WebView2 SDK / nlohmann.json 三个包。找不到 nuget.exe 就是
+        # NUGET-NOTFOUND，整个 Windows 构建失败。
+        # runner 镜像里虽然有 NuGet，但不保证在 PATH 上（find_program 只认 PATH），
+        # 所以显式装一次 —— 已装过就是秒返回的 no-op。
+        run: |
+          choco install nuget.commandline -y --no-progress
+          nuget help | Select-Object -First 1
+        shell: pwsh
+
       - name: 构建（混淆）
         run: |
+          # flutter_inappwebview 的 Windows 端拉的是 WIL 1.0.231216.1，它还在 include
+          # <experimental/coroutine>；而 VS 2022 17.14（MSVC 14.51）起那个头文件**直接当错误报**
+          # （C2338 / STL1011），提示的抑制宏就是下面这个。不加它 Windows 构建必挂。
+          # 与语言环境无关，所以 CI 也要加（不像 C4819 只在中文 Windows 上触发）。
+          $env:CL = "/D_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS"
           flutter pub get
           flutter build windows --release `
             --build-name=${{ steps.ver.outputs.name }} `
@@ -218,27 +235,58 @@ jobs:
           }
           JSON
 
-      - name: 配置签名（可选）
-        # 没配 ANDROID_KEYSTORE_BASE64 时 Flutter 用 debug 签名——能装，但**换台机器就发不出
-        # 可覆盖安装的更新**（Android 要求同包名同签名）。正式发布请先生成一次 keystore
-        #（见 AGENTS.md 第七节），把 base64 与口令存进本仓库 secret。
+      - name: 配置签名
+        # **打 tag 发布时缺密钥直接失败**，不再像以前那样"警告一下、悄悄用 debug 签名发出去"。
+        # 那个默认值很坑：debug 签名的包能装、能跑，看起来一切正常，但下一次换台机器
+        #（或 GitHub 换了 runner）重新发布的包**签名不同，老用户覆盖安装会失败**，
+        # 只能卸载重装——而那时用户已经装了。宁可发布链断在这里。
+        #
+        # 手动跑（workflow_dispatch）只为验证流水线，允许缺密钥，给警告即可。
+        #
+        # 生成密钥与填 secret 的步骤见 AGENTS.md 第七节。
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
-            echo "::warning::未配置 ANDROID_KEYSTORE_BASE64，本次用 debug 签名（仅适合内测）"
+          missing=""
+          for name in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            if [ -z "${!name}" ]; then missing="$missing $name"; fi
+          done
+
+          if [ -n "$missing" ]; then
+            if [ "${{ github.ref_type }}" = "tag" ]; then
+              echo "::error::发布 ${{ github.ref_name }} 缺少签名密钥:$missing"
+              echo "打 tag 发布必须用正式签名——debug 签名的包签名会变，老用户无法覆盖安装。"
+              echo "生成与配置步骤见 AGENTS.md 第七节。"
+              exit 1
+            fi
+            echo "::warning::缺少$missing，本次用 debug 签名（仅限非 tag 的流水线验证）"
             exit 0
           fi
+
           echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/app/release.keystore
+          # 解出来不是密钥库就早点停：等到 apk 签名那一步才报错，日志里只剩一句
+          # "Keystore was tampered with" —— 那通常是 base64 传坏了，不是口令错。
+          if ! keytool -list -keystore android/app/release.keystore \
+                 -storepass "$ANDROID_KEYSTORE_PASSWORD" > /dev/null 2>&1; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 解出来的不是可用密钥库（多半是 base64 传坏了，注意别带换行/引号）"
+            exit 1
+          fi
+          if ! keytool -list -keystore android/app/release.keystore \
+                 -storepass "$ANDROID_KEYSTORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" > /dev/null 2>&1; then
+            echo "::error::密钥库里没有别名为 $ANDROID_KEY_ALIAS 的条目，检查 ANDROID_KEY_ALIAS"
+            exit 1
+          fi
+
           cat > android/key.properties <<EOF
           storeFile=release.keystore
           storePassword=$ANDROID_KEYSTORE_PASSWORD
           keyAlias=$ANDROID_KEY_ALIAS
           keyPassword=$ANDROID_KEY_PASSWORD
           EOF
+          echo "签名配置就绪，别名 $ANDROID_KEY_ALIAS"
 
       - name: 构建（混淆）
         run: |
@@ -250,11 +298,34 @@ jobs:
             --split-debug-info=symbols/android \
             --dart-define-from-file=config/ci.local.json
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: android-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
-          if-no-files-found: error
+      - name: 校验 APK 签名
+        # **这是"悄悄发出一个 debug 签名包"的最后一道闸**。
+        # 上面那步只管把 key.properties 摆好，真正签成什么由 Gradle 决定 ——
+        # 而 android/app/build.gradle.kts 在 key.properties 缺失时是**静默回退 debug 签名**的。
+        # 所以构建完必须回头看**产物**上盖的是谁的章，而不是相信配置。
+        run: |
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          SDK="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          APKSIGNER=$(find "$SDK/build-tools" -maxdepth 2 -name apksigner -type f | sort -V | tail -1)
+          if [ -z "$APKSIGNER" ]; then
+            echo "::error::找不到 apksigner（$SDK/build-tools）"
+            exit 1
+          fi
+          echo "用 $APKSIGNER 校验 $APK"
+          # **不要写成 `apksigner ... | tee file`**：管道的退出码取自 tee，
+          # apksigner 真失败了也会一路走到"校验通过"——那这步就白设了。
+          if ! "$APKSIGNER" verify --print-certs "$APK" > /tmp/apk-certs.txt 2>&1; then
+            echo "::error::apksigner 校验失败（APK 没签名或签名坏了）"
+            cat /tmp/apk-certs.txt
+            exit 1
+          fi
+          cat /tmp/apk-certs.txt
+
+          if grep -qi "Android Debug" /tmp/apk-certs.txt; then
+            echo "::error::产物是 debug 签名——这种包换台机器就发不出可覆盖安装的更新，不能发布"
+            exit 1
+          fi
+          echo "签名校验通过"
 
       - uses: actions/upload-artifact@v4
         with:

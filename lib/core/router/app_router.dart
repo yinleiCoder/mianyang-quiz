@@ -30,7 +30,10 @@ import 'package:mianyang_quiz/ui/features/compose/compose_page.dart';
 import 'package:mianyang_quiz/ui/features/exam/exam_list_page.dart';
 import 'package:mianyang_quiz/ui/features/exam/exam_page.dart';
 import 'package:mianyang_quiz/ui/features/exam/exam_result_page.dart';
+import 'package:mianyang_quiz/data/models/material/material_brief.dart';
 import 'package:mianyang_quiz/ui/features/home/home_page.dart';
+import 'package:mianyang_quiz/ui/features/materials/material_viewer_page.dart';
+import 'package:mianyang_quiz/ui/features/materials/materials_page.dart';
 import 'package:mianyang_quiz/ui/features/practice/practice_page.dart';
 import 'package:mianyang_quiz/ui/features/practice/practice_result_page.dart';
 import 'package:mianyang_quiz/ui/features/practice/recite_page.dart';
@@ -200,6 +203,24 @@ GoRouter createAppRouter(AuthStore auth) {
         builder: (context, state) => ExamListPage(
           initialTab: state.uri.queryParameters[AppRoutes.examsTabQuery],
         ),
+      ),
+
+      // 复习资料。入口在首页工作台，同样不占底部导航的位置（理由见 routes.dart）。
+      GoRoute(
+        path: AppRoutes.materialsPath,
+        name: AppRoutes.materialsName,
+        builder: (context, state) => const MaterialsPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.materialViewPath,
+        name: AppRoutes.materialViewName,
+        builder: (context, state) {
+          // 资料本体随 extra 一起带过来，省一次往返；它不受编译器保证类型，
+          // 所以用 is 判断而不是硬转（与考试那两条路由同款处理）。
+          final material = state.extra;
+          if (material is! MaterialBrief) return const _RouteNotFoundPage();
+          return MaterialViewerPage(material: material);
+        },
       ),
       GoRoute(
         path: AppRoutes.examAttemptPath,

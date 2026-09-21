@@ -103,7 +103,3 @@ class QuestionEnricher {
     return {for (final row in rows) row['id'] as String: row['name'] as String};
   }
 }
-
-/// LIKE 通配符转义，让关键词里的 % _ \ 按字面匹配（与网页端 lib/question-model 同规则）。
-String escapeLikeKeyword(String input) =>
-    input.replaceAllMapped(RegExp(r'[\\%_]'), (m) => '\\${m[0]}');

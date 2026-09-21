@@ -5,25 +5,20 @@
 // 上次调好的条件还在。
 //
 // 本页最要紧的一件事：**开始新练习会静默作废进行中的会话**。
-// 所以进页面先看有没有 active_session，非空时必须让用户选「继续 / 重新开始」。
+// 所以进页面先看有没有 active_session，非空时必须让用户选「继续 / 重新开始」——
+// 那一段连同「今天练完了」的重试都在 start_practice_flow.dart，本页只管选条件与按钮态。
 
-import 'dart:async';
-
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:mianyang_quiz/core/error/error_mapper.dart';
-import 'package:mianyang_quiz/core/router/routes.dart';
 import 'package:mianyang_quiz/core/theme/app_metrics.dart';
 import 'package:mianyang_quiz/data/models/bank/question_filter.dart';
 import 'package:mianyang_quiz/data/models/practice/practice_session.dart';
-import 'package:mianyang_quiz/data/repositories/practice_repository.dart';
 import 'package:mianyang_quiz/state/dashboard_store.dart';
 import 'package:mianyang_quiz/data/services/sfx_service.dart';
 import 'package:mianyang_quiz/state/practice_draft_store.dart';
 import 'package:mianyang_quiz/ui/core/design/duo_button.dart';
 import 'package:mianyang_quiz/ui/core/design/duo_card.dart';
 import 'package:mianyang_quiz/ui/core/layout/section_header.dart';
-import 'package:mianyang_quiz/ui/features/compose/widgets/active_session_banner.dart';
+import 'package:mianyang_quiz/ui/features/compose/start_practice_flow.dart';
 import 'package:mianyang_quiz/ui/features/compose/widgets/compose_options.dart';
 import 'package:mianyang_quiz/ui/features/compose/widgets/filter_fields.dart';
 import 'package:mianyang_quiz/ui/features/compose/widgets/source_selector.dart';
@@ -41,7 +36,8 @@ class _ComposePageState extends State<ComposePage> {
 
   PracticeDraftStore get _draft => context.read<PracticeDraftStore>();
 
-  /// 开始练习。若已有进行中的会话，先让用户决定怎么处理。
+  /// 开始练习：本页只管按钮的 loading 态，流程本身在 start_practice_flow.dart
+  ///（等看板 → 处理进行中的会话 → 组卷 → 今天练完了的重试 → 跳转）。
   Future<void> _start() async {
     final draft = _draft;
     if (draft.source != PracticeSource.all && draft.filterApplies) {
@@ -49,53 +45,11 @@ class _ComposePageState extends State<ComposePage> {
       draft.updateFilter(const QuestionFilter());
     }
 
-    // 看板还没到手就先等它一次。**没有这张看板就看不见进行中的会话**，
-    // 而开始新练习会把那场练习静默作废 —— 冷启动直奔组卷页时（看板还挂在
-    // 第一个请求上）正好落在这个窗口里。宁可多等一个往返，也不能在用户
-    // 不知情时丢掉进度。
-    //
-    // 「看板有数据但已经过期」这一种窗口仍在（静默刷新失败时 Store 会保留旧数据）。
-    // 兜它的是练习页那一侧：会话被作废之后再打开看到的是「已作废」，而不是接着答题。
-    final dashboard = context.read<DashboardStore>();
-    if (dashboard.data == null) await dashboard.refresh(silent: true);
-    if (!mounted) return;
-
-    final active = dashboard.data?.activeSession;
-    if (active != null) {
-      final choice = await showActiveSessionBanner(context, active);
-      if (!mounted || choice == null) return;
-      if (choice == ActiveSessionChoice.resume) {
-        context.pushReplacement(AppRoutes.practiceOf(active.sessionId));
-        return;
-      }
-      // 重新开始：继续往下走，服务端会作废旧会话
-    }
-
     setState(() => _starting = true);
-    try {
-      final snapshot = await context.read<PracticeRepository>().startSession(
-        filter: draft.filter,
-        limit: draft.limit,
-        source: draft.source,
-      );
-      if (!mounted) return;
-      // 看板刷新不 await：练习页根本不显示看板，交卷后的结果页还会再刷一次。
-      // 等它等于把一次 practice_dashboard RPC 塞进「开始练习」的等待路径，
-      // 用户多等一个往返才进题。refresh 自己吞掉异常，这里不会产生未处理的错误。
-      unawaited(context.read<DashboardStore>().refresh(silent: true));
-      context.pushReplacement(
-        AppRoutes.practiceOf(snapshot.sessionId),
-        extra: (mode: draft.mode, shuffle: draft.shuffleOptions),
-      );
-    } catch (error) {
-      if (!mounted) return;
-      setState(() => _starting = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        // 不要插值原始异常：AppException.toString() 是 '$runtimeType: $message'，
-        // 用户会看到「ServerException: …」而不是给用户看的那句中文。
-        SnackBar(content: Text(mapError(error).message)),
-      );
-    }
+    // 进了练习页就交给那边，不要回写状态（本页马上会被替换掉）
+    final entered = await startPracticeFlow(context, draft: draft);
+    if (!mounted || entered) return;
+    setState(() => _starting = false);
   }
 
   @override

@@ -20,7 +20,7 @@ import 'package:mianyang_quiz/core/theme/app_text_styles.dart';
 import 'package:mianyang_quiz/data/models/bank/subject_node.dart';
 import 'package:mianyang_quiz/domain/subject_tree.dart';
 import 'package:mianyang_quiz/ui/core/layout/section_header.dart';
-import 'package:mianyang_quiz/ui/features/bank/widgets/subject_tree_branch.dart';
+import 'package:mianyang_quiz/ui/core/subject/subject_tree_branch.dart';
 import 'package:mianyang_quiz/ui/core/layout/max_width_box.dart';
 
 class SubjectTreeSheet extends StatefulWidget {

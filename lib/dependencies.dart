@@ -15,6 +15,7 @@ import 'package:mianyang_quiz/data/repositories/app_update_repository.dart';
 import 'package:mianyang_quiz/data/repositories/favorite_repository.dart';
 import 'package:mianyang_quiz/data/repositories/feedback_repository.dart';
 import 'package:mianyang_quiz/data/repositories/list_repository.dart';
+import 'package:mianyang_quiz/data/repositories/material_repository.dart';
 import 'package:mianyang_quiz/data/repositories/paper_repository.dart';
 import 'package:mianyang_quiz/data/repositories/practice_repository.dart';
 import 'package:mianyang_quiz/data/repositories/question_report_repository.dart';
@@ -24,6 +25,7 @@ import 'package:mianyang_quiz/data/repositories/subject_repository.dart';
 import 'package:mianyang_quiz/data/repositories/user_repository.dart';
 import 'package:mianyang_quiz/data/services/auth_service.dart';
 import 'package:mianyang_quiz/data/services/exam_draft_service.dart';
+import 'package:mianyang_quiz/data/services/material_download_service.dart';
 import 'package:mianyang_quiz/data/services/oss_upload_service.dart';
 import 'package:mianyang_quiz/data/services/question_pdf_service.dart';
 import 'package:mianyang_quiz/data/services/sfx_service.dart';
@@ -45,8 +47,12 @@ class AppDependencies {
       favoriteRepository = FavoriteRepository(client),
       feedbackRepository = FeedbackRepository(client),
       paperRepository = PaperRepository(client),
+      materialRepository = MaterialRepository(client),
       appUpdateRepository = AppUpdateRepository(Dio()),
       ossUploadService = OssUploadService(client),
+      // 下载用独立的 Dio：与 appUpdateRepository 一样是"拿别人的东西"，
+      // 不该跟 OSS 直传共用（那个带签名相关的拦截器与超时设置）
+      materialDownloadService = MaterialDownloadService(Dio()),
       sfxService = SfxService(),
       examDraftService = ExamDraftService(),
       questionPdfService = QuestionPdfService();
@@ -77,6 +83,7 @@ class AppDependencies {
   final FavoriteRepository favoriteRepository;
   final FeedbackRepository feedbackRepository;
   final PaperRepository paperRepository;
+  final MaterialRepository materialRepository;
   final AppUpdateRepository appUpdateRepository;
   final OssUploadService ossUploadService;
   final SfxService sfxService;
@@ -85,6 +92,7 @@ class AppDependencies {
   /// （服务端要等交卷才存答案，中途退出只能靠它，见 exam_draft_service.dart）。
   final ExamDraftService examDraftService;
   final QuestionPdfService questionPdfService;
+  final MaterialDownloadService materialDownloadService;
 
   /// 四个跨页 Store。赋值在 create() 里完成（它们彼此之间与仓储有依赖顺序）。
   late final AuthStore authStore;

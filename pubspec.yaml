@@ -48,11 +48,27 @@ dependencies:
   url_launcher: ^6.3.2
   share_plus: ^13.3.0
   flutter_svg: ^2.3.0
-  webview_flutter: ^4.14.1
+  # AI 答疑的内嵌浏览器。**不用官方 webview_flutter**：它只实现 Android/iOS，
+  # Windows 上没有任何官方实现（原先只能给"用浏览器打开"的降级入口）。
+  # 这个包 Windows 端走 WebView2，**构建机必须把 nuget.exe 放进 PATH**
+  #（本机：choco install NuGet.CommandLine；CI：工作流里显式装一步），
+  # 否则 `flutter build windows` 直接失败；用户机器需要 WebView2 运行时
+  #（Win11 自带，Win10 一般随 Edge 装上，安装器可另带 bootstrapper）。
+  flutter_inappwebview: ^6.1.5
   audioplayers: ^6.8.1
   pdf: ^3.13.0
   printing: ^5.15.0
   contribution_heatmap: ^0.6.0
+
+  # 复习资料区的 PDF 阅读。**为什么不用已经装了的 flutter_inappwebview 看 PDF**：
+  # Android 的系统 WebView 根本没有内置 PDF 阅读器（Chrome 有，WebView 没有），
+  # 拿 WebView 打开 OSS 上的 PDF 在手机上只会白屏。pdfrx 走 PDFium，六个平台一致。
+  # 代价：**Windows 构建机必须开「开发者模式」**（它用符号链接装 PDFium 的 native assets），
+  # 没开的话 flutter build windows 会直接报错并给出开启指引。
+  pdfrx: ^2.6.5
+  # 保存资料到本地。本来就是 share_plus 的传递依赖，但**用到了就要写进 pubspec**
+  #（同 http 那条注释的理由：上游换实现时这里会静默断掉）。
+  path_provider: ^2.1.5
 
 dev_dependencies:
   flutter_test:

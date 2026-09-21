@@ -11,6 +11,7 @@
 // 行的装配（补科目路径/学校名/标签）在 query/question_enricher.dart，与详情页共用。
 
 import 'package:mianyang_quiz/core/error/error_mapper.dart';
+import 'package:mianyang_quiz/core/utils/like_escape.dart';
 import 'package:mianyang_quiz/data/models/bank/question_brief.dart';
 import 'package:mianyang_quiz/data/models/bank/question_filter.dart';
 import 'package:mianyang_quiz/data/models/bank/subject_node.dart';

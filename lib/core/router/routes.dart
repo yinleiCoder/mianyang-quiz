@@ -60,6 +60,18 @@ abstract final class AppRoutes {
   static const examsPath = '/exams';
   static const examsName = 'exams';
 
+  // ---------- 复习资料 ----------
+  // 入口同样在首页工作台，不做第 6 个底部 tab：Material 的底部导航上限是 5 个
+  //（首页/题库/AI/记录/我的已经占满），再挤一个每个都变窄。与上面考试那条同一个判断。
+
+  static const materialsPath = '/materials';
+  static const materialsName = 'materials';
+
+  /// 资料查看页：PDF 用内嵌阅读器，图片全屏看，其余（Office/音视频）在这里给出
+  /// 「用其他程序打开 / 保存到本地 / 分享」三个动作——统一落在一页，列表只需一个入口。
+  static const materialViewPath = '/materials/:materialId';
+  static const materialViewName = 'materialView';
+
   static const examAttemptPath = '/exams/attempt/:attemptId';
   static const examAttemptName = 'examAttempt';
 
@@ -99,6 +111,8 @@ abstract final class AppRoutes {
   static String examsOf(String tab) => '$examsPath?$examsTabQuery=$tab';
 
   static String practiceOf(String sessionId) => '/practice/$sessionId';
+
+  static String materialViewOf(String materialId) => '/materials/$materialId';
 
   static String practiceResultOf(String sessionId) => '/practice/$sessionId/result';
 
