@@ -327,6 +327,13 @@ jobs:
           fi
           echo "签名校验通过"
 
+      # **必须排在校验之后**：先传再验等于把没验过的包挂上 Release。
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+
       - uses: actions/upload-artifact@v4
         with:
           name: android-symbols
