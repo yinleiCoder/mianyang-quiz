@@ -33,6 +33,10 @@ abstract final class OssPurpose {
 
   /// 头像，≤5MB，仅 image/png、image/jpeg、image/webp。
   static const String avatar = 'avatar';
+
+  // 服务端还有第三个用途 `material`（复习资料，文档档放宽到 2GB），
+  // **本端不定义它的常量**：资料由教师在网页端上传，客户端只读。
+  // 这里留一行是为了下次看到"服务端有三个用途、客户端只有两个"时不用去翻服务端代码。
 }
 
 class OssUploadService {

@@ -206,6 +206,12 @@ PDF 阅读器，拿它开 PDF 在手机上只会白屏。
 **下载次数只在真的「保存到本地」时 +1**，打开查看不计数——老师看的是"这份资料被拿走了几次"，
 混进浏览数就没意义了。
 
+**资料的文档档是 2GB，与题干附件不是同一档**：`lib/media-spec.js` 里
+`material_document`（资料，2GB）与 `document`（题干附件，200MB）并存，`MATERIAL_TYPES`
+把文档类的 mime 重映射到前者。**别把它们合并**——给一道题挂 2GB 附件没有意义。
+客户端这边的影响：下载要能扛住 GB 级文件（`material_download_service.dart` 是流式落盘、
+且已下过且大小一致就复用，不会整份读进内存）。
+
 ### 代码生成
 - `build.yaml` 里的 `explicit_to_json: true` **不能删**，否则嵌套对象会被原样塞进 `toJson()`。
 - freezed 的 union 判别键写法（已验证可用）：`@Freezed(unionKey: 't')` + `@FreezedUnionValue('text')`。
