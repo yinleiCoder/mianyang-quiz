@@ -60,6 +60,22 @@ Future<StartupResult> bootstrap() async {
       // （anonKey 参数已废弃，传它会被忽略并告警）
       publishableKey: Env.supabaseAnonKey,
       httpClient: authClient,
+      // 会话在本地存储里的 key，SDK 默认按**域名第一段**算：
+      //   `sb-${Uri.parse(url).host.split(".").first}-auth-token`
+      // （supabase_flutter 的 supabase.dart:133，且只在没传 localStorage 时才自动推导）。
+      //
+      // 所以**换域名 = 换 key = 所有人的本地会话丢失、被登出一次**。我们为了绕开 SNI 拦截
+      // 把 SUPABASE_URL 换成了 api.myquiz.cn，这个 key 就会从 sb-jwbczaoevrcrdqqvkfaz-…
+      // 变成 sb-api-…。这里显式钉住旧 key，让会话存储与域名解耦：这次换域名用户毫无感知，
+      // 以后再有下一次也一样。
+      //
+      // ⚠️ 这个值是**第一次上线时**那个域名算出来的，**以后不许再改** —— 改了就是又一次
+      // 全体登出，而且这次不会有人提醒你，因为代码看起来完全正常。
+      authOptions: FlutterAuthClientOptions(
+        localStorage: SharedPreferencesLocalStorage(
+          persistSessionKey: 'sb-jwbczaoevrcrdqqvkfaz-auth-token',
+        ),
+      ),
     );
     // 接上刷新回调。**在 initialize 之后**：它需要 client.auth，
     // 而 client 正是用这个 httpClient 造出来的（构造期拿不到，会造成循环依赖）。

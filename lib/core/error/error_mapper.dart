@@ -29,6 +29,19 @@ AppException mapError(Object error, [StackTrace? stack]) {
     );
   }
 
+  // 必须排在 AuthException 之前：它**继承自** sb.AuthException，落进去就会被当成
+  // "登录失效"（本项目的约定是收到 AuthException 就踢回登录页），而用户看到的
+  // 还会是英文原文（"HandshakeException: Connection terminated during handshake"）。
+  //
+  // 它的真实语义是**暂时连不上**：gotrue 在请求令牌时遇到网络失败或 5xx 抛的就是它。
+  // 会话并没有被清掉，网络恢复后原来那份会话照常可用。
+  if (error is sb.AuthRetryableFetchException) {
+    final status = int.tryParse(error.statusCode ?? '');
+    return status != null && status >= 500
+        ? ServerException(_httpMessage(status), cause: error)
+        : NetworkException(cause: error);
+  }
+
   if (error is sb.AuthException) {
     return AuthException(message: _authMessage(error), cause: error);
   }

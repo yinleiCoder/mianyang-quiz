@@ -53,6 +53,14 @@ add_subdirectory(${FLUTTER_MANAGED_DIR})
 add_subdirectory("runner")
 
 
+# flutter_inappwebview_windows compiles with cxx_std_17, and cppwinrt's
+# winrt/base.h falls back to <experimental/coroutine> under C++17. MSVC 14.51
+# (VS 17.14+) promotes that header's deprecation notice from a warning to a hard
+# C2338 error, so opt back in here. This must come before the plugins are added
+# below, as a directory property only applies to targets created after it.
+add_compile_definitions(_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS)
+
+
 # Generated plugin build rules, which manage building the plugins and adding
 # them to the application.
 include(flutter/generated_plugins.cmake)

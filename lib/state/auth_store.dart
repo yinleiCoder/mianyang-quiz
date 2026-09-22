@@ -65,22 +65,33 @@ class AuthStore extends ChangeNotifier {
     notifyListeners();
 
     // 令牌过期被踢、或换账号时，档案必须跟着变，否则会拿旧档案渲染新会话
-    _subscription = _auth.authStateChanges.listen((_) {
-      // 必须自己接住异常：_loadProfile 抛错时 then 不执行，错误会变成
-      // 未捕获的异步异常（只在控制台出现），而登录态已经变了、档案却停在旧值上。
-      unawaited(
-        _loadProfile().then(
-          (_) {
-            _error = null;
-            notifyListeners();
-          },
-          onError: (Object error) {
-            _error = mapError(error);
-            notifyListeners();
-          },
-        ),
-      );
-    });
+    _subscription = _auth.authStateChanges.listen(
+      (_) {
+        // 必须自己接住异常：_loadProfile 抛错时 then 不执行，错误会变成
+        // 未捕获的异步异常（只在控制台出现），而登录态已经变了、档案却停在旧值上。
+        unawaited(
+          _loadProfile().then(
+            (_) {
+              _error = null;
+              notifyListeners();
+            },
+            onError: (Object error) {
+              _error = mapError(error);
+              notifyListeners();
+            },
+          ),
+        );
+      },
+      // 流上的错误必须接住，否则 Dart 会把它直接抛给 zone，控制台出现
+      // "Unhandled Exception: AuthRetryableFetchException(...)"——看着像崩溃。
+      //
+      // 来源是 gotrue 的 notifyException：**可重试**的刷新失败（刷新时断网、
+      // TLS 握手被打断、令牌接口 5xx）会走这里。它**不改变会话**——会话被清掉时
+      // gotrue 发的是 signedOut 事件（走上面那条 data 分支），所以这里不重拉档案：
+      // 档案没变，重拉只会在断网时再失败一次。失败本身也会抛给每个等着的请求，
+      // 由各页面按 NetworkException 自己提示。
+      onError: (Object error) => debugPrint('会话刷新失败，会话未变，忽略：$error'),
+    );
   }
 
   /// [identifier] 可以是手机号或邮箱（分流与换算在 AuthService 里，见 core/utils/phone.dart）。
