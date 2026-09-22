@@ -53,9 +53,13 @@ jobs:
         # 真正的密钥（OSS AccessKey、DeepSeek key）只在网页端服务端，客户端从不内嵌。
         # APP_VERSION 取 tag 名（如 v1.0.1）——客户端内的"检查更新"就是拿它和本仓库
         # Release 的 tag 比，两边同源才不会误报。
+        #
+        # ⚠️ **SUPABASE_URL 用的是反代域名，不要改回 *.supabase.co。** 那个域名在国内部分
+        # 线路上 TLS 握手会被直接重置，直连就是用户看到的"网络连接失败"（而且时好时坏）。
+        # 反代是一个只换主机名的 Cloudflare Worker，见网页端仓库的 supabase-proxy/。
         run: |
           $config = [ordered]@{
-            SUPABASE_URL      = "https://jwbczaoevrcrdqqvkfaz.supabase.co"
+            SUPABASE_URL      = "https://api.myquiz.cn"
             SUPABASE_ANON_KEY = "sb_publishable_sKDyEQXOuKnG0pcNcJBTNg_OFB1PAM7"
             OSS_PUBLIC_HOST   = "mianyang-question-bank.oss-cn-chengdu.aliyuncs.com"
             API_BASE_URL      = "https://myquiz.cn"
@@ -223,10 +227,12 @@ jobs:
           echo "code=${{ github.run_number }}" >> "$GITHUB_OUTPUT"
 
       - name: 写入发布配置
+        # ⚠️ SUPABASE_URL 用反代域名，理由与上面 Windows 那段完全相同（见那段注释），
+        # 不要改回 *.supabase.co —— 直连会在部分线路上被重置。
         run: |
           cat > config/ci.local.json <<JSON
           {
-            "SUPABASE_URL": "https://jwbczaoevrcrdqqvkfaz.supabase.co",
+            "SUPABASE_URL": "https://api.myquiz.cn",
             "SUPABASE_ANON_KEY": "sb_publishable_sKDyEQXOuKnG0pcNcJBTNg_OFB1PAM7",
             "OSS_PUBLIC_HOST": "mianyang-question-bank.oss-cn-chengdu.aliyuncs.com",
             "API_BASE_URL": "https://myquiz.cn",
