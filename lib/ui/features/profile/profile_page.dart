@@ -1,7 +1,8 @@
 // 个人资料页。
 //
 // 职责：读 AuthStore 显示档案（头像/姓名/邮箱/学校/身份/就读信息），
-// 并给出四个入口：编辑资料、修改就读信息、申请教师身份、退出登录。
+// 并给出入口：编辑资料、修改就读信息、申请教师身份；
+// 反馈/改密/退出登录三项在 widgets/profile_actions_section.dart（本文件已顶到 200 行）。
 // 不负责：档案的加载与缓存（AuthStore 的事）、表单编辑（EditProfilePage）。
 //
 // 学校名要单独查一次 schools：档案里只有 school_id，没有校名。
@@ -21,6 +22,7 @@ import 'package:mianyang_quiz/state/auth_store.dart';
 import 'package:mianyang_quiz/ui/core/feedback/loading_state.dart';
 import 'package:mianyang_quiz/ui/core/layout/section_header.dart';
 import 'package:mianyang_quiz/ui/features/profile/widgets/confirm_dialog.dart';
+import 'package:mianyang_quiz/ui/features/profile/widgets/profile_actions_section.dart';
 import 'package:mianyang_quiz/ui/features/profile/widgets/profile_entry_tile.dart';
 import 'package:mianyang_quiz/ui/features/profile/widgets/profile_header.dart';
 import 'package:provider/provider.dart';
@@ -179,20 +181,8 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         ],
         SizedBox(height: AppMetrics.gapXl.r),
-        const SectionHeader(title: '其他'),
-        ProfileEntryTile(
-          icon: Icons.chat_bubble_outline_rounded,
-          label: '意见反馈',
-          subtitle: '遇到问题或想提建议？告诉系统管理员',
-          onTap: () => context.push(AppRoutes.feedbackPath),
-        ),
-        SizedBox(height: AppMetrics.gapMd.r),
-        ProfileEntryTile(
-          icon: Icons.logout_rounded,
-          label: '退出登录',
-          danger: true,
-          onTap: _signOut,
-        ),
+        // 「其他」区（反馈 / 改密 / 退出登录）拆到 widgets/ 里 —— 本文件已到 200 行上限
+        ProfileActionsSection(onSignOut: _signOut),
       ],
     );
   }

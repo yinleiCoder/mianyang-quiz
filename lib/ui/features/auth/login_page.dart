@@ -17,10 +17,10 @@ import 'package:mianyang_quiz/core/error/error_mapper.dart';
 import 'package:mianyang_quiz/core/router/routes.dart';
 import 'package:mianyang_quiz/core/theme/app_metrics.dart';
 import 'package:mianyang_quiz/core/theme/app_text_styles.dart';
-import 'package:mianyang_quiz/core/utils/phone.dart';
 import 'package:mianyang_quiz/state/auth_store.dart';
 import 'package:mianyang_quiz/ui/core/design/duo_button.dart';
 import 'package:mianyang_quiz/ui/features/auth/widgets/auth_scaffold.dart';
+import 'package:mianyang_quiz/ui/features/auth/widgets/identifier_field.dart';
 import 'package:provider/provider.dart';
 
 class LoginPage extends StatefulWidget {
@@ -87,21 +87,8 @@ class _LoginPageState extends State<LoginPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            TextFormField(
-              controller: _identifier,
-              enabled: !_busy,
-              // 用 text 而不是 emailAddress：后者会弹带 @ 的键盘，而学生大多数时候
-              // 要输的是纯数字。也不用 phone —— 那个键盘打不出字母，教师输邮箱会被卡住。
-              keyboardType: TextInputType.text,
-              textInputAction: TextInputAction.next,
-              // 不填 autofillHints: email —— 手机号账号占多数，填了会让系统
-              // 优先弹邮箱自动填充，反而碍事。
-              decoration: const InputDecoration(
-                labelText: '手机号 / 邮箱',
-                prefixIcon: Icon(Icons.person_outline_rounded),
-              ),
-              validator: _validateIdentifier,
-            ),
+            // 输入框与校验规则与找回密码页共用（口径只有一份，见 identifier_field.dart）
+            IdentifierField(controller: _identifier, enabled: !_busy),
             SizedBox(height: AppMetrics.gapLg.r),
             TextFormField(
               controller: _password,
@@ -128,16 +115,21 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   /// 底部次要动作。主按钮只有一个，这里要的是「顺手点一下」，所以用文字按钮。
-  /// 第二行是给「登不上」的人留的人工通道——站内的意见反馈要登录后才够得着，
-  /// 而这批人恰恰最需要找到管理员。
+  /// 第二行是「找回密码」入口：绝大多数忘密码的同学可以自助重置；
+  /// 姓名也记不清、号码已换的那批人，站内的意见反馈要登录后才够得着，
+  /// 所以这里同时保留一句人工通道。
   Widget _footer(BuildContext context) => Column(
     children: [
       TextButton(
         onPressed: _busy ? null : () => context.go(AppRoutes.registerPath),
         child: const Text('还没有账号？去注册'),
       ),
+      TextButton(
+        onPressed: _busy ? null : () => context.go(AppRoutes.forgotPasswordPath),
+        child: const Text('忘记密码？用手机号/邮箱和姓名重置'),
+      ),
       Text(
-        '登录不上或账号有问题？请联系你所在学校的管理员或任课教师。',
+        '账号有问题（姓名记不清、手机号已换）请联系你所在学校的管理员或任课教师。',
         textAlign: TextAlign.center,
         style: AppTextStyles.caption(
           context,
@@ -145,24 +137,4 @@ class _LoginPageState extends State<LoginPage> {
       ),
     ],
   );
-}
-
-/// 账号标识校验：手机号或邮箱，二选一。真正的判定在服务端。
-String? _validateIdentifier(String? input) {
-  final value = input?.trim() ?? '';
-  if (value.isEmpty) return '请输入手机号或邮箱';
-
-  if (value.contains('@')) {
-    // 邮箱只做最宽松的形状检查 —— 太严的本地正则会把合法但少见的地址挡在门外。
-    final at = value.indexOf('@');
-    if (at <= 0 || at == value.length - 1 || !value.contains('.')) {
-      return '邮箱格式不正确';
-    }
-    return null;
-  }
-
-  // 不含 @ 一律当手机号处理（与 core/utils/phone.dart 的 looksLikePhone 同口径）。
-  // **少打一位也要在这里报"手机号格式不正确"**，而不是放过去让服务端当邮箱查 ——
-  // 那样报回来的是「密码不正确」，用户根本想不到是自己号码打错了。
-  return normalizePhone(value) == null ? '手机号格式不正确' : null;
 }

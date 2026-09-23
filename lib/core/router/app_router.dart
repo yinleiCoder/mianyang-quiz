@@ -21,6 +21,7 @@ import 'package:mianyang_quiz/state/auth_store.dart';
 import 'package:mianyang_quiz/state/practice_mode.dart';
 import 'package:mianyang_quiz/ui/core/feedback/empty_state.dart';
 import 'package:mianyang_quiz/ui/features/auth/email_verify_page.dart';
+import 'package:mianyang_quiz/ui/features/auth/forgot_password_page.dart';
 import 'package:mianyang_quiz/ui/features/auth/login_page.dart';
 import 'package:mianyang_quiz/ui/features/auth/register_page.dart';
 import 'package:mianyang_quiz/ui/features/ai/ai_page.dart';
@@ -37,6 +38,7 @@ import 'package:mianyang_quiz/ui/features/materials/materials_page.dart';
 import 'package:mianyang_quiz/ui/features/practice/practice_page.dart';
 import 'package:mianyang_quiz/ui/features/practice/practice_result_page.dart';
 import 'package:mianyang_quiz/ui/features/practice/recite_page.dart';
+import 'package:mianyang_quiz/ui/features/profile/change_password_page.dart';
 import 'package:mianyang_quiz/ui/features/profile/edit_profile_page.dart';
 import 'package:mianyang_quiz/core/router/route_observer.dart';
 import 'package:mianyang_quiz/ui/features/profile/feedback_page.dart';
@@ -50,6 +52,9 @@ const _publicPaths = {
   AppRoutes.loginPath,
   AppRoutes.registerPath,
   AppRoutes.emailVerifyPath,
+  // 忘记密码必须在这里：要走这条的人**恰恰是登不上的那批人**。
+  // 反过来，忘了密码的用户一旦重置成功并自动登录，下面的守卫会把他送回首页 —— 正合预期。
+  AppRoutes.forgotPasswordPath,
 };
 
 GoRouter createAppRouter(AuthStore auth) {
@@ -142,6 +147,11 @@ GoRouter createAppRouter(AuthStore auth) {
         path: AppRoutes.emailVerifyPath,
         name: AppRoutes.emailVerifyName,
         builder: (context, state) => const EmailVerifyPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.forgotPasswordPath,
+        name: AppRoutes.forgotPasswordName,
+        builder: (context, state) => const ForgotPasswordPage(),
       ),
 
       // ---------- 全屏页（壳之外，不显示底部导航）----------
@@ -249,6 +259,12 @@ GoRouter createAppRouter(AuthStore auth) {
         path: AppRoutes.feedbackPath,
         name: AppRoutes.feedbackName,
         builder: (context, state) => const FeedbackPage(),
+      ),
+      // 修改密码要求已登录，所以**不进 _publicPaths**（进去会被"已登录访问公开页"弹回首页）
+      GoRoute(
+        path: AppRoutes.changePasswordPath,
+        name: AppRoutes.changePasswordName,
+        builder: (context, state) => const ChangePasswordPage(),
       ),
     ],
     errorBuilder: (context, state) => const _RouteNotFoundPage(),

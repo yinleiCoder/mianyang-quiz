@@ -17,11 +17,13 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/core/theme/app_theme.dart';
 import 'package:mianyang_quiz/data/repositories/subject_repository.dart';
+import 'package:mianyang_quiz/data/repositories/password_repository.dart';
 import 'package:mianyang_quiz/data/repositories/user_repository.dart';
 import 'package:mianyang_quiz/data/services/auth_service.dart';
 import 'package:mianyang_quiz/state/auth_store.dart';
 import 'package:mianyang_quiz/ui/core/design/duo_button.dart';
 import 'package:mianyang_quiz/ui/features/auth/email_verify_page.dart';
+import 'package:mianyang_quiz/ui/features/auth/forgot_password_page.dart';
 import 'package:mianyang_quiz/ui/features/auth/login_page.dart';
 import 'package:mianyang_quiz/ui/features/auth/register_page.dart';
 import 'package:provider/provider.dart';
@@ -79,6 +81,76 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('已有账号？去登录'), findsOneWidget);
+  });
+
+  testWidgets('登录页：底部入口去忘记密码', (tester) async {
+    await _pump(tester, '/login');
+
+    await tester.tap(find.text('忘记密码？用手机号/邮箱和姓名重置'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('找回密码'), findsWidgets);
+  });
+
+  testWidgets('忘记密码页：空表单只提示字段错误，不发请求', (tester) async {
+    await _pump(tester, '/forgot-password');
+
+    final submit = find.widgetWithText(DuoButton, '重置密码');
+    await tester.ensureVisible(submit);
+    await tester.tap(submit);
+    await tester.pump();
+
+    expect(find.text('请输入手机号或邮箱'), findsOneWidget);
+    expect(find.text('请输入姓名'), findsOneWidget);
+    expect(find.text('密码长度至少 6 位'), findsOneWidget);
+  });
+
+  testWidgets('忘记密码页：两次密码不一致在本地拦下', (tester) async {
+    await _pump(tester, '/forgot-password');
+
+    final fields = find.byType(TextFormField);
+    await tester.enterText(fields.at(0), '13800138000');
+    await tester.enterText(fields.at(1), '张三');
+    await tester.enterText(fields.at(2), 'newpass123');
+    await tester.enterText(fields.at(3), 'newpass124');
+
+    final submit = find.widgetWithText(DuoButton, '重置密码');
+    await tester.ensureVisible(submit);
+    await tester.tap(submit);
+    await tester.pump();
+
+    expect(find.text('两次输入的密码不一致'), findsOneWidget);
+  });
+
+  testWidgets('忘记密码页：25 个汉字（75 字节）在本地就被拦下', (tester) async {
+    await _pump(tester, '/forgot-password');
+
+    // bcrypt 是在 72 **字节**处截断的：25 个汉字 = 75 字节。
+    // 按字符数判会放过去，学生以为设了 25 位长密码、实际只有前 24 个字生效。
+    const long = '密密密密密密密密密密密密密密密密密密密密密密密密密';
+    expect(long.length, 25);
+
+    final fields = find.byType(TextFormField);
+    await tester.enterText(fields.at(0), '13800138000');
+    await tester.enterText(fields.at(1), '张三');
+    await tester.enterText(fields.at(2), long);
+    await tester.enterText(fields.at(3), long);
+
+    final submit = find.widgetWithText(DuoButton, '重置密码');
+    await tester.ensureVisible(submit);
+    await tester.tap(submit);
+    await tester.pump();
+
+    expect(find.textContaining('新密码过长'), findsOneWidget);
+  });
+
+  testWidgets('忘记密码页：返回登录', (tester) async {
+    await _pump(tester, '/forgot-password');
+
+    await tester.tap(find.text('想起密码了？返回登录'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('还没有账号？去注册'), findsOneWidget);
   });
 
   testWidgets('注册页：选教师后就读信息整块消失', (tester) async {
@@ -187,6 +259,10 @@ Future<void> _pump(WidgetTester tester, String location) async {
         path: '/verify-email',
         builder: (context, state) => const EmailVerifyPage(),
       ),
+      GoRoute(
+        path: '/forgot-password',
+        builder: (context, state) => const ForgotPasswordPage(),
+      ),
     ],
   );
 
@@ -199,6 +275,8 @@ Future<void> _pump(WidgetTester tester, String location) async {
             create: (_) => AuthStore(AuthService(client), UserRepository(client)),
           ),
           Provider<UserRepository>(create: (_) => UserRepository(client)),
+          // 忘记密码页要它（页面直接用仓储，不进 AuthStore）
+          Provider<PasswordRepository>(create: (_) => PasswordRepository(client)),
           // 注册页的专业大类/专业下拉要读科目树（迁移 0039 对 anon 开放只读）
           Provider<SubjectRepository>(create: (_) => SubjectRepository(client)),
         ],

@@ -79,6 +79,9 @@ class _MianyangQuizAppState extends State<MianyangQuizApp> {
                 Provider.value(value: deps.listRepository),
                 Provider.value(value: deps.favoriteRepository),
                 Provider.value(value: deps.feedbackRepository),
+                // 密码（忘记密码的自助重置 / 已登录改密）：页面直接用，
+                // 不进 AuthStore —— 理由见仓储文件头
+                Provider.value(value: deps.passwordRepository),
                 Provider.value(value: deps.paperRepository),
                 Provider.value(value: deps.materialRepository),
                 Provider.value(value: deps.materialDownloadService),

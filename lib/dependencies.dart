@@ -17,6 +17,7 @@ import 'package:mianyang_quiz/data/repositories/feedback_repository.dart';
 import 'package:mianyang_quiz/data/repositories/list_repository.dart';
 import 'package:mianyang_quiz/data/repositories/material_repository.dart';
 import 'package:mianyang_quiz/data/repositories/paper_repository.dart';
+import 'package:mianyang_quiz/data/repositories/password_repository.dart';
 import 'package:mianyang_quiz/data/repositories/practice_repository.dart';
 import 'package:mianyang_quiz/data/repositories/question_report_repository.dart';
 import 'package:mianyang_quiz/data/repositories/question_repository.dart';
@@ -41,6 +42,7 @@ class AppDependencies {
       subjectRepository = SubjectRepository(client),
       questionRepository = QuestionRepository(client),
       questionReportRepository = QuestionReportRepository(client),
+      passwordRepository = PasswordRepository(client),
       practiceRepository = PracticeRepository(client),
       statsRepository = StatsRepository(client),
       listRepository = ListRepository(client),
@@ -77,6 +79,9 @@ class AppDependencies {
   /// 题目纠错（学生 → 本题作者）。与 feedbackRepository 是两回事：
   /// 那边的收件人是系统管理员且没有回复闭环，这个有（见仓库文件头）。
   final QuestionReportRepository questionReportRepository;
+
+  /// 找回密码（未登录自助重置）。走 RPC 而不是 Auth SDK —— 理由见仓储文件头。
+  final PasswordRepository passwordRepository;
   final PracticeRepository practiceRepository;
   final StatsRepository statsRepository;
   final ListRepository listRepository;

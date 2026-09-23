@@ -17,6 +17,10 @@ abstract final class AppRoutes {
   static const emailVerifyPath = '/verify-email';
   static const emailVerifyName = 'emailVerify';
 
+  /// 忘记密码（自助重置）。必须是公开页：要走这条的人**恰恰是登不上的那批人**。
+  static const forgotPasswordPath = '/forgot-password';
+  static const forgotPasswordName = 'forgotPassword';
+
   // ---------- 登录后的主壳（底部导航内）----------
   static const homePath = '/';
   static const homeName = 'home';
@@ -84,6 +88,11 @@ abstract final class AppRoutes {
   /// 意见反馈（联系系统管理员）：内容短，独立一页比弹窗更好写校验与错误态。
   static const feedbackPath = '/profile/feedback';
   static const feedbackName = 'feedback';
+
+  /// 修改密码（已登录、记得住旧密码的人走这条）。**不能进公开页名单** ——
+  /// 它要求已登录，进了名单反而会被守卫「已登录访问公开页」的规则弹回首页。
+  static const changePasswordPath = '/profile/password';
+  static const changePasswordName = 'changePassword';
 
   // ---------- RecordsPage 的页签 ----------
   // 错题本与收藏**不是独立路由**，而是记录页的三个页签之一，

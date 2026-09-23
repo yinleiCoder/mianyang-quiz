@@ -13,11 +13,13 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/core/theme/app_theme.dart';
 import 'package:mianyang_quiz/data/repositories/subject_repository.dart';
+import 'package:mianyang_quiz/data/repositories/password_repository.dart';
 import 'package:mianyang_quiz/data/repositories/user_repository.dart';
 import 'package:mianyang_quiz/data/services/auth_service.dart';
 import 'package:mianyang_quiz/data/services/oss_upload_service.dart';
 import 'package:mianyang_quiz/state/auth_store.dart';
 import 'package:mianyang_quiz/ui/core/design/duo_button.dart';
+import 'package:mianyang_quiz/ui/features/profile/change_password_page.dart';
 import 'package:mianyang_quiz/ui/features/profile/edit_profile_page.dart';
 import 'package:mianyang_quiz/ui/features/profile/profile_page.dart';
 import 'package:provider/provider.dart';
@@ -36,6 +38,24 @@ void main() {
     // 未绑定学校时显示占位；列表拉不到也不该把整格画成空白（点击是重试）。
     expect(find.text('暂不绑定'), findsOneWidget);
     expect(find.widgetWithText(DuoButton, '保存'), findsOneWidget);
+  });
+
+  testWidgets('修改密码页：两次新密码不一致时本地提示，不发请求', (tester) async {
+    await _pump(tester, '/profile/password');
+
+    final fields = find.byType(TextField);
+    await tester.enterText(fields.at(0), 'oldpass123');
+    await tester.enterText(fields.at(1), 'newpass123');
+    await tester.enterText(fields.at(2), 'newpass124');
+
+    final submit = find.widgetWithText(DuoButton, '修改密码');
+    await tester.ensureVisible(submit);
+    await tester.tap(submit);
+    await tester.pump();
+
+    expect(find.text('两次输入的新密码不一致'), findsOneWidget);
+    // 让 SnackBar 的计时器跑完，否则测试报 pending timer（与其他页测试同套路）
+    await tester.pump(const Duration(seconds: 5));
   });
 
   testWidgets('个人资料页：没有档案时是加载态，不是空白页', (tester) async {
@@ -67,6 +87,8 @@ Future<void> _pump(WidgetTester tester, String location) async {
             create: (_) => AuthStore(AuthService(client), users),
           ),
           Provider<UserRepository>.value(value: users),
+          // 修改密码页要它（页面直接用仓储，不进 AuthStore）
+          Provider<PasswordRepository>(create: (_) => PasswordRepository(client)),
           Provider<OssUploadService>(create: (_) => OssUploadService(client)),
           // 就读信息的专业大类/专业下拉要读科目树
           Provider<SubjectRepository>(create: (_) => SubjectRepository(client)),
@@ -87,6 +109,10 @@ Future<void> _pump(WidgetTester tester, String location) async {
               GoRoute(
                 path: '/profile/edit',
                 builder: (context, state) => const EditProfilePage(),
+              ),
+              GoRoute(
+                path: '/profile/password',
+                builder: (context, state) => const ChangePasswordPage(),
               ),
             ],
           ),
