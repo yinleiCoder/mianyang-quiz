@@ -40,6 +40,8 @@ class SessionRecordTile extends StatelessWidget {
 
     return DuoCard(
       onTap: action,
+      // 白卡（同题库列表；复盘页刻意不改，见 review_question_card.dart）
+      color: Theme.of(context).colorScheme.surface,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

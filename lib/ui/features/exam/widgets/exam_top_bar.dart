@@ -70,7 +70,13 @@ class ExamTopBar extends StatelessWidget {
             ),
           ),
         ),
-        ExamTimer(deadline: deadline, onExpired: onExpired, clock: clock),
+        // 右边留一口气：宽屏时它右边就是答题卡的那条竖分割线（ExamStage 的
+        // VerticalDivider），不留白的话倒计时数字直接贴上去（学生反馈）。
+        // 窄屏时右边是答题卡图标按钮，多这 12 也只是把图标往左挪一点，无害。
+        Padding(
+          padding: const EdgeInsets.only(right: AppMetrics.gapMd),
+          child: ExamTimer(deadline: deadline, onExpired: onExpired, clock: clock),
+        ),
         if (onOpenAnswerSheet != null)
           IconButton(
             onPressed: onOpenAnswerSheet,

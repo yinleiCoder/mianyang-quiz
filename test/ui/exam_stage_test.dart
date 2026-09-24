@@ -82,6 +82,20 @@ void main() {
     expect(find.byIcon(Icons.grid_view_rounded), findsNothing);
   });
 
+  testWidgets('宽屏：题面用满答题栏之外的宽度（学生反馈"大屏上太窄"）', (tester) async {
+    await _pump(tester, const Size(1280, 800), now: now);
+
+    // 1280 的窗口：右栏 260 + 1 条分割线 + 左右各 20 内边距 → 题面可用约 979。
+    // 量「第 1 题」那一行（Column 的 stretch 子项，宽度 = 限宽本身），
+    // 不要量 Text：Text 只有文字那么宽。
+    final header = find.ancestor(of: find.text('第 1 题'), matching: find.byType(Row)).first;
+    expect(
+      tester.getSize(header).width,
+      greaterThan(640),
+      reason: '题面限宽必须大于旧的上限 640，否则大屏上两侧还是大片空白',
+    );
+  });
+
   testWidgets('点选选项后计入已作答，答题卡与提示跟着变', (tester) async {
     final runner = await _pump(tester, const Size(1280, 800), now: now);
 

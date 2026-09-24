@@ -43,29 +43,36 @@ class ExamQuestionArea extends StatelessWidget {
         horizontal: AppMetrics.pagePadding,
         vertical: AppMetrics.gapLg,
       ),
-      child: MaxWidthBox(
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 180),
-          // key 必须给 child（理由见 PracticeQuestionArea）：用题号做 key，
-          // 切题时整块重建，上一题的输入焦点不会残留到下一题。
-          child: Column(
-            key: ValueKey('$index-${item.id}'),
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (runner.startsSection(index)) ...[
-                ExamSectionHeading(section: runner.sectionAt(index)),
-                SizedBox(height: AppMetrics.gapLg.r),
+      // 限宽随可用宽度走：手机（可用 < 640）与今天完全一样；宽屏一路放到 1080 为止，
+      // 中间不设断点——窗口从 1200 拖到 1600 时题面是连续变宽的，不会有"跳一下"。
+      child: LayoutBuilder(
+        builder: (context, constraints) => MaxWidthBox(
+          maxWidth: constraints.maxWidth
+              .clamp(AppMetrics.pageMaxWidth, AppMetrics.pageWideMaxWidth)
+              .toDouble(),
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 180),
+            // key 必须给 child（理由见 PracticeQuestionArea）：用题号做 key，
+            // 切题时整块重建，上一题的输入焦点不会残留到下一题。
+            child: Column(
+              key: ValueKey('$index-${item.id}'),
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (runner.startsSection(index)) ...[
+                  ExamSectionHeading(section: runner.sectionAt(index)),
+                  SizedBox(height: AppMetrics.gapLg.r),
+                ],
+                _ItemHeader(number: index + 1, item: item),
+                SizedBox(height: AppMetrics.gapMd.r),
+                QuestionView(
+                  qtype: item.qtype,
+                  content: item.content,
+                  answer: runner.draftAt(index),
+                  onAnswerChanged: onAnswerChanged,
+                  shortAnswerMode: ShortAnswerMode.essay,
+                ),
               ],
-              _ItemHeader(number: index + 1, item: item),
-              SizedBox(height: AppMetrics.gapMd.r),
-              QuestionView(
-                qtype: item.qtype,
-                content: item.content,
-                answer: runner.draftAt(index),
-                onAnswerChanged: onAnswerChanged,
-                shortAnswerMode: ShortAnswerMode.essay,
-              ),
-            ],
+            ),
           ),
         ),
       ),

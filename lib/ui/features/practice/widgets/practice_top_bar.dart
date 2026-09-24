@@ -65,7 +65,13 @@ class PracticeTopBar extends StatelessWidget {
         ),
         // 计时在题号**右侧**：左侧留给"还剩多少"（进度条 + 计数），
         // 时间属于"已经过去"的信息，跟它们分开摆不容易读串
-        PracticeTimer(startedAt: startedAt),
+        //
+        // 右边留一口气：宽屏时右边紧挨着答题卡栏的竖分割线（PracticeLayout），
+        // 不留白数字就贴上去——与考试页同一条（学生反馈的是考试页）。
+        Padding(
+          padding: const EdgeInsets.only(right: AppMetrics.gapMd),
+          child: PracticeTimer(startedAt: startedAt),
+        ),
         if (onOpenAnswerSheet != null)
           IconButton(
             onPressed: onOpenAnswerSheet,

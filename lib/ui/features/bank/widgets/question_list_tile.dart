@@ -48,6 +48,8 @@ class QuestionListTile extends StatelessWidget {
 
     return DuoCard(
       onTap: onTap,
+      // 白卡（用户 2026-09-24：题库列表卡片、题目详情、记录页都改白，复盘页不动）
+      color: theme.colorScheme.surface,
       padding: EdgeInsets.all(AppMetrics.gapLg.r),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
