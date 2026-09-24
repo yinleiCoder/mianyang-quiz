@@ -11,6 +11,7 @@
 import 'package:dio/dio.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:mianyang_quiz/data/repositories/analytics_repository.dart';
 import 'package:mianyang_quiz/data/repositories/app_update_repository.dart';
 import 'package:mianyang_quiz/data/repositories/favorite_repository.dart';
 import 'package:mianyang_quiz/data/repositories/feedback_repository.dart';
@@ -49,6 +50,7 @@ class AppDependencies {
       favoriteRepository = FavoriteRepository(client),
       feedbackRepository = FeedbackRepository(client),
       paperRepository = PaperRepository(client),
+      analyticsRepository = AnalyticsRepository(client),
       materialRepository = MaterialRepository(client),
       appUpdateRepository = AppUpdateRepository(Dio()),
       ossUploadService = OssUploadService(client),
@@ -88,6 +90,9 @@ class AppDependencies {
   final FavoriteRepository favoriteRepository;
   final FeedbackRepository feedbackRepository;
   final PaperRepository paperRepository;
+
+  /// 成绩榜（试卷维度的聚合读，与作答写路径分开，理由见仓储文件头）。
+  final AnalyticsRepository analyticsRepository;
   final MaterialRepository materialRepository;
   final AppUpdateRepository appUpdateRepository;
   final OssUploadService ossUploadService;

@@ -62,6 +62,9 @@ class _ExamPaperListTabState extends State<ExamPaperListTab>
     paper: row,
     starting: _starting == row.versionId,
     onTap: () => _start(row),
+    // 卷名随 extra 带过去，榜页的标题就不用等一次加载
+    onLeaderboard: () =>
+        context.push(AppRoutes.paperLeaderboardOf(row.paperId), extra: row.title),
   );
 
   @override

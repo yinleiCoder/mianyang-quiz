@@ -35,6 +35,10 @@ abstract class ExamAttemptRecord with _$ExamAttemptRecord {
     @JsonKey(name: 'pending_review_count') @Default(0) int pendingReviewCount,
     @JsonKey(name: 'duration_ms') @Default(0) int durationMs,
     @JsonKey(name: 'item_count') @Default(0) int itemCount,
+
+    /// 是否本人对这一版卷面的第一次交卷（0076）。**只有它为 true 才进排行榜**，
+    /// 重做的那几场是自主练习——列表上要标出来，否则学生会以为重做把成绩覆盖了。
+    @JsonKey(name: 'is_official') @Default(false) bool isOfficial,
   }) = _ExamAttemptRecord;
 
   factory ExamAttemptRecord.fromJson(Map<String, dynamic> json) =>

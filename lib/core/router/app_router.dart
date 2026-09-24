@@ -25,6 +25,9 @@ import 'package:mianyang_quiz/ui/features/auth/forgot_password_page.dart';
 import 'package:mianyang_quiz/ui/features/auth/login_page.dart';
 import 'package:mianyang_quiz/ui/features/auth/register_page.dart';
 import 'package:mianyang_quiz/ui/features/ai/ai_page.dart';
+import 'package:mianyang_quiz/ui/features/analytics/my_standing_page.dart';
+import 'package:mianyang_quiz/ui/features/analytics/paper_analysis_page.dart';
+import 'package:mianyang_quiz/ui/features/analytics/paper_leaderboard_page.dart';
 import 'package:mianyang_quiz/ui/features/bank/bank_page.dart';
 import 'package:mianyang_quiz/ui/features/bank/question_detail_page.dart';
 import 'package:mianyang_quiz/ui/features/compose/compose_page.dart';
@@ -249,6 +252,30 @@ GoRouter createAppRouter(AuthStore auth) {
         name: AppRoutes.examResultName,
         builder: (context, state) =>
             ExamResultPage(attemptId: state.pathParameters['attemptId']!),
+      ),
+      // 成绩榜：全屏页（与考试页同款，不进 shell）。卷名从上一页带过来，
+      // 加载期间标题不空着 —— 带不过来也只是标题退化成默认文案，不算错误。
+      GoRoute(
+        path: AppRoutes.paperLeaderboardPath,
+        name: AppRoutes.paperLeaderboardName,
+        builder: (context, state) => PaperLeaderboardPage(
+          paperId: state.pathParameters['paperId']!,
+          paperTitle: state.extra is String ? state.extra! as String : null,
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.paperAnalysisPath,
+        name: AppRoutes.paperAnalysisName,
+        builder: (context, state) => PaperAnalysisPage(
+          paperId: state.pathParameters['paperId']!,
+          paperTitle: state.extra is String ? state.extra! as String : null,
+        ),
+      ),
+      // 我的处境：全屏页（不在底部导航里），入口在首页工作台
+      GoRoute(
+        path: AppRoutes.myStandingPath,
+        name: AppRoutes.myStandingName,
+        builder: (context, state) => const MyStandingPage(),
       ),
       GoRoute(
         path: AppRoutes.editProfilePath,

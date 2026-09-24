@@ -53,6 +53,15 @@ class HomeActions extends StatelessWidget {
             AppRoutes.recordsOf(AppRoutes.recordsTabWrong),
           ),
         ),
+        const SizedBox(height: AppMetrics.gapSm),
+        DuoButton(
+          // 「我的处境」同样放首页：它是"偶尔看一眼"的东西（考完试、想找差距时），
+          // 天天点的是"开始练习"，不该占底部导航
+          label: '我的处境',
+          icon: Icons.leaderboard_outlined,
+          variant: DuoButtonVariant.outline,
+          onPressed: () => context.push(AppRoutes.myStandingPath),
+        ),
       ],
     );
   }

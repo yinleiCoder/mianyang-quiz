@@ -63,6 +63,13 @@ class ExamAttemptTile extends StatelessWidget {
                 tone: _toneOf(status),
                 dense: true,
               ),
+              // 重做的场次标出来：同一份卷只有**第一次**交卷进排行榜，
+              // 不标的话学生会以为重做把之前的名次覆盖了（也更可能去刷分）
+              if (!record.isOfficial &&
+                  (status.isFinal || status == ExamStatus.submitted || status == ExamStatus.grading)) ...[
+                SizedBox(width: AppMetrics.gapXs.r),
+                const DuoChip(label: '自主练习 · 不计入排行', tone: DuoChipTone.neutral, dense: true),
+              ],
               SizedBox(width: AppMetrics.gapSm.r),
               Expanded(
                 child: Text(

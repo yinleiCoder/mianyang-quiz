@@ -20,6 +20,7 @@ import 'package:mianyang_quiz/core/utils/formatters.dart';
 import 'package:mianyang_quiz/data/models/exam/exam_attempt.dart';
 import 'package:mianyang_quiz/data/models/exam/exam_paper.dart';
 import 'package:mianyang_quiz/data/repositories/paper_repository.dart';
+import 'package:mianyang_quiz/ui/core/design/duo_button.dart';
 import 'package:mianyang_quiz/ui/core/feedback/async_view.dart';
 import 'package:mianyang_quiz/ui/core/layout/max_width_box.dart';
 import 'package:mianyang_quiz/ui/features/exam/widgets/exam_result_summary.dart';
@@ -100,6 +101,31 @@ class _Body extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               ExamResultSummary(attempt: attempt, title: paper.title),
+              SizedBox(height: AppMetrics.gapMd.r),
+              // 成绩榜入口就放在成绩旁边：看完分数最想知道的就是"我这分在班里算什么水平"。
+              // 卷名随 extra 带过去，榜页标题不用等一次加载。
+              DuoButton(
+                label: '查看成绩排行',
+                variant: DuoButtonVariant.outline,
+                icon: Icons.emoji_events_outlined,
+                onPressed: () => context.push(
+                  AppRoutes.paperLeaderboardOf(attempt.paperId),
+                  extra: paper.title,
+                ),
+              ),
+              SizedBox(height: AppMetrics.gapSm.r),
+              // 试题分析：每题全班答得怎么样（选项分布 + 谁选了什么）。
+              // **只在已出分时给入口**——没出分时服务端会拒（选项分布 + 标准答案 = 答案本身）。
+              if (revealed)
+                DuoButton(
+                  label: '试题分析',
+                  variant: DuoButtonVariant.outline,
+                  icon: Icons.bar_chart_outlined,
+                  onPressed: () => context.push(
+                    AppRoutes.paperAnalysisOf(attempt.paperId),
+                    extra: paper.title,
+                  ),
+                ),
               SizedBox(height: AppMetrics.gapXl.r),
               Text(
                 revealed ? '逐题得分' : '逐题作答',

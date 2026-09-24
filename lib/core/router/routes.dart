@@ -82,6 +82,20 @@ abstract final class AppRoutes {
   static const examResultPath = '/exams/attempt/:attemptId/result';
   static const examResultName = 'examResult';
 
+  /// 试卷成绩榜（全班 / 全校 / 全市）。挂在考试域下：它看的就是某一份卷子的考试成绩。
+  /// 全屏页（不在底部导航里），入口在成绩单与试卷库列表项。
+  static const paperLeaderboardPath = '/exams/paper/:paperId/leaderboard';
+  static const paperLeaderboardName = 'paperLeaderboard';
+
+  /// 试题分析（每题正确率 / 选项分布 / 错答名单）。学生要自己出分后才看得到。
+  static const paperAnalysisPath = '/exams/paper/:paperId/analysis';
+  static const paperAnalysisName = 'paperAnalysis';
+
+  /// 我的处境：我在班里/校里排第几、离上一名差多少、哪儿最弱。
+  /// 入口在首页工作台（同样不占底部导航）。
+  static const myStandingPath = '/me/standing';
+  static const myStandingName = 'myStanding';
+
   static const editProfilePath = '/profile/edit';
   static const editProfileName = 'editProfile';
 
@@ -116,6 +130,11 @@ abstract final class AppRoutes {
 
   static String examResultOf(String attemptId) =>
       '/exams/attempt/$attemptId/result';
+
+  static String paperLeaderboardOf(String paperId) =>
+      '/exams/paper/$paperId/leaderboard';
+
+  static String paperAnalysisOf(String paperId) => '/exams/paper/$paperId/analysis';
 
   static String examsOf(String tab) => '$examsPath?$examsTabQuery=$tab';
 

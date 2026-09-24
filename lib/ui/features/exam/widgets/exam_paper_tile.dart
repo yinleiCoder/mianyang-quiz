@@ -18,6 +18,7 @@ class ExamPaperTile extends StatelessWidget {
     required this.paper,
     required this.onTap,
     this.starting = false,
+    this.onLeaderboard,
   });
 
   final PaperBrief paper;
@@ -27,6 +28,10 @@ class ExamPaperTile extends StatelessWidget {
 
   /// 正在开考：右侧显示转圈。开考要往返一次服务端，没有反馈会让人以为没点上。
   final bool starting;
+
+  /// 「排行」入口。为 null 时不渲染——**没考过的人也该能看榜**
+  /// （榜只含分数与姓名，不含题目与答案），所以列表页对所有已入库的卷子都给这个入口。
+  final VoidCallback? onLeaderboard;
 
   @override
   Widget build(BuildContext context) {
@@ -76,12 +81,21 @@ class ExamPaperTile extends StatelessWidget {
               height: 20.r,
               child: const CircularProgressIndicator(strokeWidth: 2.4),
             )
-          else
+          else ...[
+            // 榜先于"开考"可见：看别人考成什么样，本身就是开考的理由
+            if (onLeaderboard != null)
+              IconButton(
+                onPressed: onLeaderboard,
+                icon: Icon(Icons.emoji_events_outlined, size: 22.r),
+                color: scheme.onSurfaceVariant,
+                tooltip: '成绩排行',
+              ),
             Icon(
               Icons.chevron_right,
               size: 22.r,
               color: scheme.onSurfaceVariant,
             ),
+          ],
         ],
       ),
     );

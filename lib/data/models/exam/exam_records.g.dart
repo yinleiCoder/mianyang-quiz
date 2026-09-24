@@ -64,6 +64,7 @@ _ExamAttemptRecord _$ExamAttemptRecordFromJson(
         'item_count',
         (v) => (v as num?)?.toInt() ?? 0,
       ),
+      isOfficial: $checkedConvert('is_official', (v) => v as bool? ?? false),
     );
     return val;
   },
@@ -84,6 +85,7 @@ _ExamAttemptRecord _$ExamAttemptRecordFromJson(
     'pendingReviewCount': 'pending_review_count',
     'durationMs': 'duration_ms',
     'itemCount': 'item_count',
+    'isOfficial': 'is_official',
   },
 );
 
@@ -107,6 +109,7 @@ Map<String, dynamic> _$ExamAttemptRecordToJson(_ExamAttemptRecord instance) =>
       'pending_review_count': instance.pendingReviewCount,
       'duration_ms': instance.durationMs,
       'item_count': instance.itemCount,
+      'is_official': instance.isOfficial,
     };
 
 _ExamSubmitSummary _$ExamSubmitSummaryFromJson(Map<String, dynamic> json) =>
