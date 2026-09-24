@@ -63,9 +63,11 @@ extension SubjectNodeX on SubjectNode {
     return null;
   }
 
-  /// 能否直接挂题。冻结的节点不能挂新题，但已挂的题仍在（冻结不改变在库题目）。
+  /// 能否直接挂题。**任意层级都可以**（2026-09-24 起：公共学科、专业大类、专业、课程），
+  /// 与服务端 0075 及网页端 lib/subject-nodes.js 的 isAttachable 同口径。
+  /// 冻结的节点不能挂新题，但已挂的题仍在（冻结不改变在库题目）。
   bool get isAttachable =>
-      (kind == SubjectKind.discipline.wire || kind == SubjectKind.course.wire) &&
+      kindValue != null &&
       !isFrozen;
 
   String get scopeLabel => scopeValue?.label ?? scope;
