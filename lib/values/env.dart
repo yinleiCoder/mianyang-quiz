@@ -46,6 +46,15 @@ abstract final class Env {
     defaultValue: '',
   );
 
+  /// Sentry 的上报地址（DSN）。**留空则整个上报链路关掉**：不初始化 SDK、
+  /// 不建 HTTP 客户端、什么都不发。开发机与 CI 都不配它，只有正式包才配。
+  ///
+  /// 刻意**不进 [missingKeys]**：它是可选的，缺了不该把启动拦在提示页上。
+  static const String sentryDsn = String.fromEnvironment('SENTRY_DSN');
+
+  /// 是否启用崩溃上报。
+  static bool get crashReportingEnabled => sentryDsn.isNotEmpty;
+
   /// 四项配置是否齐备。未配置时启动会停在提示页，而不是抛一堆网络异常。
   static bool get isConfigured =>
       supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty;

@@ -1,0 +1,7 @@
+{
+  "_说明": "集成测试用的真实账号。复制成 config/test.local.json 再填（已被 .gitignore 忽略）。",
+  "_跑法": "flutter test integration_test/practice_flow_test.dart -d windows --dart-define-from-file=config/dev.json --dart-define-from-file=config/test.local.json",
+  "TEST_PHONE": "13800000000",
+  "TEST_PASSWORD": "填这个账号的密码",
+  "_TEST_WRITE": "加上 TEST_WRITE: true 才会跑「开始练习→交卷」那条——它会往生产库写练习记录"
+}

@@ -75,6 +75,23 @@ dependencies:
   # 保存资料到本地。本来就是 share_plus 的传递依赖，但**用到了就要写进 pubspec**
   #（同 http 那条注释的理由：上游换实现时这里会静默断掉）。
   path_provider: ^2.1.5
+  # 崩溃/异常上报。**DSN 从 --dart-define-from-file 注入，没配就整个关掉**
+  # （见 lib/apis/crash_reporter.dart）——仓库里永远不放 DSN，
+  # 而且没配的开发机不该在启动时去连一个连不上的域。
+  #
+  # ⚠ **国内网络到 sentry.io 未必通**。这个坑本仓已经踩过一次：PDF 中文字体原先走
+  # PdfGoogleFonts 从 fonts.gstatic.com 拉，国内到不了**且那个调用没有超时**，
+  # 点「打印」既不报错也不出对话框，师生的感受就是"按钮没反应"（2026-09-17）。
+  # 所以这里的上报必须是**尽力而为、绝不阻塞**：见 crash_reporter.dart 里的
+  # timeout 与"上报失败静默吞掉"。真要用起来建议先在校园网上实测一次。
+  # ⚠ **钉在 8.x，不要升到 9.x。** 9.30.1 依赖 `jni: 0.14.2`（精确锁定），
+  # 而那个包在 pubspec 里声明了 `windows: ffiPlugin: true`，于是 Flutter 会去编它；
+  # 它的 `third_party/jni.h` 却无条件写了
+  #     #define JNIEXPORT __attribute__((visibility("default")))
+  # —— GCC/Clang 的语法，**MSVC 直接语法错误**（C2059/C2143，整个文件一路报下去）。
+  # 9.x 因此**编不出 Windows 包**，本地与 CI 都一样（CI 也是 MSVC）。
+  # 8.14.2 没有这个依赖。等上游修了再升——升完务必跑一次 `flutter build windows`。
+  sentry_flutter: ^8.14.2
 
 dev_dependencies:
   flutter_test:

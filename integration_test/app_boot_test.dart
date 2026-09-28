@@ -28,7 +28,9 @@ void main() {
 
   testWidgets('启动：真实 bootstrap() 之后落在可交互的首屏', (tester) async {
     final startup = await bootstrap();
-    addTearDown(() => startup.deps?.dispose());
+    // **不要 addTearDown(startup.deps!.dispose())**：MianyangQuizApp 自己持有依赖，
+    // 它的 dispose() 里已经调过一次（见 app.dart）。再释放一次会在 teardown 里
+    // 抛「A AuthStore was used after being disposed.」，看着像用例本体挂了。
 
     await tester.pumpWidget(MianyangQuizApp(startup: startup));
 
@@ -54,7 +56,7 @@ void main() {
 
   testWidgets('根组件挂载不抛异常（装配顺序 + ScreenUtil 都在真机上过一遍）', (tester) async {
     final startup = await bootstrap();
-    addTearDown(() => startup.deps?.dispose());
+    // 同上：依赖由 MianyangQuizApp 释放，这里不插手
 
     await tester.pumpWidget(MianyangQuizApp(startup: startup));
     await tester.pump(const Duration(milliseconds: 300));

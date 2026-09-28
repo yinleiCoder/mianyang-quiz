@@ -360,6 +360,66 @@ flutter test integration_test -d windows
 
 CI 如果要在 Windows 上跑集成测试，也得按这个循环写。
 
+### 真实账号的端到端测试
+
+`integration_test/live_backend_test.dart`（**只读**）与 `practice_flow_test.dart`（**写库**）
+打的是**真实后端**，凭据从 `config/test.local.json` 注入（已被 `.gitignore` 忽略，
+模板见 `config/test.example.json`）。**凭据绝不进仓库**，没配就 skip，不会红。
+
+```bash
+flutter test integration_test/live_backend_test.dart -d windows \
+  --dart-define-from-file=config/dev.json \
+  --dart-define-from-file=config/test.local.json
+```
+
+写路径那条默认**不跑**（`"TEST_WRITE": true` 才跑）——它会建会话、写作答，
+按 0069 还会消耗掉该账号当天的题池，并且**静默作废该账号进行中的会话**。
+
+写这两条时踩到的坑，全是真机才暴露的。**先看这条最值钱的**：
+
+> 超时信息里会自动带上**屏幕上当前的所有文字**（`screenText`）。
+> 「是卡在转圈、还是落了错误态、还是文案跟预期不一样」一眼可辨。
+> 这条机制抓出的问题比下面所有坑加起来还多——写 UI 集成测试先把它做出来。
+
+**生命周期**
+
+1. **别在用例里 `addTearDown(deps.dispose())`**。`MianyangQuizApp.dispose()` 自己就会
+   释放依赖（见 `app.dart`），再释放一次会在 teardown 里抛
+   「A AuthStore was used after being disposed.」——**报在 teardown**，
+   看上去像用例本体挂了，极难归因。谁创建谁释放。
+2. **写库的用例要把收尾放进 `addTearDown`**，别写在用例末尾。中途一失败，
+   末尾那行就永远不会执行，于是每失败一次就往库里留一个"进行中的会话"——
+   下一次进来弹「上次的练习还没做完」，走另一个分支，越跑越乱。
+
+**等待**
+
+3. **不能 `pumpAndSettle`**。加载态是无限动画，它会一直等到超时（默认 10 分钟）。
+   用 `waitFor`：一边 `pump` 一边让**真实时间**流过（网络是真的，假时钟等不到）。
+4. **不能等页面靠后的内容**。`ListView` 是懒构建的，视口外的子项根本没被创建。
+   首页要等就等**第一项**「你好，xxx」（既在视口内，又只在数据回来后存在）。
+5. **`launchAndLogin` 只等到主壳，不等于首页数据到了**。紧接着去点首页上的按钮
+   会报 "could not find any matching widgets"——得先等学情加载完。
+
+**找元素**
+
+6. **组卷页的 AppBar 标题也叫「开始练习」**（`compose_page.dart:65`），
+   而按钮叫「开始练习（最多 N 题）」。用 `textContaining('开始练习')` 会先匹配到标题，
+   点上去毫无反应。**finder 要带左括号**，并限定在 `ComposePage` 子树内
+   （首页那颗「开始一次练习」还挂在树里，IndexedStack 不销毁已访问的分支）。
+7. 组卷页底部那颗按钮**在首屏之外时根本没被创建**，`find` 找不到、`ensureVisible`
+   也没用（那个要求先有 element）。只能真的往下 `drag` 到它出现（见 `_scrollToStartButton`）。
+8. **弹窗有入场动画**。`waitForAny` 一看到文字就返回，那时按钮还没落位，
+   直接 `tap` 会点空。先 `pump(600ms)` 再点，而且点 `DuoButton` 本身而不是里面的 `Text`。
+
+**流程本身的分支**（写死一种必红）
+
+9. 点了「开始练习」有**三种**结局：进练习页 / 弹「上次的练习还没做完」/ 弹「今天的题都练完了」。
+10. **走「继续上次的练习」时，当前题可能已经是判过的**（服务端把判定一并恢复回来），
+    那这题一进来就带着反馈条，根本没有「检查」可点。
+11. **即时练习是「选完立刻出对错」**（组卷页自己的原话）——选择题一点选项就提交了，
+    「检查」在那一刻就消失了。**「检查」只留给填空/主观这类需要显式提交的题型。**
+    所以选完之后要两种都接住：已判 → 直接等反馈条；未判 → 再点「检查」。
+
 ### 取性能数据（帧耗时基线）
 
 `binding.watchPerformance(...)` 采到的 `reportData` **只有 `flutter drive` 会取走**，
@@ -615,3 +675,256 @@ dart run flutter_launcher_icons    # 重新生成 windows 的 .ico 与 android �
 SVG → PNG 这一步是**离线**做的（与网页端 favicon 同例，不往仓库塞生成脚本）：
 headless Chrome 打开一个把 `<img>` 撑满的 html 截图即可，
 `--default-background-color=00000000` 保住透明底、`--window-size=1024,1024` 定尺寸。
+
+---
+
+## 八、深度链接与分享链接
+
+题目分享链接形如 `https://myquiz.cn/bank/<uuid>`（拼法与识别见 `values/share_links.dart`，
+站点域名取 `SHARE_BASE_URL`）。让它在 App 里打开有**两条路，且两条并存**：
+
+| 机制 | 覆盖平台 | 触发方式 | 状态 |
+|---|---|---|---|
+| **剪贴板识别** | Android **+ Windows** | 复制链接 → 切回 App → 弹窗问「要打开看看吗」 | **已实现**（`pages/shell/widgets/clipboard_link_listener.dart`） |
+| **Android App Links** | 仅 Android | 在浏览器/聊天里**直接点**链接 | App 侧已配，**还差网页端一个文件** |
+
+### 剪贴板那条（为什么它是主力）
+
+只在**回到前台**时读一次剪贴板（`AppLifecycleState.resumed`），不做轮询——
+轮询既费电，又会在用户还在别的 app 里时就抢注意力。
+同一条内容只弹一次，但**重新复制会再弹**（重新复制往往就是想再打开一次）。
+隐私边界：只读、只在本地比对，不外传不落库；"上次看过什么"存在 shared_preferences 里。
+
+**它是 Windows 上唯一的机制**：官方文档明说深度链接只覆盖 iOS / Android / Web，
+桌面端一个字都没提。所以别把剪贴板这条路当成"App Links 的临时替代"删掉——
+删了 Windows 用户就彻底没法从链接进题。
+
+### Android App Links（`android/app/src/main/AndroidManifest.xml`）
+
+`<activity>` 里那段 `<intent-filter android:autoVerify="true">`。两个刻意的取舍：
+
+- **只认 `/bank/` 前缀**（官方示例不带 `pathPrefix`，等于接管整个域名）。
+  myquiz.cn 上还有网页端自己的页面，整站接管会把那些链接也抢进 App，
+  而 App 里根本没有对应路由，点开就是空白页。
+- **只声明 https**：分享链接拼出来的就是 https，没必要把 http 那条老路放进来。
+
+Flutter 3.27 起深度链接**默认开启**，不需要 `flutter_deeplinking_enabled` 这个 meta-data
+（本仓 3.47）。**go_router 也不用接线**：路由表里 `/bank/:questionId` 已经存在，
+框架把进来的 URI 交给 `MaterialApp.router`，go_router 自己就匹配上了。
+
+### ⚠ 还差什么：网页端的 assetlinks.json
+
+Android 会用 `autoVerify` 去 `https://myquiz.cn/.well-known/assetlinks.json` 核对签名指纹，
+**核对通过才会自动打开 App**。没有那个文件 = 验证失败 = 链接照旧走浏览器
+（不会出错，但也享受不到）。
+
+那个文件归**网页端仓库**管，内容长这样：
+
+```json
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.quiz.mianyang_quiz",
+    "sha256_cert_fingerprints": ["<见下>"]
+  }
+}]
+```
+
+必须放在 `public/.well-known/assetlinks.json`（Next.js 的 public 直接映射到站点根，
+**且 `.well-known` 要能直接访问、不能被重定向**）。
+
+**指纹从哪来**：不用翻 keystore——发布流水线跑完会打印它：
+
+```
+===== 正式签名证书 SHA-256（粘进 assetlinks.json 的 sha256_cert_fingerprints）=====
+Signer #1 certificate SHA-256 digest: AB:CD:...
+```
+
+证书指纹是公开信息（它本来就挂在公网上给人核对），打进日志不泄密。
+本地调试包用的是另一把 debug keystore，指纹不同；要本地验的话
+用 `keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android`
+再取一条，数组里可以放多个指纹。
+
+### 怎么测
+
+**adb 那条命令测不出网页端配没配对**——官方原话：就算 assetlinks.json 不存在，
+这条命令也照样能把 App 拉起来。它只验"App 这边认不认这个链接"：
+
+```bash
+flutter run    # 先跑一次，确保 App 已安装
+adb shell 'am start -a android.intent.action.VIEW \
+    -c android.intent.category.BROWSABLE \
+    -d "https://myquiz.cn/bank/<uuid>"' \
+    com.quiz.mianyang_quiz
+```
+
+要验**端到端**（网页端 + 签名指纹都对），只能拿真链接点：
+从浏览器地址栏、或从聊天里发一条给自己点开。改过 manifest 之后**必须重装**，
+intent-filter 是装机时登记的。
+
+DevTools 的 **Deep Links** 页（验证深度链接）能扫 manifest 与配置给出问题提示，
+但它**不检查网页端那个文件**。
+
+---
+
+## 九、错误处理与崩溃上报
+
+### 两层，别混
+
+| 哪一类 | 走什么 | 用户看到 | 上报？ |
+|---|---|---|---|
+| **预期内的失败**（网络断、会话过期、服务端拒绝） | `AppException` → `error_mapper` → `AsyncView` | 一句中文提示 + 重试 | **不上报** |
+| **没人接住的**（build 里抛的、异步漏 catch 的） | `lib/error_handling.dart` 的三个钩子 | 那块内容变成一句「没能显示出来」 | 上报 |
+
+第二类**不该**去上报第一类。网络抖动是常态，报上去只会把真正没见过的问题淹掉——
+上报的价值全在"没见过的那种"。
+
+### 三个钩子，装在哪、什么顺序
+
+全在 `lib/error_handling.dart`，由 `main.dart` 在 `runApp` **之前**调用：
+
+1. `FlutterError.onError` —— 框架在 build / layout / paint 里捕获的
+2. `PlatformDispatcher.instance.onError` —— 当前 zone 里没人处理的异步错误
+3. `ErrorWidget.builder` —— 某棵子树构建失败时**画什么**
+
+**顺序是硬要求**：`installErrorHandling()` 必须排在 `CrashReporter.init()` **前面**。
+Sentry 的那两个 integration 是**链式**的（先捕获，再调用原来那个 handler），
+它装的时候会把我们的函数存下来。顺序反了它就存不到，钩子被顶掉。
+
+**钩子里绝不能再调 Sentry**，否则同一条错误上报两次——Sentry 自己已经捕获过了。
+
+### 几条从官方文档里挖出来的硬事实
+
+- **`runZonedGuarded` 已经从文档里彻底消失**（0 处出现，英文原站也一样），
+  没有弃用通知，直接被 `PlatformDispatcher.instance.onError` 取代。
+  别再去包那个 zone。
+- `PlatformDispatcher.instance.onError` **返回 `true` 才是"我处理了"**。
+  返回 `false` 会让引擎走它的兜底路径，在 release 里可能直接终止进程——
+  用户看到"闪退"，而我们连一行日志都留不下。
+- **`ErrorWidget.builder` 必须做尽可能少的事**。官方 API 文档原话：它被调用时
+  "系统通常处于不稳定状态……框架本身（尤其是 BuildOwner）可能已经混乱，
+  很可能再抛异常"，建议返回一个 `LeafRenderObjectWidget`。
+  **指南页里那个 `Scaffold(body: Center(...))` 的示例与这条相矛盾**，以 API 文档为准。
+  本仓的兜底只用 widgets 层最基础的东西，且在测试里**故意不给任何祖先**
+  （没有 MaterialApp / Theme / Directionality / MediaQuery）验证它照样画得出来。
+- **那一堆常见的渲染报错（RenderFlex 溢出、unbounded height、setState during build）
+  都是 `assert` 包着的，正式包里根本不存在。** 别为它们写去重/降噪逻辑
+  （它们在 release 里到不了钩子），也别拿它们去验上报是否生效——
+  debug 下有、release 下没有，看起来就像"上报坏了"。
+  本仓那 5 条历史遗留失败正属于这一类，**修，不要"接住"**。
+- 文档对**混淆只字未提**。本仓是 `--obfuscate --split-debug-info` 构建的，
+  不上传符号，Sentry 里的堆栈就是一堆 `a.b.c` —— 见下面那条 CI 步骤。
+
+### 隐私：学生数据不出境
+
+`lib/apis/crash_reporter.dart` 里显式关掉了这些（SDK 默认大多是关的，**但 `enablePrintBreadcrumbs` 默认是开的**）：
+
+| 选项 | 为什么关 |
+|---|---|
+| `attachScreenshot` | 截图里有题干正文与学生的真实姓名 |
+| `attachViewHierarchy` | 视图树里同样有 |
+| `enablePrintBreadcrumbs` | **默认开**，会把这个项目所有 `debugPrint`（启动失败详情、题目 id）收成面包屑 |
+| `sendDefaultPii` | 关掉身份信息 |
+
+显式写出来而不"靠默认值"，是为了防止有人顺手打开看看效果——这是未成年学生的数据。
+
+**没配 `SENTRY_DSN` 就整个是空操作**：不初始化 SDK、不建 HTTP 客户端、什么都不发。
+开发机与 CI 都不配它。
+
+### 网络：本项目实测到 sentry.io **是通的**（但别当成永久事实）
+
+曾经担心的事没有发生。2026-09-28 在本机实测（`o496762.ingest.us.sentry.io`）：
+
+| 检查 | 结果 |
+|---|---|
+| DNS | 正常解析 |
+| TLS 握手 | **0.3s** |
+| 投一个真实 event | **HTTP 200**，Sentry 返回了它分配的 event id |
+
+所以上报在这台机器上是可用的。定位仍然是**尽力而为**：SDK 的传输层自己吞异常，
+上游再兜一层，发不出去就发不出去，**绝不影响任何功能**。
+
+留个心眼：本仓已经因为"境外域名不通且调用没超时"踩过一次——PDF 中文字体原先从
+`fonts.gstatic.com` 拉，点「打印」既不报错也不出对话框，师生的感受就是"按钮没反应"
+（2026-09-17）。**客户端所在网络与开发机不是一回事**，学校机房可能是另一番景象。
+要真依赖它，先在目标网络上实测。
+
+### 上线前还差一步（DSN 已经有了）
+
+1. **`SENTRY_DSN`** —— 项目已建好，值在维护者的密码管理器里；
+   **本地开发放进 `config/dev.json`（已被 gitignore），CI 放进仓库 Secrets**。
+   仓库里任何被跟踪的文件都不该出现它（已核对）。
+2. **`SENTRY_AUTH_TOKEN`** —— 还要去 Sentry 生成一个，加到仓库 Secrets，
+   用于让流水线把符号传到 Sentry。不配会跳过（不报错），
+   但 Sentry 里的堆栈会是混淆后的名字。
+
+两者都是"不配照常发版"——不该因为上报没配好就发不出包。
+
+**验一遍接线**（改完 Sentry 相关代码后值得跑一次）：
+
+```bash
+flutter test <任意测试> --dart-define=SENTRY_DSN=<dsn>
+# 在测试里断言 CrashReporter.enabled == true
+```
+
+`flutter analyze` 与 `flutter test`（不带 DSN）**测不出**接线对不对——
+不带 DSN 时它按设计就是关的，全绿什么也不说明。
+
+### 怎么测
+
+```bash
+flutter test test/utils/error_handling_test.dart
+```
+
+覆盖：三个钩子装上了、钩子自己不会抛、异步钩子返回 `true`、
+正式包的兜底在没有主题/方向/MediaQuery 的环境下能画出来且不泄露异常内容。
+
+**注意 `FlutterError.onError` 是全局静态**，测试里必须 save/restore，
+否则会污染后面所有测试（本仓的测试已经这么做了）。
+
+### ⚠⚠ `sentry_flutter` 必须钉在 8.x，**升级会直接废掉 Windows 构建**
+
+`pubspec.yaml` 里写的是 `sentry_flutter: ^8.14.2`，**不要顺手升到 9.x**。
+
+9.30.1（当前最新）依赖 `jni: 0.14.2`，而且是**精确锁定**改不掉。那个包在
+自己的 pubspec 里声明了 `windows: ffiPlugin: true`，所以 Flutter 一定会去编它；
+可它的 `third_party/jni.h` 第 1457 行无条件写着：
+
+```c
+#define JNIEXPORT __attribute__((visibility("default")))
+```
+
+**这是 GCC/Clang 的语法，MSVC 不认**（整个头文件里一个 `_WIN32` / `_MSC_VER` /
+`__declspec` 分支都没有）。结果是 `dartjni.c` 与 `jni.h` 一路
+`C2059 / C2143 语法错误`，**Windows 包根本编不出来**——本地编不出，CI 也编不出
+（GitHub 的 windows runner 同样是 MSVC）。
+
+8.14.2 **没有这个依赖**（只有 `ffi` / `file` / `collection` / `package_info_plus`），
+Windows 构建实测 104.7s 通过。升级之前务必跑一次 `flutter build windows`，
+不要只看 `flutter analyze` 和 `flutter test` —— 这两条**完全测不出**这个问题。
+
+### ⚠ 9.x 还有第二个坑：构建期要连 GitHub
+
+退一步说，就算 `jni` 的问题将来被上游修了，`sentry_flutter` 在 Windows 上**构建期**
+还会用 CMake `FetchContent` 去 GitHub 拉 `sentry-native`，并且是**递归子模块**
+（`crashpad`、`breakpad`、`benchmark`、`libunwindstack-ndk`、`lss` 五个），
+**没有断点续传**，网络抖一次就整个重来。
+
+实测三次：主仓库能拉到，子模块每次挂在不同地方（先 `benchmark`、后 `crashpad`），
+单次失败要跑 20+ 分钟。CI 能连 GitHub 所以没事，**国内开发机基本靠运气**。
+
+真卡住时的手工救援（与第四节 pdfrx 那份"先把包下好放进缓存"同源）：
+
+```bash
+# 1. 找到 FetchContent 已克隆下来的源码目录
+cd build/windows/x64/_deps/sentry-native-src
+# 2. 手动补子模块；这一步可以反复重试，不会从头再来
+until git submodule update --init --recursive; do sleep 3; done
+# 3. 目录完整后重跑 flutter build windows，FetchContent 会跳过已有 clone
+git submodule status --recursive   # 全部没有 '-' 前缀才算完整
+```
+
+另：`jni` 那条路还额外要求构建机**装了 JDK 且设了 `JAVA_HOME`**
+（它的 CMake 里有 `find_package(JNI REQUIRED COMPONENTS JVM)`）。
+9.x 三重要求叠在一起——它需要 GitHub、需要 JDK、然后**仍然编不过**。

@@ -10,6 +10,7 @@ export 'analytics_repository.dart';
 export 'app_update_repository.dart';
 export 'auth_refresh_client.dart';
 export 'auth_service.dart';
+export 'crash_reporter.dart';
 export 'exam_draft_service.dart';
 export 'favorite_repository.dart';
 export 'feedback_repository.dart';

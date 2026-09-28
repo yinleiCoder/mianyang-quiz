@@ -6,11 +6,13 @@
 // 形态学多邻国 Web 端：左上是品牌区，下面是条目列表；选中项用浅色圆角块突出，
 // 且图标换成实心版本——不只靠颜色区分选中态（色盲用户也看得出）。
 
-import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/values/values.dart';
 import 'package:mianyang_quiz/widgets/widgets.dart';
 import 'package:mianyang_quiz/pages/shell/widgets/nav_destinations.dart';
+import 'package:mianyang_quiz/pages/shell/widgets/nav_shortcut.dart';
+import 'package:mianyang_quiz/pages/shell/widgets/side_nav_item.dart';
 
 class AppSideNav extends StatelessWidget {
   const AppSideNav({
@@ -44,12 +46,44 @@ class AppSideNav extends StatelessWidget {
           children: [
             _Brand(theme: theme),
             const SizedBox(height: AppMetrics.gapSm),
-            for (var i = 0; i < kNavDestinations.length; i++)
-              _NavItem(
-                destination: kNavDestinations[i],
-                selected: i == currentIndex,
-                onTap: () => onSelect(i),
+            // 条目区**必须可滚动**：侧栏是"宽但可以很矮"的那一档，
+            // 窗口被拖矮时固定高度的 Column 会直接 RenderFlex 溢出，
+            // 整块导航跟着错位。条目从 5 个涨到 7 个之后这条更要紧。
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  for (var i = 0; i < kNavDestinations.length; i++)
+                    SideNavItem(
+                      label: kNavDestinations[i].label,
+                      icon: kNavDestinations[i].icon,
+                      activeIcon: kNavDestinations[i].activeIcon,
+                      selected: i == currentIndex,
+                      onTap: () => onSelect(i),
+                    ),
+                  if (kNavShortcuts.isNotEmpty) ...[
+                    const SizedBox(height: AppMetrics.gapMd),
+                    Divider(
+                      height: 1,
+                      indent: AppMetrics.gapLg,
+                      endIndent: AppMetrics.gapLg,
+                      color: scheme.outlineVariant,
+                    ),
+                    const SizedBox(height: AppMetrics.gapMd),
+                    // 快捷入口：push 一个整页，不是切分支——
+                    // 所以它们**永远不是选中态**（当前页不在这五项里）。
+                    for (final shortcut in kNavShortcuts)
+                      SideNavItem(
+                        label: shortcut.label,
+                        icon: shortcut.icon,
+                        activeIcon: shortcut.icon,
+                        selected: false,
+                        onTap: () => context.push(shortcut.path),
+                      ),
+                  ],
+                ],
               ),
+            ),
           ],
         ),
       ),
@@ -85,71 +119,6 @@ class _Brand extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _NavItem extends StatelessWidget {
-  const _NavItem({
-    required this.destination,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final NavDestination destination;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final color = selected ? scheme.onPrimaryContainer : scheme.onSurfaceVariant;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppMetrics.gapMd,
-        vertical: 2,
-      ),
-      child: Semantics(
-        button: true,
-        selected: selected,
-        label: destination.label,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(AppMetrics.radiusButton.r),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 120),
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppMetrics.gapMd,
-              vertical: AppMetrics.gapMd,
-            ),
-            decoration: BoxDecoration(
-              color: selected ? scheme.primaryContainer : null,
-              borderRadius: BorderRadius.circular(AppMetrics.radiusButton.r),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  selected ? destination.activeIcon : destination.icon,
-                  size: 22.r,
-                  color: color,
-                ),
-                const SizedBox(width: AppMetrics.gapMd),
-                Expanded(
-                  child: Text(
-                    destination.label,
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      color: color,
-                      fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }

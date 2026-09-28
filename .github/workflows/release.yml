@@ -65,6 +65,10 @@ jobs:
             API_BASE_URL      = "https://myquiz.cn"
             SHARE_BASE_URL    = "https://myquiz.cn"
             APP_VERSION       = "${{ github.ref_type == 'tag' && github.ref_name || 'dev' }}"
+            # 崩溃上报的 DSN。留空（没配这个 secret）= 整个上报链路关掉，
+            # 见 lib/apis/crash_reporter.dart。它同样不是机密（客户端里就有），
+            # 走 secret 只是不想把它写死在仓库里、换个 Sentry 项目还要改代码。
+            SENTRY_DSN        = "${{ secrets.SENTRY_DSN }}"
           }
           $config | ConvertTo-Json | Set-Content -Encoding utf8 "config/ci.local.json"
         shell: pwsh
@@ -237,7 +241,8 @@ jobs:
             "OSS_PUBLIC_HOST": "mianyang-question-bank.oss-cn-chengdu.aliyuncs.com",
             "API_BASE_URL": "https://myquiz.cn",
             "SHARE_BASE_URL": "https://myquiz.cn",
-            "APP_VERSION": "${{ github.ref_type == 'tag' && github.ref_name || 'dev' }}"
+            "APP_VERSION": "${{ github.ref_type == 'tag' && github.ref_name || 'dev' }}",
+            "SENTRY_DSN": "${{ secrets.SENTRY_DSN }}"
           }
           JSON
 
@@ -361,6 +366,23 @@ jobs:
           [ "$failed" -eq 0 ] || exit 1
           echo "全部 ${#APKS[@]} 个 APK 签名校验通过"
 
+      - name: 打印签名证书的 SHA-256（填 assetlinks.json 用）
+        # App Links 要在**网页端仓库**托管 public/.well-known/assetlinks.json，
+        # 里面必须带上正式签名的 SHA-256 指纹，否则 Android 的 autoVerify 过不了、
+        # 链接照旧走浏览器。而指纹只能从 keystore 或已签名的包里取——keystore 在
+        # Secrets 里，维护者手上未必有；已签名的包这里刚好有一个。
+        #
+        # 证书指纹是**公开信息**（它本来就挂在公网 assetlinks.json 里给人核对），
+        # 打进日志不泄密。没有这一步，就只能靠人手工跑 keytool 再抄一遍十六进制，
+        # 抄错一位的表现是"怎么都不生效"，极难查。
+        run: |
+          APK=build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+          SDK="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          APKSIGNER=$(find "$SDK/build-tools" -maxdepth 2 -name apksigner -type f | sort -V | tail -1)
+          echo "===== 正式签名证书 SHA-256（粘进 assetlinks.json 的 sha256_cert_fingerprints）====="
+          "$APKSIGNER" verify --print-certs "$APK" | grep -i "SHA-256"
+          echo "::notice::把上面那行冒号分隔的 SHA-256 填进网页端 public/.well-known/assetlinks.json"
+
       # **必须排在校验之后**：先传再验等于把没验过的包挂上 Release。
       - uses: actions/upload-artifact@v4
         with:
@@ -425,3 +447,40 @@ jobs:
               - 两种形态都已带上 C 运行库，目标电脑无需另装 Visual C++ Redistributable
           files: assets/*
           fail_on_unmatched_files: true
+
+      # **放在 Release 之后**：Sentry 挂了一次不该让这一版发不出去。
+      - name: 上传符号到 Sentry（混淆后的堆栈才读得懂）
+        # 本仓两个平台都是 `--obfuscate --split-debug-info` 构建的。
+        # **不上传符号，Sentry 里的堆栈就是一堆 a.b.c**，上报这件事本身就白做了。
+        # 官方那几页性能/错误文档对混淆只字未提（只挂了个侧边栏链接），
+        # 所以这一步是本仓自己补的。
+        #
+        # 用 npx 拉 sentry-cli，**不往项目里塞构建期插件**：sentry_dart_plugin
+        # 会在每次本地构建时也去连 Sentry，没配 token 的开发机就被它拖慢/报错。
+        #
+        # 没配 SENTRY_AUTH_TOKEN 就跳过而不是失败：还没建 Sentry 项目、
+        # 或者干脆不想开这个功能的仓，不该因此发不出包。
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          if [ -z "$SENTRY_AUTH_TOKEN" ]; then
+            echo "::notice::未配置 SENTRY_AUTH_TOKEN，跳过符号上传——Sentry 上的堆栈将是混淆后的名字"
+            exit 0
+          fi
+          shopt -s nullglob
+          DIRS=(dist/*-symbols)
+          if [ ${#DIRS[@]} -eq 0 ]; then
+            echo "::warning::没找到任何符号目录（dist/*-symbols）"
+            exit 0
+          fi
+          # --wait：阻塞到 **Sentry 服务端分析完**为止，把"传了点东西"变成
+          # "服务端确认处理了"。这一步排在 Release 之后，所以万一 Sentry 慢/挂了，
+          # 也**不会**让这一版发不出去。
+          for d in "${DIRS[@]}"; do
+            echo "==== 上传 $d ===="
+            npx --yes @sentry/cli debug-files upload \
+              --org yinlei \
+              --project mianyang-quiz \
+              --wait \
+              "$d"
+          done
