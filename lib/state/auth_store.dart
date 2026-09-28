@@ -9,12 +9,10 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:mianyang_quiz/core/constants/identity_meta.dart';
-import 'package:mianyang_quiz/core/error/app_exception.dart';
-import 'package:mianyang_quiz/core/error/error_mapper.dart';
-import 'package:mianyang_quiz/data/models/user/profile.dart';
-import 'package:mianyang_quiz/data/repositories/user_repository.dart';
-import 'package:mianyang_quiz/data/services/auth_service.dart';
+import 'package:mianyang_quiz/values/values.dart';
+import 'package:mianyang_quiz/utils/utils.dart';
+import 'package:mianyang_quiz/entity/entity.dart';
+import 'package:mianyang_quiz/apis/apis.dart';
 
 class AuthStore extends ChangeNotifier {
   AuthStore(this._auth, this._users);
@@ -94,7 +92,7 @@ class AuthStore extends ChangeNotifier {
     );
   }
 
-  /// [identifier] 可以是手机号或邮箱（分流与换算在 AuthService 里，见 core/utils/phone.dart）。
+  /// [identifier] 可以是手机号或邮箱（分流与换算在 AuthService 里，见 utils/phone.dart）。
   Future<void> signIn({required String identifier, required String password}) =>
       _run(() async {
         await _auth.signIn(identifier: identifier, password: password);

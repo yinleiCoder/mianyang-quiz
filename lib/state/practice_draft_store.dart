@@ -5,8 +5,7 @@
 // 只装"用户改过的组卷条件"，不装题目数据——那是练习会话自己的事。
 
 import 'package:flutter/foundation.dart';
-import 'package:mianyang_quiz/data/models/bank/question_filter.dart';
-import 'package:mianyang_quiz/data/models/practice/practice_session.dart';
+import 'package:mianyang_quiz/entity/entity.dart';
 import 'package:mianyang_quiz/state/practice_mode.dart';
 
 class PracticeDraftStore extends ChangeNotifier {

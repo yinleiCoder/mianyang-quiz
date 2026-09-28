@@ -5,7 +5,7 @@
 // 表现是用户选了 100 却收到「题量需在 1~100 之间」——只在真机上点得出来。
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mianyang_quiz/state/practice_draft_store.dart';
+import 'package:mianyang_quiz/state/state.dart';
 
 void main() {
   test('题量上限是 100', () {

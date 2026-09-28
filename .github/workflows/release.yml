@@ -294,50 +294,78 @@ jobs:
           EOF
           echo "签名配置就绪，别名 $ANDROID_KEY_ALIAS"
 
-      - name: 构建（混淆）
+      - name: 构建（混淆 + 按 ABI 拆分）
+        # **为什么要拆 ABI**：不拆的话一个包里塞着 arm64-v8a / armeabi-v7a / x86_64
+        # 三套原生库（Flutter engine、PDFium、各插件），84MB 里绝大部分是重复的。
+        # 拆开后每份只带自己那套，真机那份约 30MB。
+        #
+        # 代价：**不再有"一个包通吃"**。下载页那条固定链接现在指向 arm64-v8a
+        # （见 release job 的「规整资产名」），32 位老设备要走 Release 里的
+        # `mianyang_quiz-android-armv7.apk`。改这里之前先想清楚这两条。
         run: |
           flutter pub get
           flutter build apk --release \
             --build-name=${{ steps.ver.outputs.name }} \
             --build-number=${{ steps.ver.outputs.code }} \
+            --split-per-abi \
             --obfuscate \
             --split-debug-info=symbols/android \
             --dart-define-from-file=config/ci.local.json
+          ls -la build/app/outputs/flutter-apk/
 
       - name: 校验 APK 签名
         # **这是"悄悄发出一个 debug 签名包"的最后一道闸**。
         # 上面那步只管把 key.properties 摆好，真正签成什么由 Gradle 决定 ——
         # 而 android/app/build.gradle.kts 在 key.properties 缺失时是**静默回退 debug 签名**的。
         # 所以构建完必须回头看**产物**上盖的是谁的章，而不是相信配置。
+        #
+        # --split-per-abi 之后有三个产物，**每一个都要验**：只验其中一个的话，
+        # 另外两个完全可以带着 debug 章溜进 Release。
         run: |
-          APK=build/app/outputs/flutter-apk/app-release.apk
+          APKS=(build/app/outputs/flutter-apk/app-*-release.apk)
+          # 拆 ABI 后产物是带 ABI 后缀的名字；没拆过则是 app-release.apk。
+          # 两种都接住，免得将来有人去掉 --split-per-abi 时这里静默空转。
+          if [ ! -e "${APKS[0]}" ]; then
+            APKS=(build/app/outputs/flutter-apk/app-release.apk)
+          fi
+          if [ ! -e "${APKS[0]}" ]; then
+            echo "::error::没找到任何 APK 产物（build/app/outputs/flutter-apk/）"
+            ls -la build/app/outputs/flutter-apk/ || true
+            exit 1
+          fi
+
           SDK="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
           APKSIGNER=$(find "$SDK/build-tools" -maxdepth 2 -name apksigner -type f | sort -V | tail -1)
           if [ -z "$APKSIGNER" ]; then
             echo "::error::找不到 apksigner（$SDK/build-tools）"
             exit 1
           fi
-          echo "用 $APKSIGNER 校验 $APK"
-          # **不要写成 `apksigner ... | tee file`**：管道的退出码取自 tee，
-          # apksigner 真失败了也会一路走到"校验通过"——那这步就白设了。
-          if ! "$APKSIGNER" verify --print-certs "$APK" > /tmp/apk-certs.txt 2>&1; then
-            echo "::error::apksigner 校验失败（APK 没签名或签名坏了）"
-            cat /tmp/apk-certs.txt
-            exit 1
-          fi
-          cat /tmp/apk-certs.txt
 
-          if grep -qi "Android Debug" /tmp/apk-certs.txt; then
-            echo "::error::产物是 debug 签名——这种包换台机器就发不出可覆盖安装的更新，不能发布"
-            exit 1
-          fi
-          echo "签名校验通过"
+          failed=0
+          for APK in "${APKS[@]}"; do
+            echo "==== 校验 $APK ===="
+            # **不要写成 `apksigner ... | tee file`**：管道的退出码取自 tee，
+            # apksigner 真失败了也会一路走到"校验通过"——那这步就白设了。
+            if ! "$APKSIGNER" verify --print-certs "$APK" > /tmp/apk-certs.txt 2>&1; then
+              echo "::error::apksigner 校验失败（$APK 没签名或签名坏了）"
+              cat /tmp/apk-certs.txt
+              failed=1
+              continue
+            fi
+            cat /tmp/apk-certs.txt
+            if grep -qi "Android Debug" /tmp/apk-certs.txt; then
+              echo "::error::$APK 是 debug 签名——这种包换台机器就发不出可覆盖安装的更新，不能发布"
+              failed=1
+            fi
+          done
+          [ "$failed" -eq 0 ] || exit 1
+          echo "全部 ${#APKS[@]} 个 APK 签名校验通过"
 
       # **必须排在校验之后**：先传再验等于把没验过的包挂上 Release。
       - uses: actions/upload-artifact@v4
         with:
           name: android-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: build/app/outputs/flutter-apk/app-*-release.apk
           if-no-files-found: error
 
       - uses: actions/upload-artifact@v4
@@ -357,11 +385,26 @@ jobs:
           path: dist
 
       - name: 规整资产名
+        # Android 已按 ABI 拆成三份（见 build-android 的构建步骤）。映射关系是**刻意**的：
+        #   · `mianyang_quiz-android.apk`   ← arm64-v8a。**真机 ABI**，下载页的固定链接
+        #      `/releases/latest/download/mianyang_quiz-android.apk` 指向它，永远指向最新版。
+        #   · `mianyang_quiz-android-armv7.apk`   ← armeabi-v7a，32 位老设备
+        #   · `mianyang_quiz-android-x86_64.apk`  ← x86_64，模拟器
+        # 换映射之前先想清楚：固定名一旦指错 ABI，用户拿到的是装不上的包（「应用未安装」），
+        # 而这个报错不告诉任何人"你该下另一个文件"。
         run: |
           mkdir -p assets
           cp dist/windows-bundle/*.zip assets/
           cp dist/windows-bundle/*-setup.exe assets/
-          cp dist/android-apk/*.apk "assets/mianyang_quiz-android.apk"
+          cp dist/android-apk/app-arm64-v8a-release.apk "assets/mianyang_quiz-android.apk"
+          cp dist/android-apk/app-armeabi-v7a-release.apk "assets/mianyang_quiz-android-armv7.apk"
+          cp dist/android-apk/app-x86_64-release.apk "assets/mianyang_quiz-android-x86_64.apk"
+
+          # 三份缺一不可：少一份就说明构建或上传环节变了，
+          # 宁可在这里炸掉，也不要发出一个"老设备用户点进去 404"的 Release
+          for f in mianyang_quiz-android.apk mianyang_quiz-android-armv7.apk mianyang_quiz-android-x86_64.apk; do
+            [ -s "assets/$f" ] || { echo "::error::缺少 Android 资产 $f"; exit 1; }
+          done
           ls -la assets
 
       - uses: softprops/action-gh-release@v2
@@ -373,6 +416,9 @@ jobs:
             绵阳市中职共建题库客户端 ${{ github.ref_name }}
 
             - **Android**：下载 `mianyang_quiz-android.apk` 直接安装（首次需允许「安装未知来源应用」）
+              - 这份是 **arm64-v8a**，近几年的手机都是它。装不上、提示「应用未安装」的，
+                换 `mianyang_quiz-android-armv7.apk`（32 位老设备），模拟器用 `mianyang_quiz-android-x86_64.apk`
+              - **换 ABI 覆盖安装会失败**，要先卸载旧版再装（Android 不允许换签名/ABI 覆盖）
             - **Windows**：下载 `mianyang_quiz-windows-x64-setup.exe`，双击安装即可
               - 默认按当前用户安装，**不需要管理员权限**；会创建桌面与开始菜单快捷方式
               - 免安装版：`mianyang_quiz-windows-x64.zip`，**解压后运行整个目录里的 exe**（不能只拷 exe）

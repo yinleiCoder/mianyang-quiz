@@ -6,11 +6,9 @@
 // 后者一旦漏掉某个入口就会显示错数字，而且很难发现。
 
 import 'package:flutter/foundation.dart';
-import 'package:mianyang_quiz/core/error/app_exception.dart';
-import 'package:mianyang_quiz/core/error/error_mapper.dart';
-import 'package:mianyang_quiz/core/utils/async_value.dart';
-import 'package:mianyang_quiz/data/models/stats/practice_dashboard.dart';
-import 'package:mianyang_quiz/data/repositories/stats_repository.dart';
+import 'package:mianyang_quiz/utils/utils.dart';
+import 'package:mianyang_quiz/entity/entity.dart';
+import 'package:mianyang_quiz/apis/apis.dart';
 
 class DashboardStore extends ChangeNotifier {
   DashboardStore(this._repository);

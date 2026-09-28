@@ -11,8 +11,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
-import 'package:mianyang_quiz/core/config/env.dart';
-import 'package:mianyang_quiz/core/network/auth_refresh_client.dart';
+import 'package:mianyang_quiz/values/values.dart';
+import 'package:mianyang_quiz/apis/apis.dart';
 import 'package:mianyang_quiz/dependencies.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 

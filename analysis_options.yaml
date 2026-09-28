@@ -39,3 +39,10 @@ linter:
     use_colored_box: true
     use_decorated_box: true
     use_full_hex_values_for_flutter_colors: true
+
+    # --- 刻意关掉 ---
+    # 八个桶文件写的是 `library widgets;` 这种**具名**库声明。这条 lint 认为名字
+    # 没必要，但 Flutter SDK 自己的桶就是具名的（material_ui 包的 lib/material_ui.dart
+    # 第 18 行 `library material_ui;`），本仓跟随官方风格：名字会出现在堆栈跟踪与
+    # dartdoc 里，"这个符号来自哪个桶"一眼可见，比匿名桶好定位。
+    unnecessary_library_name: false

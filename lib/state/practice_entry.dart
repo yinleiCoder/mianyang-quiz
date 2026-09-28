@@ -6,16 +6,16 @@
 // 收敛成一个函数就是为了让这个顺序不可能写反。
 //
 // **为什么放在 state/ 而不是某个 feature 里**：调用方横跨 records 与 practice
-// 两个 feature，而 ui/features/a/ 不准 import ui/features/b/（AGENTS.md 二）。
-// 也不能放 ui/core/：那层禁止依赖 state/（共享 UI 只能收数据与回调），
+// 两个 feature，而 pages/a/ 不准 import pages/b/（AGENTS.md 二）。
+// 也不能放 widgets/：那层禁止依赖 state/（共享 UI 只能收数据与回调），
 // 而本函数必须读 PracticeDraftStore。
 //
 // 它不是组件而是动作函数：不需要状态，也不返回任何东西。
 
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
-import 'package:mianyang_quiz/core/router/routes.dart';
-import 'package:mianyang_quiz/data/models/practice/practice_session.dart';
+import 'package:mianyang_quiz/router/router.dart';
+import 'package:mianyang_quiz/entity/entity.dart';
 import 'package:mianyang_quiz/state/practice_draft_store.dart';
 import 'package:provider/provider.dart';
 

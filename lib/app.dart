@@ -13,8 +13,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/bootstrap.dart';
-import 'package:mianyang_quiz/core/router/app_router.dart';
-import 'package:mianyang_quiz/core/theme/app_theme.dart';
+import 'package:mianyang_quiz/router/router.dart';
+import 'package:mianyang_quiz/values/values.dart';
 import 'package:provider/provider.dart';
 
 /// 应用名。主壳与"起不来"提示页共用一处 —— 两处各写一份必然会漂移

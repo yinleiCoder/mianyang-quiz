@@ -21,7 +21,7 @@ dependencies:
   provider: ^6.1.5
 
   # 后端：Auth / PostgREST / RPC 走官方 SDK；
-  # dio 只用于网页端的 /api/oss/sign 签名与 OSS 直传（见 lib/core/network/oss_dio.dart）。
+  # dio 只用于网页端的 /api/oss/sign 签名与 OSS 直传（见 lib/apis/oss_upload_service.dart）。
   supabase_flutter: ^2.17.2
   dio: ^5.11.1
   # 显式声明 http：core/network/auth_refresh_client.dart 要包一层 http.Client
@@ -78,6 +78,14 @@ dependencies:
 
 dev_dependencies:
   flutter_test:
+    sdk: flutter
+
+  # 集成测试：在**真实设备**上跑端到端流程（本机可用的设备是 Windows 桌面）。
+  # 与 test/ 下的单元/组件测试是两套：`flutter test` 只扫 test/，
+  # 集成测试要显式 `flutter test integration_test -d windows`，
+  # 二者**不能在同一个 flutter test 调用里混跑**（工具会直接报错）。
+  # 取性能数据要用 `flutter drive ... --profile`（见 test_driver/perf_driver.dart）。
+  integration_test:
     sdk: flutter
 
   build_runner: ^2.16.1

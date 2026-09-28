@@ -11,30 +11,8 @@
 import 'package:dio/dio.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'package:mianyang_quiz/data/repositories/analytics_repository.dart';
-import 'package:mianyang_quiz/data/repositories/app_update_repository.dart';
-import 'package:mianyang_quiz/data/repositories/favorite_repository.dart';
-import 'package:mianyang_quiz/data/repositories/feedback_repository.dart';
-import 'package:mianyang_quiz/data/repositories/list_repository.dart';
-import 'package:mianyang_quiz/data/repositories/material_repository.dart';
-import 'package:mianyang_quiz/data/repositories/paper_repository.dart';
-import 'package:mianyang_quiz/data/repositories/password_repository.dart';
-import 'package:mianyang_quiz/data/repositories/practice_repository.dart';
-import 'package:mianyang_quiz/data/repositories/question_report_repository.dart';
-import 'package:mianyang_quiz/data/repositories/question_repository.dart';
-import 'package:mianyang_quiz/data/repositories/stats_repository.dart';
-import 'package:mianyang_quiz/data/repositories/subject_repository.dart';
-import 'package:mianyang_quiz/data/repositories/user_repository.dart';
-import 'package:mianyang_quiz/data/services/auth_service.dart';
-import 'package:mianyang_quiz/data/services/exam_draft_service.dart';
-import 'package:mianyang_quiz/data/services/material_download_service.dart';
-import 'package:mianyang_quiz/data/services/oss_upload_service.dart';
-import 'package:mianyang_quiz/data/services/question_pdf_service.dart';
-import 'package:mianyang_quiz/data/services/sfx_service.dart';
-import 'package:mianyang_quiz/state/auth_store.dart';
-import 'package:mianyang_quiz/state/dashboard_store.dart';
-import 'package:mianyang_quiz/state/favorite_store.dart';
-import 'package:mianyang_quiz/state/practice_draft_store.dart';
+import 'package:mianyang_quiz/apis/apis.dart';
+import 'package:mianyang_quiz/state/state.dart';
 
 class AppDependencies {
   AppDependencies._(this.client)

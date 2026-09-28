@@ -10,8 +10,8 @@
 import 'dart:collection';
 
 import 'package:flutter/foundation.dart';
-import 'package:mianyang_quiz/core/error/error_mapper.dart';
-import 'package:mianyang_quiz/data/repositories/favorite_repository.dart';
+import 'package:mianyang_quiz/utils/utils.dart';
+import 'package:mianyang_quiz/apis/apis.dart';
 
 class FavoriteStore extends ChangeNotifier {
   FavoriteStore(this._repository);

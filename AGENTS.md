@@ -18,7 +18,7 @@
    转场与 Hero 动画**静默消失**（不报错，只是没了）。
 
 2. **不使用 MVVM。** 不建 `view_models/`、不写 `XxxViewModel`、不配 Presenter 层。
-   页面直接读仓储（`data/repositories/`）与跨页状态（`state/` 的 `*Store`）。
+   页面直接读仓储（`apis/`）与跨页状态（`state/` 的 `*Store`）。
    官方 skill `flutter-apply-architecture-best-practices` 的核心指令就是实现 MVVM，
    **与本条冲突，不要安装它**。
 
@@ -29,25 +29,33 @@
    任何 INSERT/UPDATE/DELETE 都必须通过 `supabase.rpc(...)` 调 SECURITY DEFINER 函数。
 
 5. **配置不入库。** `config/dev.json`（`--dart-define-from-file` 注入）已在 `.gitignore`；
-   模板是 `config/dev.example.json`。新增配置项要同步改 `lib/core/config/env.dart` 与模板。
+   模板是 `config/dev.example.json`。新增配置项要同步改 `lib/values/env.dart` 与模板。
    OSS 的 AccessKey/Bucket/Endpoint **只存在于网页端服务端**，客户端永远不内嵌。
 
 ---
 
 ## 二、分层与依赖方向
 
+八个顶层目录，自下而上（下层不认识上层）：
+
 ```
-ui/features/**  →  ui/core/**  state/**  data/repositories/**  core/**  data/models/**
-state/**        →  data/repositories/**  data/models/**  core/error
-data/repos/**   →  data/services/**  data/models/**  core/network  core/error
-domain/**       →  只依赖 Dart 核心库（**不 import Flutter**，必须可独立单测）
-core/**         →  零业务，不 import 任何上层
+values/   ← 主题、常量、配置、文案：谁都能用，它谁也不依赖
+entity/   ↔ 数据模型（freezed）
+utils/    ← 纯 Dart：判分镜像、作答编解码、格式化、异常映射
+apis/     ← 仓储、服务、网络设施
+state/    ← 跨页 Store
+widgets/  ← 共享组件（只"喂数据"，不自己取数）
+pages/    ← 页面 + 各模块私有组件、私有状态机
+router/   ← 路由表与路径常量
 ```
 
-跨 feature 复用**必须**上提到 `ui/core/` 或 `state/`——`ui/features/a/` 不准 import `ui/features/b/`。
-这条最容易被违反，也是上个版本练习页涨到 1379 行的原因。
+`entity/` 与 `utils/` 是**互相**依赖的（模型用 `formatters`，判分用 `SubjectNode`）——
+这是重构前就存在的结构，不必强行拆开。除此之外依赖方向一律单向。
 
-`core/network/supabase_client.dart` 是唯一持有 `SupabaseClient` 的地方，由 `bootstrap.dart` 注入、
+跨模块复用**必须**上提到 `widgets/` 或 `state/`——`pages/a/` 不准 import `pages/b/`。
+这条最容易被违反，也是上个版本练习页涨到 1379 行的原因，由 `tool/check_architecture.dart` 强制。
+
+`dependencies.dart` 是唯一持有 `SupabaseClient` 的地方，由 `bootstrap.dart` 注入、
 仓储通过构造函数接收。**不允许仓储里写 `Supabase.instance.client`**，否则测试无法替换。
 
 ---
@@ -69,9 +77,46 @@ M3 的 `ColorScheme` **没有「成功」这个角色**。拿 `tertiary` 顶替�
 tertiary 是**粉红色**，与表示错误的 `error`（红）几乎同色——用户根本分不出答对答错。
 代码读起来却完全通顺（"没有成功色就用第三色"）。
 
-所以主题里显式定义了 `SemanticColors`（`core/theme/semantic_colors.dart`），
+所以主题里显式定义了 `SemanticColors`（`values/semantic_colors.dart`），
 用 `context.semantic.success / successContainer / warning` 取色。
 组件一律从主题取色，**不要在组件里写死颜色**——主题是唯一该写死颜色的地方。
+
+---
+
+## 二·六、桶（barrel）导出
+
+八个顶层目录各有一个与目录同名的桶文件（`widgets/widgets.dart`、`entity/entity.dart` …）。
+写法跟随 Flutter SDK 自己的桶（`material_ui` 包的 `lib/material_ui.dart` 就是
+`library material_ui;` + 一串 `export`），所以是**具名**库声明，不是匿名 `library;`。
+`analysis_options.yaml` 为此关掉了 `unnecessary_library_name`，别把它又打开。
+
+```dart
+library widgets;
+
+export 'duo_button.dart';
+export 'duo_card.dart';
+```
+
+**引用规则：**
+
+| 场景 | 写法 |
+|---|---|
+| 跨目录引用 | 走桶：`import 'package:mianyang_quiz/widgets/widgets.dart';` |
+| 同目录内部 | 精确到文件：`import 'package:mianyang_quiz/pages/practice/state/practice_runner.dart';` |
+| 目标不在桶的导出范围内 | 精确到文件（生成物、模块私有组件） |
+
+同目录内部不写桶，是为了让"谁依赖谁"在 import 行上看得见——
+`analysis_options.yaml` 把 `unused_import` 设为 error，靠的正是这一点。
+同理，**桶只能省掉"跨目录"的噪音，不能拿来省同目录的路径**。
+
+两条边界，改桶时别踩：
+
+- **生成物不能 export**。`*.g.dart` / `*.freezed.dart` 是 `part` 文件、不是库，
+  写进 `export` 直接编译失败，所以生成桶的脚本要按后缀排除。
+- **`pages/pages.dart` 只导出各模块顶层的文件**（页面与流程入口），
+  `pages/<模块>/widgets/` 与 `state/` 下的东西**刻意不导出**：既避免跨模块误用，
+  也避免不同模块的同名组件撞车（`auth/` 与 `profile/` 各有一个 `SchoolPickerField`）。
+  测试要用模块私有组件时，写精确路径即可。
 
 ---
 
@@ -79,32 +124,43 @@ tertiary 是**粉红色**，与表示错误的 `error`（红）几乎同色—�
 
 | 目录 | 放什么 | 判定标准 |
 |---|---|---|
-| `core/` | 配置、主题、路由、网络、纯工具 | 与业务无关，换个 App 也能用 |
-| `domain/` | 判分、作答编解码、标签映射 | 纯函数，不 import Flutter |
-| `data/models/` | freezed 数据模型 | 对应一次网络请求/响应 |
-| `data/repositories/` | 查询与 RPC 封装 | 只做「查询 + 模型转换」，不写业务规则 |
+| `values/` | 主题、颜色、字阶、中文字案与标签映射、编译期配置 | 与业务无关的**名词**；谁都能用，它谁也不依赖 |
+| `entity/` | freezed 数据模型 | 对应一次网络请求/响应 |
+| `utils/` | 判分、作答编解码、格式化、异常、URL 合成 | 纯函数，**不 import Flutter**，必须可独立单测 |
+| `apis/` | 查询与 RPC 封装、服务、网络设施 | 只做「查询 + 模型转换」，不写业务规则 |
 | `state/` | 跨页面 `ChangeNotifier` | **会被 ≥2 个页面写**的状态 |
-| `ui/core/` | 共享组件 | 被 ≥2 个 feature 用；参数只能是数据与回调 |
-| `ui/features/<f>/` | 页面 + 该页私有组件、私有状态机 | 只被本 feature 用 |
+| `widgets/` | 共享组件 | 被 ≥2 个模块用；参数只能是数据与回调 |
+| `pages/<模块>/` | 页面 + 该页私有组件、私有状态机 | 只被本模块用 |
+| `router/` | 路由表与路径常量 | 唯一认识全部页面的地方 |
 
 判断一个组件该放哪：**把它复制到第二个页面时，你愿不愿意改它的名字？**
-不愿意 → `ui/core`；愿意（"这是练习页的进度条"）→ 留在 feature 内。
+不愿意 → `widgets/`；愿意（"这是练习页的进度条"）→ 留在 `pages/<模块>/` 内。
 
-`ui/core` 的组件里不允许出现 `sessionId`/`runner`/`store` 这类参数——出现即说明它属于某个 feature。
+`widgets/` 的组件里不允许出现 `sessionId`/`runner`/`store` 这类参数——出现即说明它属于某个模块。
+
+模块名与后端概念对齐（`bank` 题库 / `practice` 刷题 / `exam` 考试 / `compose` 组卷 /
+`records` 记录 / `materials` 资料 / `analytics` 学情 / `auth` / `profile` / `home` /
+`shell` 主壳 / `ai` 答疑），新增模块照此起名。
+
+**`test/` 与 `lib/` 同构**：`test/pages/<模块>/` 放该模块页面与其私有组件/状态机的测试，
+其余按被测文件在 lib 里的归属落到 `test/{widgets,values,utils,entity,apis,state}/`。
+判断依据是**被测的那个文件在 lib 的哪**，不是测试自己长什么样——
+比如 `semantic_color_pairing_test.dart` 渲染的是组件，但它验的是语义色配对，所以进 `test/values/`。
+测试文件不被任何东西 import，搬迁零成本，放错就尽早挪。
 
 ---
 
 ## 四、踩过的坑（都是实测，不是推测）
 
 ### 判分镜像
-- `grade_answer` / `norm_answer_text` 对客户端角色 **revoke**，调不到，必须本地镜像（`lib/domain/answer_grader.dart`）。
+- `grade_answer` / `norm_answer_text` 对客户端角色 **revoke**，调不到，必须本地镜像（`lib/utils/answer_grader.dart`）。
 - **本地的判分只用于抢先显示**；`submit_practice_answer` 返回的 `is_correct` 是权威，回来要覆盖。
 - **不能直接用 `RegExp(r'\s')` 做归一化。** Dart 走 ECMAScript 规则，与 PostgreSQL 的 `[[:space:]]`
   互不包含：Dart 多匹配 U+FEFF，少匹配 U+001C–U+001F 与 U+0085。
   实测本库命中 29 个码位，已在代码里写成显式集合。重测方法见 `answer_grader.dart` 注释。
 - **多选比的是排序后的数组，不是集合**：`['A','A'] ≠ ['A']`。用 Set 实现会比服务端宽松，
   表现为"先闪答对、提交后判错"。
-- 改动判分逻辑前，先重跑 `test/domain/answer_grader_test.dart`；那里的期望值全部取自真实数据库函数。
+- 改动判分逻辑前，先重跑 `test/utils/answer_grader_test.dart`；那里的期望值全部取自真实数据库函数。
 
 ### 背题模式
 **背题不能开会话。** `start_practice_session` 会写 `practice_sessions` 一行（练习记录页正是读这张表），
@@ -187,7 +243,7 @@ widget 测试断言不了"字是不是大得离谱"。
 现在最坏只留个孤儿对象。
 
 **只有 PDF 与图片能在应用内看**，其余（Office / 音视频）一律交给系统程序。
-这条口径两端各有一份、必须一致：客户端 `core/constants/material_meta.dart` 的
+这条口径两端各有一份、必须一致：客户端 `values/material_meta.dart` 的
 `opensInline`，网页端 `lib/materials.js` 的 `INLINE_KINDS`。
 PDF 用 **pdfrx**（PDFium）：**不要改用 WebView** —— Android 的系统 WebView 没有内置
 PDF 阅读器，拿它开 PDF 在手机上只会白屏。
@@ -218,7 +274,7 @@ CI（GitHub Actions）能直连 GitHub，不需要这一步。
 **「保存到本地」两端不是一个动作**：Windows 写系统下载目录；Android **没有**等价写法
 （`getDownloadsDirectory()` 在 Android 抛 UnsupportedError，写应用外部目录 Android 11+
 对其他应用不可见，`file_selector` 的 `getSaveLocation()` 官方支持表里 Android 是 ❌），
-所以走系统分享面板。见 `data/services/material_download_service.dart` 文件头。
+所以走系统分享面板。见 `apis/material_download_service.dart` 文件头。
 
 **入口在首页工作台，不做底部导航的第 6 个 tab**：底部导航已经 5 个（Material 的上限），
 与考试放首页是同一个判断。
@@ -245,14 +301,101 @@ CI（GitHub Actions）能直连 GitHub，不需要这一步。
 
 ```bash
 flutter analyze                        # 零 error
-flutter test                           # 全绿
-dart run tool/check_architecture.dart  # 架构约束
+flutter test                           # 全绿（只扫 test/）
+dart run tool/check_architecture.dart  # 架构约束（只扫 lib/）
 ```
 
 三条都过才算完成。**不要**用 `flutter analyze` 通过就当作完成——测试里锁着判分契约。
 
 改动涉及界面时，另外在 Windows 桌面端跑一遍 `flutter run -d windows`，
 并用 1280×800 窗口逐页检查（屏幕适配的坑只在这里暴露）。
+
+改动涉及**插件、平台通道、系统字体、真实网络**时，再跑一遍集成测试
+（见五·二）——那些东西 widget 测试一概证明不了。
+
+---
+
+## 五·二、三类测试怎么分工、放哪、怎么跑
+
+| 类型 | 目录 | 跑法 | 证明什么 |
+|---|---|---|---|
+| 单元测试 | `test/{apis,entity,utils,values,state}/` | `flutter test` | 纯函数与编解码对不对 |
+| 组件测试 | `test/pages/<模块>/`、`test/widgets/` | `flutter test` | 某个页面/组件渲染与交互对不对 |
+| 集成测试 | `integration_test/` | `flutter test integration_test -d windows` | **这个包在这台设备上能不能跑起来** |
+
+三条硬规矩：
+
+1. **`flutter test` 只扫 `test/`**，永远不会碰到 `integration_test/`；
+   而两者**不能在同一个 `flutter test` 调用里混跑**，工具会直接报错。分开跑。
+2. **`test/` 与 `lib/` 同构**：测试放哪，看**被测文件在 lib 的哪**，
+   不看测试自己长什么样。判据与目录表见第三节。
+3. **集成测试下的 HTTP 是真的**。`IntegrationTestWidgetsFlutterBinding`
+   的 `overrideHttpClient` 是 `false`——widget 测试那套「client 指向假地址、
+   让 flutter_test 拦掉请求」的写法在这里会变成真去解析域名。
+   所以拿不到后端时，集成测试要么只验不依赖数据的路径，要么把依赖注入成假实现。
+
+### ⚠ Windows 上必须**一个文件一次**地跑（实测，且可复现）
+
+官方文档给的整目录写法 `flutter test integration_test` 在 Windows 桌面端**跑不通**：
+第一个文件通过，第二个开始必定失败——
+
+```
+Error waiting for a debug connection: The log reader stopped unexpectedly, or never started.
+Failed to load "...performance_test.dart": Unable to start the app on the device.
+```
+
+2026-09-28 复现过两次，两次都是"第 1 个过、第 2 与第 3 个起不来"，
+且第二次没有重新构建（不是构建占着 exe 不放），是**第二个 app 实例起不来/附加不上**。
+三个文件**单独跑都全绿**，所以不是测试本身的问题。
+
+```bash
+# 对的：逐个文件
+for f in integration_test/*_test.dart; do
+  flutter test "$f" -d windows || exit 1
+done
+
+# 错的：整目录（Windows 上第二个必挂）
+flutter test integration_test -d windows
+```
+
+CI 如果要在 Windows 上跑集成测试，也得按这个循环写。
+
+### 取性能数据（帧耗时基线）
+
+`binding.watchPerformance(...)` 采到的 `reportData` **只有 `flutter drive` 会取走**，
+`flutter test` 只回传通过/失败——所以量性能必须走 drive：
+
+```bash
+flutter drive \
+  --driver=test_driver/perf_driver.dart \
+  --target=integration_test/performance_test.dart \
+  --profile
+```
+
+产出 `build/<reportKey>_summary.json`：average / 90th / 99th / worst 的帧构建
+与光栅耗时、超预算帧数。**看 99th 与 worst**——平均值好看而 worst 很差，
+说明有偶发的重布局，那才是用户感觉到的卡。`--profile` 不能省，
+debug 下的数字官方明说不代表用户体感。
+
+### 性能这一块，**不要**做这几件事（都是在浪费时间）
+
+官方文档（Flutter 3.47）已经把话说死了，逐条记下来免得下次又想加：
+
+- **Impeller 不用管**。Android（API 29+）与 Windows 从 3.47 起都**默认开启**，
+  没有 `--enable-impeller` 这种开关（只有 opt-out，且文档说将来会移除）。
+- **不要加 SkSL / shader 预热**。那套 `--bundle-sksl-path` / `FlutterShaderWarmUp`
+  的文档**已经 404 下线**，Impeller 在引擎构建期就把 shader 编好了。
+- **不要满屏撒 `RepaintBoundary`**。官方原话是「只在需要时」——
+  光栅缓存本身构建很贵还吃显存。本仓目前 0 处，是正确的状态。
+- **不要给 Widget 重写 `operator ==`**。看着像能省重建，实际是 O(N²)。
+- **不要反射性地用短命 isolate**。`Isolate.run` 每次都要重新孵化 + 拷贝对象；
+  重复性的活儿应该用**常驻** isolate。判断标准是「这一步是否超过帧间隔」，
+  而且要**先量再决定**——本仓 PDF 生成实测约 190ms（首次）/ 65ms（缓存后），
+  是一次性动作、不在滚动路径上，所以**没有**下放 isolate，这是量过之后的结论。
+
+已确认**不需要**动的（都核对过）：`Opacity` / `ShaderMask` / `ColorFilter` /
+`BackdropFilter` / `ImageFilter` / `Clip.antiAliasWithSaveLayer` 全库 0 处；
+列表该懒加载的都懒加载了；首页用 `context.select` 而不是 `watch`。
 
 ---
 
@@ -311,11 +454,32 @@ Release 目录里没有就装 Microsoft Visual C++ Redistributable，或把这�
 git tag v1.0.1 && git push origin v1.0.1
 ```
 
-跑完在 GitHub Releases 上得到两个资产，**名字固定不带版本号**（这样
+跑完在 GitHub Releases 上得到几个资产，**名字固定不带版本号**（这样
 `/releases/latest/download/<名字>` 永远指向最新版，产品页与客户端都能写死链接）：
 
 - `mianyang_quiz-android.apk` —— Android 直接装（**必须已配正式签名**，见下）
 - `mianyang_quiz-windows-x64.zip` —— 整个目录解压后运行
+
+### Android 按 ABI 拆包（2026-09-28 起）
+
+CI 用的是 `flutter build apk --split-per-abi`，出三份而不是一个通用包。
+不拆的话一个 84MB 的包里塞着 arm64-v8a / armeabi-v7a / x86_64 **三套原生库**
+（Flutter engine、PDFium、各插件），其中两份对任何一台机器都是死重量。
+
+**固定名与 ABI 的映射是刻意的，改之前先想清楚：**
+
+| 资产名 | ABI | 给谁 |
+|---|---|---|
+| `mianyang_quiz-android.apk` | **arm64-v8a** | **真机**——下载页的固定链接指向它 |
+| `mianyang_quiz-android-armv7.apk` | armeabi-v7a | 32 位老设备 |
+| `mianyang_quiz-android-x86_64.apk` | x86_64 | 模拟器 |
+
+固定名一旦指错 ABI，用户拿到的是**装不上的包**——报错就一句「应用未安装」，
+不告诉任何人「你该下另一个文件」。所以 release job 里对三份资产都有
+`[ -s ... ]` 的存在性断言，少一份直接失败，不会发出一个「老设备点进去 404」的版本。
+
+**换 ABI 覆盖安装会失败**：Android 不允许换 ABI 覆盖安装，从通用包转成分包、
+或从 armv7 换到 arm64，都要先卸载（和换签名是同一类问题，见下面那段警告）。
 
 ### Android 正式签名（一次性配好）
 
@@ -401,6 +565,7 @@ CI，**报错一字不变**——这个逃生口在 AGP 9.1 上已经不起作�
 **正解是升到 `flutter_inappwebview: ^6.2.0-beta.3`**：作者自己的前向修复，
 改用 `proguard-android-optimize.txt`，并且 `compileSdk` 跟随 Flutter 而不钉死 34。
 两个平台都已验证通过（Android `assembleRelease` 出包 84.4MB、Windows release 构建通过）。
+（那个 84.4MB 是**拆 ABI 之前**的通用包体积；现已改成 `--split-per-abi`，见第七节。）
 
 **别回退到 6.1.5** —— 它 23 个月没更新且编译不过，"留在稳定版"在这里不是更安全的选择。
 等 6.2.0 转正（`^6.2.0-beta.3` 会自动升上去）再确认一次即可。
@@ -430,8 +595,8 @@ kotlin.incremental=false
 符号文件（`app.*.symbols` + `obfuscation-map.json`）只作为 Actions artifact 上传，**不进 Release**：
 它们能反解混淆，公开挂出去等于白混淆。
 
-**检查更新**（`lib/ui/features/shell/widgets/update_checker.dart`）读的就是上面那个 Release 的
-`tag_name`，与本机 `Env.appVersion` 比大小（比较逻辑在 `lib/domain/app_version.dart`，纯函数可单测）。
+**检查更新**（`lib/pages/shell/widgets/update_checker.dart`）读的就是上面那个 Release 的
+`tag_name`，与本机 `Env.appVersion` 比大小（比较逻辑在 `lib/utils/app_version.dart`，纯函数可单测）。
 所以 `APP_VERSION` 由流水线按 tag 注入 —— 两边同源才不会误报。调试构建（`kDebugMode`）与
 `APP_VERSION` 带 `-` 的包不检查；同一个版本「稍后再说」过就不再弹。
 
