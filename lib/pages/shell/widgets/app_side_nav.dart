@@ -112,7 +112,7 @@ class _Brand extends StatelessWidget {
           const SizedBox(width: AppMetrics.gapMd),
           Expanded(
             child: Text(
-              '绵阳市中职共建题库',
+              '职教高考联盟',
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w700,
               ),

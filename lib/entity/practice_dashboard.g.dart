@@ -106,6 +106,17 @@ _PracticeDashboard _$PracticeDashboardFromJson(Map<String, dynamic> json) =>
                 ? null
                 : ActiveSessionBrief.fromJson(v as Map<String, dynamic>),
           ),
+          forgettingCurve: $checkedConvert(
+            'forgetting_curve',
+            (v) =>
+                (v as List<dynamic>?)
+                    ?.map(
+                      (e) =>
+                          ForgettingBucket.fromJson(e as Map<String, dynamic>),
+                    )
+                    .toList() ??
+                const <ForgettingBucket>[],
+          ),
           daily: $checkedConvert(
             'daily',
             (v) =>
@@ -150,28 +161,31 @@ _PracticeDashboard _$PracticeDashboardFromJson(Map<String, dynamic> json) =>
         'heatmapFrom': 'heatmap_from',
         'heatmapTo': 'heatmap_to',
         'activeSession': 'active_session',
+        'forgettingCurve': 'forgetting_curve',
         'qtypeStats': 'qtype_stats',
       },
     );
 
-Map<String, dynamic> _$PracticeDashboardToJson(_PracticeDashboard instance) =>
-    <String, dynamic>{
-      'total_answers': instance.totalAnswers,
-      'correct_answers': instance.correctAnswers,
-      'accuracy': instance.accuracy,
-      'today_answers': instance.todayAnswers,
-      'total_duration_ms': instance.totalDurationMs,
-      'wrong_count': instance.wrongCount,
-      'favorite_count': instance.favoriteCount,
-      'week_answers': instance.weekAnswers,
-      'prev_week_answers': instance.prevWeekAnswers,
-      'streak_days': instance.streakDays,
-      'last_practice_day': instance.lastPracticeDay,
-      'heatmap_daily': instance.heatmapDaily.map((e) => e.toJson()).toList(),
-      'heatmap_from': instance.heatmapFrom,
-      'heatmap_to': instance.heatmapTo,
-      'active_session': instance.activeSession?.toJson(),
-      'daily': instance.daily.map((e) => e.toJson()).toList(),
-      'qtype_stats': instance.qtypeStats.map((e) => e.toJson()).toList(),
-      'recent': instance.recent.map((e) => e.toJson()).toList(),
-    };
+Map<String, dynamic> _$PracticeDashboardToJson(
+  _PracticeDashboard instance,
+) => <String, dynamic>{
+  'total_answers': instance.totalAnswers,
+  'correct_answers': instance.correctAnswers,
+  'accuracy': instance.accuracy,
+  'today_answers': instance.todayAnswers,
+  'total_duration_ms': instance.totalDurationMs,
+  'wrong_count': instance.wrongCount,
+  'favorite_count': instance.favoriteCount,
+  'week_answers': instance.weekAnswers,
+  'prev_week_answers': instance.prevWeekAnswers,
+  'streak_days': instance.streakDays,
+  'last_practice_day': instance.lastPracticeDay,
+  'heatmap_daily': instance.heatmapDaily.map((e) => e.toJson()).toList(),
+  'heatmap_from': instance.heatmapFrom,
+  'heatmap_to': instance.heatmapTo,
+  'active_session': instance.activeSession?.toJson(),
+  'forgetting_curve': instance.forgettingCurve.map((e) => e.toJson()).toList(),
+  'daily': instance.daily.map((e) => e.toJson()).toList(),
+  'qtype_stats': instance.qtypeStats.map((e) => e.toJson()).toList(),
+  'recent': instance.recent.map((e) => e.toJson()).toList(),
+};

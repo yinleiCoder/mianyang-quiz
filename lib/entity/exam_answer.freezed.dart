@@ -289,7 +289,7 @@ as double,
 /// @nodoc
 mixin _$ExamAnswerRecord {
 
-@JsonKey(name: 'paper_item_id') String get paperItemId; int get seq;/// 学生提交上去的那份 JSON（形状见 domain/submitted_answer.dart）。
+@JsonKey(name: 'paper_item_id') String get paperItemId; int get seq;/// 学生提交上去的那份 JSON（形状见 utils/submitted_answer.dart）。
 /// 未作答是空 Map，不是 null。
  Map<String, dynamic> get answer; List<ScoreUnit> get units;/// 本题得分。主观题在教师给分前恒为 0（**不是**"答错了"）。
  double get score;/// auto（机器判）/ manual（教师判）/ pending（待教师判）。
@@ -506,10 +506,10 @@ class _ExamAnswerRecord implements ExamAnswerRecord {
 
 @override@JsonKey(name: 'paper_item_id') final  String paperItemId;
 @override@JsonKey() final  int seq;
-/// 学生提交上去的那份 JSON（形状见 domain/submitted_answer.dart）。
+/// 学生提交上去的那份 JSON（形状见 utils/submitted_answer.dart）。
 /// 未作答是空 Map，不是 null。
  final  Map<String, dynamic> _answer;
-/// 学生提交上去的那份 JSON（形状见 domain/submitted_answer.dart）。
+/// 学生提交上去的那份 JSON（形状见 utils/submitted_answer.dart）。
 /// 未作答是空 Map，不是 null。
 @override@JsonKey() Map<String, dynamic> get answer {
   if (_answer is EqualUnmodifiableMapView) return _answer;

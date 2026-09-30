@@ -13,6 +13,7 @@ import 'package:mianyang_quiz/entity/entity.dart';
 import 'package:mianyang_quiz/state/state.dart';
 import 'package:mianyang_quiz/widgets/widgets.dart';
 import 'package:mianyang_quiz/pages/home/widgets/active_session_card.dart';
+import 'package:mianyang_quiz/pages/home/widgets/forgetting_curve_card.dart';
 import 'package:mianyang_quiz/pages/home/widgets/home_actions.dart';
 import 'package:mianyang_quiz/pages/home/widgets/recent_answers_section.dart';
 import 'package:mianyang_quiz/pages/home/widgets/streak_header.dart';
@@ -99,6 +100,23 @@ class _DashboardBody extends StatelessWidget {
             AppMetrics.gapMd,
           ),
           child: DailyTrendChart(daily: dashboard.daily),
+        ),
+        const SizedBox(height: AppMetrics.gapXl),
+        // 与上面那张是同一个话题的两面：**练了多少** vs **记得多牢**。
+        // 数据服务端早就在算（迁移 0067 给 practice_dashboard 加了 forgetting_curve），
+        // 客户端一直没接——这张图就是把它接上。
+        const SectionHeader(
+          title: '遗忘曲线',
+          subtitle: '你自己的保持率 vs 艾宾浩斯理论曲线',
+        ),
+        DuoCard(
+          padding: const EdgeInsets.fromLTRB(
+            AppMetrics.gapMd,
+            AppMetrics.gapLg,
+            AppMetrics.gapLg,
+            AppMetrics.gapMd,
+          ),
+          child: ForgettingCurveCard(buckets: dashboard.forgettingCurve),
         ),
       ],
     );

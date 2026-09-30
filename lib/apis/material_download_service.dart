@@ -107,7 +107,7 @@ class MaterialDownloadService {
   /// Windows 上 share_plus 没有可用的系统分享面板，会抛；调用方负责退回到
   /// "复制链接"（与 share_question_sheet 同款取舍）。
   Future<void> shareLink(MaterialBrief material) async {
-    final text = '${material.title}（来自绵阳市中职共建题库 · 复习资料）\n${material.fileUrl}';
+    final text = '${material.title}（来自职教高考联盟 · 复习资料）\n${material.fileUrl}';
     final file = await _cachedFile(material);
 
     if (defaultTargetPlatform == TargetPlatform.windows || !await file.exists()) {

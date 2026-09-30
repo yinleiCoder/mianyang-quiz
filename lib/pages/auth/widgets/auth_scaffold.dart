@@ -127,7 +127,7 @@ class _Brand extends StatelessWidget {
         const BrandMark(size: 56),
         SizedBox(height: AppMetrics.gapMd.r),
         Text(
-          '绵阳市中职共建题库',
+          '职教高考联盟',
           textAlign: TextAlign.center,
           style: AppTextStyles.sectionTitle(context),
         ),

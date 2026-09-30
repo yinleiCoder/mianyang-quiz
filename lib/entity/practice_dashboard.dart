@@ -7,6 +7,7 @@
 // 没有 XP、等级、红心这类后端不支持的东西——游戏化只做有数据支撑的部分。
 
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:mianyang_quiz/entity/forgetting_curve.dart';
 import 'package:mianyang_quiz/entity/recent_answer.dart';
 
 part 'practice_dashboard.freezed.dart';
@@ -70,6 +71,15 @@ abstract class PracticeDashboard with _$PracticeDashboard {
     /// 进行中的会话；非空时首页显示「继续练习」。
     /// **注意**：开始新练习会静默作废它，所以入口处要先问用户。
     @JsonKey(name: 'active_session') ActiveSessionBrief? activeSession,
+
+    /// **学生自己的遗忘曲线**：按「距上次练同一道题的间隔天数」分桶后的答对率。
+    ///
+    /// 服务端（迁移 0067）已经在算，字段名 `forgetting_curve`。
+    /// 只有作答过至少两次的题才贡献数据；新手这里就是空的。
+    /// 理论曲线（艾宾浩斯）**不在这里**——它是常量，由客户端画（见 utils/forgetting_curve.dart）。
+    @JsonKey(name: 'forgetting_curve')
+    @Default(<ForgettingBucket>[])
+    List<ForgettingBucket> forgettingCurve,
 
     @Default(<DailyStat>[]) List<DailyStat> daily,
     @JsonKey(name: 'qtype_stats') @Default(<QtypeStat>[]) List<QtypeStat> qtypeStats,

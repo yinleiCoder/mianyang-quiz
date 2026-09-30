@@ -11,6 +11,7 @@ export 'app_exception.dart';
 export 'app_version.dart';
 export 'async_value.dart';
 export 'error_mapper.dart';
+export 'forgetting_curve.dart';
 export 'formatters.dart';
 export 'like_escape.dart';
 export 'node_accuracy.dart';

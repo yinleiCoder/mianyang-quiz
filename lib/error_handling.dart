@@ -32,7 +32,7 @@ void installErrorHandling() {
     // 诊断信息，为了"统一"把它盖掉是净亏。
     FlutterError.presentError(details);
 
-    // **这里刻意不再上报**。SentryFlutter.init 的 FlutterErrorIntegration
+    // **这里刻意不再上报**。`SentryFlutter.init` 的 FlutterErrorIntegration
     // 已经先捕获过一遍了，这里再调一次 captureException 会让同一条错误
     // 上报两次。它装钩子时会把我们上面这个函数存下来、捕获完再调用，
     // 所以这里的 presentError 在开与不开上报时都会照常执行。

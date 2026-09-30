@@ -7,6 +7,7 @@
 library entity;
 
 export 'block.dart';
+export 'forgetting_curve.dart';
 export 'exam_answer.dart';
 export 'exam_attempt.dart';
 export 'exam_paper.dart';

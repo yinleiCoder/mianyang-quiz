@@ -19,7 +19,7 @@ import 'package:provider/provider.dart';
 
 /// 应用名。主壳与"起不来"提示页共用一处 —— 两处各写一份必然会漂移
 /// （桌面端窗口标题、任务栏、任务管理器读的都是它）。
-const _appTitle = '绵阳市中职共建题库';
+const _appTitle = '职教高考联盟';
 
 class MianyangQuizApp extends StatefulWidget {
   const MianyangQuizApp({super.key, required this.startup});

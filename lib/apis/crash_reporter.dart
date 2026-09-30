@@ -1,18 +1,32 @@
 // 崩溃上报：Sentry 的薄封装。
 //
-// 四条设计约束，每条都有理由：
+// 用的是**官方的 `sentry_flutter`**。这不是随手挑的——`sentry` 包自己的 README 就写着
+// 「For Flutter consider sentry_flutter instead」，而 `sentry_flutter` 多给这些：
+//   · **原生崩溃捕获**（Android 的 Java/Kotlin/C/C++，iOS 的 Objective-C/Swift）
+//   · release health、离线缓存
+//   · 自动挂 `PlatformDispatcher.onError` 等错误钩子
+//
+// ⚠ **版本必须是 10.x，不能回退到 9.x 或 8.x。** 它前面两个稳定版各自废掉一个平台：
+//   · 9.30.1 精确锁 `jni: 0.14.2`，而那个版本的 `jni.h` 用了 MSVC 不认的
+//     `__attribute__`，**Windows 包编不出来**。本项目的 `path_provider_android`
+//     本来就把 jni 拉到 1.0.3（已修 MSVC），**是 sentry_flutter 把它降级回坏版本的**。
+//   · 8.14.2 把整套 Android 工具链钉在两年多前（kotlin_version 1.8.0 / AGP 7.4.2 /
+//     compileSdk 34 / languageVersion "1.6"），与 Kotlin 2.4 + AGP 9.1 + compileSdk 36
+//     全对不上，**Android 包编不出来**。
+// 10.0.0-rc.1 把 jni 放开成 `>=1.0.0 <1.1.0`、compileSdk 提到 36、删掉了
+// languageVersion —— 两个平台才同时编得过。详见 AGENTS.md 第九节。
+//
+// 三条设计约束：
 //
 // 1. **没配 DSN 就是彻底的空操作**——不初始化 SDK、不建 HTTP 客户端、什么都不发。
 //    开发机与 CI 都不配它，不该因为"上报没配好"而多出一堆东西、多一次启动开销。
 //
-// 2. **上报失败绝不冒泡到应用**。SDK 的传输层自己就吞异常
-//    （sentry 包的 http_transport.dart 里 send 外面包着 try/catch），
-//    这里再兜一层，是为了"将来换实现"也不变脸。
+// 2. **上报失败绝不冒泡到应用**。SDK 的传输层自己就吞异常，这里再兜一层，
+//    是为了"将来换实现"也不变脸。
 //
-// 3. **学生数据不出境**。截图与视图树里会有题干正文和学生的真实姓名，
-//    `debugPrint` 的输出里有启动失败详情与题目 id——全部显式关掉。
-//    SDK 的默认值本来就是关的（除了 `enablePrintBreadcrumbs`，它默认**开**），
-//    显式写出来是防止有人"顺手打开看看效果"。
+// 3. **学生数据不出境**。截图、视图树、`debugPrint` 面包屑里都会有题干正文、
+//    学生真实姓名与题目 id——全部显式关掉（SDK 默认大多是关的，
+//    **但 `enablePrintBreadcrumbs` 默认是开的**）。
 //
 // 4. **本文件不装任何 Flutter 钩子**。`SentryFlutter.init` 自己会装
 //    `FlutterError.onError` 与 `PlatformDispatcher.onError`，而且那两处 integration
@@ -20,10 +34,9 @@
 //      · 全局钩子在 lib/error_handling.dart 里**先**装，Sentry **后**装并链住它们；
 //      · **钩子里绝不能再调这里**，否则同一条错误会被上报两次。
 //
-// ⚠ 国内网络到 sentry.io 未必通。本仓已经因为同类问题踩过一次坑：
-// PDF 中文字体原先从 fonts.gstatic.com 拉，国内到不了**且没有超时**，
-// 点「打印」既不报错也不出对话框（2026-09-17）。所以这里的定位是
-// **尽力而为**：发不出去就发不出去，绝不影响任何功能。
+// ⚠ 国内网络到 sentry.io **实测是通的**（2026-09-28：TLS 0.3s、event 投递 HTTP 200），
+// 但仍定位成**尽力而为**：发不出去就发不出去，绝不影响任何功能。
+// 本仓被境外域名坑过一次（PDF 字体走 fonts.gstatic.com 且没超时，点「打印」毫无反应）。
 
 import 'package:flutter/foundation.dart';
 import 'package:mianyang_quiz/values/values.dart';
@@ -40,9 +53,11 @@ abstract final class CrashReporter {
   static Future<void> init() async {
     if (!Env.crashReportingEnabled) return;
     try {
+      // **不传 appRunner**：本应用的启动顺序（配置校验 → Supabase → 依赖装配）
+      // 有自己的讲究，不要为了上报去重排它。
       await SentryFlutter.init((options) {
         options.dsn = Env.sentryDsn;
-        // 版本号与包名一起进事件，便于"这个问题出在哪个包"；
+        // 版本号与包名一起进事件，便于判断"这个问题出在哪个包"；
         // 流水线按 tag 注入 APP_VERSION，与检查更新同源。
         options.release = Env.appVersion.isEmpty ? null : Env.appVersion;
         options.environment = kReleaseMode ? 'production' : 'debug';

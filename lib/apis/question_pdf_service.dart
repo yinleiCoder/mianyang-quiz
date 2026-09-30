@@ -90,7 +90,7 @@ class QuestionPdfService {
           pw.SizedBox(height: 16),
           pw.Divider(color: PdfColors.grey300),
           pw.Text(
-            '绵阳市中职共建题库 · 本题为全市共享题目，内容经两级审核入库',
+            '职教高考联盟 · 本题为全省共享题目，内容经两级审核入库',
             style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600),
           ),
         ],

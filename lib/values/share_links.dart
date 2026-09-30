@@ -34,5 +34,5 @@ abstract final class ShareLinks {
   }
 
   /// 分享给别人的文案：一句话 + 链接。
-  static String shareText(String questionId) => '这道题来自绵阳市中职共建题库：${ofQuestion(questionId)}';
+  static String shareText(String questionId) => '这道题来自职教高考联盟：${ofQuestion(questionId)}';
 }
