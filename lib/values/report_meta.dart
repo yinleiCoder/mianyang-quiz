@@ -23,10 +23,19 @@ enum ReportCategory {
   final String label;
 }
 
-/// 反馈处理状态。只有两态，与服务端 check 约束一致。
+/// 反馈处理状态，与服务端 check 约束（0084 起五态）一致。
+///
+/// 0084 把「教师申诉」接在了同一张表上：
+///   open → resolved（学生纠错·作者已处理）
+///   open → accepted（申诉受理·题已下线等整改）/ rejected / withdrawn
+/// 客户端目前只做呈示（提交与撤回在网页端），所以这里只需要认得出状态；
+/// 新增取值不改老版本的降级行为（未知值按"待处理"显示，见 fromWire）。
 enum ReportStatus {
   open('open', '待处理'),
-  resolved('resolved', '已处理');
+  resolved('resolved', '已处理'),
+  accepted('accepted', '已受理'),
+  rejected('rejected', '已驳回'),
+  withdrawn('withdrawn', '已撤回');
 
   const ReportStatus(this.wire, this.label);
 

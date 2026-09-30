@@ -2,7 +2,8 @@
 //
 // **wire 取值是跨三处的契约**，这里把它钉死：
 //   · supabase/migrations/0066_question_reports.sql 的 check 约束
-//   · 网页端 lib/question-reports.js 的 REPORT_CATEGORIES
+//     （状态一列 0084 已扩到五态，见 0084_question_appeals.sql）
+//   · 网页端 lib/question-reports.js 的 REPORT_CATEGORIES / REPORT_STATES
 //   · 本端 lib/values/report_meta.dart
 // 写歪一个字的后果是**静默失败**：服务端 22023 直接拒，而客户端只知道"提交失败"。
 // 所以下面逐字断言，而不是拿枚举自己和自己比。
@@ -27,13 +28,21 @@ void main() {
   });
 
   group('ReportStatus', () {
+    // 0084 把教师申诉接在同一张表上，状态从两态变五态：
+    //   resolved = 学生纠错已处理；accepted/rejected/withdrawn = 申诉的三种终态
     test('wire 取值逐字对', () {
-      expect(ReportStatus.values.map((s) => s.wire).toList(), ['open', 'resolved']);
+      expect(
+        ReportStatus.values.map((s) => s.wire).toList(),
+        ['open', 'resolved', 'accepted', 'rejected', 'withdrawn'],
+      );
     });
 
     test('已知取值正常映射', () {
       expect(ReportStatus.fromWire('open'), ReportStatus.open);
       expect(ReportStatus.fromWire('resolved'), ReportStatus.resolved);
+      expect(ReportStatus.fromWire('accepted'), ReportStatus.accepted);
+      expect(ReportStatus.fromWire('rejected'), ReportStatus.rejected);
+      expect(ReportStatus.fromWire('withdrawn'), ReportStatus.withdrawn);
     });
 
     // 服务端将来加了状态（比如 dismissed）时，旧客户端**不能崩** ——
