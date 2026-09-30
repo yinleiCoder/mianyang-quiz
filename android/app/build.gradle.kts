@@ -30,7 +30,17 @@ android {
         applicationId = "com.quiz.mianyang_quiz"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        // **26 是 sentry_flutter 抬上来的下限，不是随便定的。**
+        // Flutter 的默认值是 24，而 sentry_flutter 10.x 的 AAR 声明了 minSdk 26，
+        // manifest 合并会直接失败：
+        //     uses-sdk:minSdkVersion 24 cannot be smaller than version 26
+        //        declared in library [:sentry_flutter]
+        // 它给的另一条出路 `tools:overrideLibrary` **不要走**——那是强行合并，
+        // 官方注释自己就写着"may lead to runtime failures"：库确实可能调用了
+        // 24 上没有的 API。抬下限才是对的。
+        //
+        // 代价：不再支持 Android 7.x 及以下（API 26 = Android 8.0，2017 年）。
+        minSdk = maxOf(flutter.minSdkVersion, 26)
         targetSdk = flutter.targetSdkVersion
         // Uses the version code from pubspec.yaml. When using split APKs, 1000 * ABI_VERSION
         // is added automatically by Flutter. (https://developer.android.com/studio/build/configure-apk-splits#configure-APK-versions)

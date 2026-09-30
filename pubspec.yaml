@@ -1,5 +1,5 @@
 name: mianyang_quiz
-description: "绵阳市中职共建题库 · 刷题客户端"
+description: "职教高考联盟 · 刷题客户端"
 publish_to: 'none'
 
 version: 1.0.0+1
@@ -75,23 +75,19 @@ dependencies:
   # 保存资料到本地。本来就是 share_plus 的传递依赖，但**用到了就要写进 pubspec**
   #（同 http 那条注释的理由：上游换实现时这里会静默断掉）。
   path_provider: ^2.1.5
-  # 崩溃/异常上报。**DSN 从 --dart-define-from-file 注入，没配就整个关掉**
-  # （见 lib/apis/crash_reporter.dart）——仓库里永远不放 DSN，
-  # 而且没配的开发机不该在启动时去连一个连不上的域。
+  # 崩溃/异常上报。用**官方的 sentry_flutter** —— `sentry` 包自己的 README 就写着
+  # 「For Flutter consider sentry_flutter instead」，而它多给原生崩溃捕获、
+  # release health、离线缓存、以及自动挂 Flutter 错误钩子。
   #
-  # ⚠ **国内网络到 sentry.io 未必通**。这个坑本仓已经踩过一次：PDF 中文字体原先走
-  # PdfGoogleFonts 从 fonts.gstatic.com 拉，国内到不了**且那个调用没有超时**，
-  # 点「打印」既不报错也不出对话框，师生的感受就是"按钮没反应"（2026-09-17）。
-  # 所以这里的上报必须是**尽力而为、绝不阻塞**：见 crash_reporter.dart 里的
-  # timeout 与"上报失败静默吞掉"。真要用起来建议先在校园网上实测一次。
-  # ⚠ **钉在 8.x，不要升到 9.x。** 9.30.1 依赖 `jni: 0.14.2`（精确锁定），
-  # 而那个包在 pubspec 里声明了 `windows: ffiPlugin: true`，于是 Flutter 会去编它；
-  # 它的 `third_party/jni.h` 却无条件写了
-  #     #define JNIEXPORT __attribute__((visibility("default")))
-  # —— GCC/Clang 的语法，**MSVC 直接语法错误**（C2059/C2143，整个文件一路报下去）。
-  # 9.x 因此**编不出 Windows 包**，本地与 CI 都一样（CI 也是 MSVC）。
-  # 8.14.2 没有这个依赖。等上游修了再升——升完务必跑一次 `flutter build windows`。
-  sentry_flutter: ^8.14.2
+  # ⚠ **必须是 10.x，不要回退到 9.x 或 8.x。** 那两个稳定版各自废掉一个平台：
+  #   · 9.30.1 精确锁 jni: 0.14.2（MSVC 编不过）→ **Windows 包编不出来**；
+  #     而本项目的 path_provider_android 本来就把 jni 拉到 1.0.3，
+  #     **是 sentry_flutter 把它降级回坏版本的**。
+  #   · 8.14.2 把 Android 工具链钉在两年多前（AGP 7.4.2 / compileSdk 34 /
+  #     languageVersion "1.6"）→ **Android 包编不出来**。
+  # 10.0.0-rc.1 把 jni 放开成 >=1.0.0 <1.1.0、compileSdk 提到 36、删掉 languageVersion，
+  # 两个平台才同时编得过。**它是 RC**：等 10.0.0 转正后换成 ^10.0.0 即可。
+  sentry_flutter: 10.0.0-rc.1
 
 dev_dependencies:
   flutter_test:
@@ -132,7 +128,7 @@ flutter_launcher_icons:
   # 圆形/方形遮罩 —— 源图的 logo 几乎铺满整张，四角会被裁掉，看起来就是"图标太大、显示不全"。
   #
   # 规范：108dp 画布里只有**中间 72dp（66.7%）是安全区**，外围随时可能被遮罩吃掉。
-  # 源图（1024×1024，绵阳 logo，自带约 5% 白边）用 `inset: 18` 内缩后，
+  # 源图（1024×1024，**仍是旧标识，待换成联盟 logo**，自带约 5% 白边）用 `inset: 18` 内缩后，
   # logo 实际落在画布的 64% 左右 —— 正好填满安全区且留一点余量，各家的圆/方遮罩都不会切到。
   # 背景取白色：源图本来就是白底，换成别的颜色会在 logo 边缘露出一圈异色。
   adaptive_icon_background: "#FFFFFF"
