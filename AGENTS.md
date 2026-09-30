@@ -883,48 +883,114 @@ flutter test test/utils/error_handling_test.dart
 **注意 `FlutterError.onError` 是全局静态**，测试里必须 save/restore，
 否则会污染后面所有测试（本仓的测试已经这么做了）。
 
-### ⚠⚠ `sentry_flutter` 必须钉在 8.x，**升级会直接废掉 Windows 构建**
+### ⚠⚠ `sentry_flutter` 必须用 10.x（9.x 与 8.x 各废掉一个平台）
 
-`pubspec.yaml` 里写的是 `sentry_flutter: ^8.14.2`，**不要顺手升到 9.x**。
+`pubspec.yaml` 里是 `sentry_flutter: 10.0.0-rc.1`。**不要回退到 9.x 或 8.x。**
 
-9.30.1（当前最新）依赖 `jni: 0.14.2`，而且是**精确锁定**改不掉。那个包在
-自己的 pubspec 里声明了 `windows: ffiPlugin: true`，所以 Flutter 一定会去编它；
-可它的 `third_party/jni.h` 第 1457 行无条件写着：
+这是按官方文档选的：`sentry` 包自己的 README 就写着「For Flutter consider
+sentry_flutter instead」，而 `sentry_flutter` 多给原生崩溃捕获（Android 的
+Java/Kotlin/C/C++）、release health、离线缓存、以及自动挂 Flutter 错误钩子。
+纯 Dart 的 `sentry` 我们在 2026-09-29 试过一轮，能用但**丢掉原生捕获**，不值。
 
-```c
-#define JNIEXPORT __attribute__((visibility("default")))
+前面两个稳定版各自编不出一个平台：
+
+| 版本 | Windows | Android | 原因 |
+|---|---|---|---|
+| 9.30.1 | ✗ | ✓ | 精确锁 `jni: 0.14.2`，那个版本的 `jni.h` 用 MSVC 不认的 `__attribute__` |
+| 8.14.2 | ✓ | ✗ | AGP 7.4.2 / compileSdk 34 / `languageVersion "1.6"`，与 Kotlin 2.4 + AGP 9.1 全对不上 |
+| **10.0.0-rc.1** | ✓ | ✓ | jni 放开成 `>=1.0.0 <1.1.0`、compileSdk 36、删掉 languageVersion |
+
+**9.x 的坑特别隐蔽**：本项目 `path_provider_android` 本来就把 `jni` 拉到 **1.0.3**
+（已修 MSVC），**是 sentry_flutter 9.x 把它降级回坏版本的**。所以别只看
+「谁依赖 jni」，要看**谁把它钉在旧版本**。
+
+**抬 jni 版本修不通**（试过）：`jni` 1.0.3 补了 `__declspec(dllexport)` 能过 C 编译，
+但 **1.0 同时破坏性改了 Dart API**，sentry_flutter 9.x 的
+`lib/src/native/java/*.dart` 是按 0.14.2 写的，于是 `JList.array`、`nullableType`、
+`JObjType` 全找不到。0.15.x 又仍然只有 `__attribute__`——**两头堵死**。
+
+**10.0.0-rc.1 是 RC**：等 10.0.0 转正后把约束换成 `^10.0.0` 即可。
+升完之后 **`flutter build apk --release` 与 `flutter build windows` 各跑一次**
+——`flutter analyze` 与 `flutter test` 这些问题**一个都测不出来**。
+
+### minSdk 被抬到 26，是 sentry_flutter 逼的
+
+`android/app/build.gradle.kts` 里是 `minSdk = maxOf(flutter.minSdkVersion, 26)`。
+Flutter 默认 24，而 sentry_flutter 10.x 的 AAR 声明了 minSdk 26，
+manifest 合并直接失败：
+
+```
+uses-sdk:minSdkVersion 24 cannot be smaller than version 26 declared in library [:sentry_flutter]
 ```
 
-**这是 GCC/Clang 的语法，MSVC 不认**（整个头文件里一个 `_WIN32` / `_MSC_VER` /
-`__declspec` 分支都没有）。结果是 `dartjni.c` 与 `jni.h` 一路
-`C2059 / C2143 语法错误`，**Windows 包根本编不出来**——本地编不出，CI 也编不出
-（GitHub 的 windows runner 同样是 MSVC）。
+它给的另一条出路 `tools:overrideLibrary` **不要走**——官方注释自己写着
+"may lead to runtime failures"，那是强行合并，库确实可能调了 24 上没有的 API。
+**代价：不再支持 Android 7.x 及以下**（API 26 = Android 8.0，2017 年）。
 
-8.14.2 **没有这个依赖**（只有 `ffi` / `file` / `collection` / `package_info_plus`），
-Windows 构建实测 104.7s 通过。升级之前务必跑一次 `flutter build windows`，
-不要只看 `flutter analyze` 和 `flutter test` —— 这两条**完全测不出**这个问题。
+### ⚠️ 别在 `android/` 下新建 `build.gradle`（Groovy）
 
-### ⚠ 9.x 还有第二个坑：构建期要连 GitHub
+**踩过一次，而且症状极具误导性。**
 
-退一步说，就算 `jni` 的问题将来被上游修了，`sentry_flutter` 在 Windows 上**构建期**
-还会用 CMake `FetchContent` 去 GitHub 拉 `sentry-native`，并且是**递归子模块**
-（`crashpad`、`breakpad`、`benchmark`、`libunwindstack-ndk`、`lss` 五个），
-**没有断点续传**，网络抖一次就整个重来。
+`android/build.gradle.kts` 里有一段把构建产物重定向到仓库根 `build/` 的逻辑
+（`rootProject.layout.buildDirectory.value(newBuildDir)`）。
+**Groovy 与 Kotlin DSL 的根构建脚本同时存在时，Gradle 用 `.gradle`，把 `.kts`
+整个遮蔽掉**——重定向随之失效，产物全落到 `android/app/build/`，于是：
 
-实测三次：主仓库能拉到，子模块每次挂在不同地方（先 `benchmark`、后 `crashpad`），
-单次失败要跑 20+ 分钟。CI 能连 GitHub 所以没事，**国内开发机基本靠运气**。
-
-真卡住时的手工救援（与第四节 pdfrx 那份"先把包下好放进缓存"同源）：
-
-```bash
-# 1. 找到 FetchContent 已克隆下来的源码目录
-cd build/windows/x64/_deps/sentry-native-src
-# 2. 手动补子模块；这一步可以反复重试，不会从头再来
-until git submodule update --init --recursive; do sleep 3; done
-# 3. 目录完整后重跑 flutter build windows，FetchContent 会跳过已有 clone
-git submodule status --recursive   # 全部没有 '-' 前缀才算完整
+```
+Gradle build failed to produce an .apk file. It's likely that this file was
+generated under <项目>\build, but the tool couldn't find it.
 ```
 
-另：`jni` 那条路还额外要求构建机**装了 JDK 且设了 `JAVA_HOME`**
-（它的 CMake 里有 `find_package(JNI REQUIRED COMPONENTS JVM)`）。
-9.x 三重要求叠在一起——它需要 GitHub、需要 JDK、然后**仍然编不过**。
+**构建其实是成功的**，只是产物在错的地方，报错完全指不到真正的原因。
+`.gitignore` 里加了一条 `/android/app/build/` 做兜底（正常情况下它根本不该出现；
+一旦出现，就是有人又建了 `build.gradle`）。
+
+顺带一个同源的教训：我当初判断"这个文件是空的"，用的是
+`cat android/build.gradle 2>/dev/null`——**`2>/dev/null` 把"文件不存在"吞成了空输出**，
+我把"没找到"读成了"是空的"（第四节里已经记过这条，这次又踩了一遍）。
+**查文件在不在，用 `ls` 或 `git ls-files`，不要用被吞了 stderr 的 `cat`。**
+
+---
+
+## 十、首页的遗忘曲线（2026-09-29 才接上）
+
+### 后端早就在算，客户端一直没接
+
+`practice_dashboard` 的 `forgetting_curve` 字段是**迁移 0067** 加的，做法是
+`pg_get_functiondef` + 定点替换（那个迁移刻意没重抄整个函数体）。
+它把每一次作答按「距上次练同一道题的间隔天数」分桶，统计该桶答对率 ——
+**这条下降的线就是学生自己的保持率**。
+
+**客户端直到 2026-09-29 才把它读出来**（`entity/forgetting_curve.dart` +
+`pages/home/widgets/forgetting_curve_card.dart`）。在那之前它一直白白下发着。
+**加首页数据前先翻一眼 `practice_dashboard` 的返回**，别重复造。
+
+理论曲线（艾宾浩斯）**不进数据库** —— 0067 写明「它是常量，画在图里即可」，
+实现在 `utils/forgetting_curve.dart`，纯函数、可单测。
+
+### 门槛是拿线上数据标定的，不是拍脑袋
+
+每个点要求 **≥3 次作答**（`ForgettingBucket.isReliable`），
+而**桶数只要 ≥2**。这个组合是查出来的：
+
+| 门槛 | 能看到图的学生 |
+|---|---|
+| 每桶≥3次 且 ≥3桶 | 12 / 116（**10%**） |
+| 每桶≥3次 且 **≥2桶** | **36 / 116（31%）** ← 采用 |
+| 每桶≥2次 且 ≥2桶 | 46 / 116（40%） |
+
+**线上 7 / 14 / 30 天那三档整库都没有数据** —— 0069 的「当天不重复」刚上不久，
+学生还没练到那些间隔。所以现在画出来多半只有前几档，这是**数据成熟度**问题，
+会随练习量自己变好，不要去"修"它。
+
+同理，只有 2 个可信桶时会额外显示一句「形状还看不出来」——
+两个点连成的直线不是曲线，不说清楚学生会当成"我的遗忘曲线就长这样"。
+
+### 图注不是客套话
+
+理论线用的是艾宾浩斯**无意义音节**的经典数据（1 天只剩 33%），而这里练的是有内容的
+专业课题目，**实测线几乎必然在上方**。不写清楚，学生只会得出"我比艾宾浩斯强"这个
+没有信息量的结论。要看的是**形状**：哪一档掉得特别狠，那一档的复习间隔就该缩短。
+
+对应地，服务端调度用的是**离散阶梯**（0059：连对次数 → 1/2/4/7/15/30 天），
+不是连续曲线 —— 所以这张图也能反过来校验那个阶梯对学生是不是太激进。

@@ -44,6 +44,20 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+# ⚠ 正常情况下**不会**出现这个目录：android/build.gradle.kts 把构建产物重定向到了
+# 仓库根的 build/（见那里面的 newBuildDir）。它一旦出现，几乎只有一个原因——
+# 有人新建了 android/build.gradle（Groovy），而 **Gradle 在两者同时存在时会用
+# .gradle，把 .gradle.kts 整个遮蔽掉**，重定向随之失效，产物全落到这里，
+# 于是 `flutter build apk` 报「Gradle build failed to produce an .apk file」
+# ——构建本身是成功的，只是产物在错的地方，极难归因（2026-09-29 踩过）。
+# 加这条不是为了让那种情况可用，是为了别把几 GB 垃圾提交上去。
+/android/app/build/
+
+# Gradle 的问题报告等生成物。同样只在**重定向失效**时才会落到这里
+# （见上面那段）；正常构建写的是仓库根的 build/。
+/android/build/
+
+
 # Widget Preview related
 .widget_preview/
 
