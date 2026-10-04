@@ -30,6 +30,7 @@ export 'question_content.dart';
 export 'question_filter.dart';
 export 'question_option.dart';
 export 'question_report.dart';
+export 'question_report_message.dart';
 export 'question_row.dart';
 export 'question_stats.dart';
 export 'question_tag.dart';

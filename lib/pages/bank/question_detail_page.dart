@@ -18,6 +18,7 @@ import 'package:mianyang_quiz/state/state.dart';
 import 'package:mianyang_quiz/widgets/widgets.dart';
 import 'package:mianyang_quiz/pages/bank/widgets/question_meta_header.dart';
 import 'package:mianyang_quiz/pages/bank/widgets/question_report_sheet.dart';
+import 'package:mianyang_quiz/pages/bank/widgets/report_thread.dart';
 import 'package:mianyang_quiz/pages/bank/widgets/share_question_sheet.dart';
 import 'package:provider/provider.dart';
 
@@ -198,6 +199,10 @@ class _QuestionDetailPageState extends State<QuestionDetailPage> {
                   myReport: _myReport,
                   accuracyAttempts: _accuracyAttempts,
                   accuracyCorrect: _accuracyCorrect,
+                  onReportChanged: () async {
+                    final again = await _loadMyReport();
+                    if (mounted) setState(() => _myReport = again);
+                  },
                 ),
         ),
       ),
@@ -224,6 +229,7 @@ class _Body extends StatelessWidget {
     this.myReport,
     this.accuracyAttempts = 0,
     this.accuracyCorrect = 0,
+    this.onReportChanged,
   });
 
   final QuestionDetail detail;
@@ -235,6 +241,9 @@ class _Body extends StatelessWidget {
   /// 全站作答统计。0/0 = 没人做过，元信息条那时不显示统计标签。
   final int accuracyAttempts;
   final int accuracyCorrect;
+
+  /// 撤回 / 发言之后重刷"我的反馈"（回调留给页面 State —— 它持有加载器）。
+  final VoidCallback? onReportChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -285,7 +294,7 @@ class _Body extends StatelessWidget {
             // 这边有闭环。不显示回音的话，学生的观感和石沉大海没区别。
             if (myReport != null) ...[
               SizedBox(height: AppMetrics.gapMd.r),
-              _MyReportCard(report: myReport!),
+              _MyReportCard(report: myReport!, onChanged: onReportChanged),
             ],
           ],
         ),
@@ -294,20 +303,25 @@ class _Body extends StatelessWidget {
   }
 }
 
-/// 「我的反馈」卡片：我提的内容 + 作者的处理说明。
+/// 「我的反馈」卡片：我提的内容 + 作者的处理说明 + **往来与撤回**（0084）。
 class _MyReportCard extends StatelessWidget {
-  const _MyReportCard({required this.report});
+  const _MyReportCard({required this.report, this.onChanged});
 
   final QuestionReport report;
+
+  /// 撤回 / 发言成功后回调，让页面重刷这条反馈（状态会变）。
+  final VoidCallback? onChanged;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final resolved = report.isResolved;
-    // 已处理用成功色，待处理用中性色 —— 语义色对走 semanticColors，
+    // 0084 起终态不止"已处理"：申诉受理/驳回/撤回各有自己的标签（见 report_meta）。
+    final chip = ReportStatus.fromWire(report.status);
+    final settled = report.status != 'open';
+    // 已结案用主色、进行中用中性色 —— 语义色对走 semanticColors，
     // 别在这里手拼 onTertiaryContainer 之类（AGENTS.md 二·五警告过那个坑）。
-    final badgeColor = resolved ? scheme.primary : scheme.onSurfaceVariant;
+    final badgeColor = settled ? scheme.primary : scheme.onSurfaceVariant;
 
     return DuoCard(
       color: scheme.surface,
@@ -324,7 +338,7 @@ class _MyReportCard extends StatelessWidget {
               ),
               SizedBox(width: AppMetrics.gapSm.r),
               Text(
-                resolved ? ReportStatus.resolved.label : ReportStatus.open.label,
+                chip.label,
                 style: theme.textTheme.bodySmall?.copyWith(color: badgeColor),
               ),
               const Spacer(),
@@ -346,18 +360,25 @@ class _MyReportCard extends StatelessWidget {
           SizedBox(height: AppMetrics.gapSm.r),
           Divider(height: 1, color: scheme.outlineVariant),
           SizedBox(height: AppMetrics.gapSm.r),
-          if (resolved)
+          if (report.resolveNote != null && report.resolveNote!.isNotEmpty)
             Text(
-              '作者回复：${report.resolveNote ?? ""}',
+              // 学生纠错是"作者回复"，申诉是"判定" —— 由状态分辨（与网页端同一口径）
+              '${report.status == 'resolved' ? '作者回复' : '判定'}：${report.resolveNote}',
               style: theme.textTheme.bodyMedium,
             )
-          else
+          else if (!settled)
             Text(
               '作者还没处理。处理后会在这里回复你。',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: scheme.onSurfaceVariant,
               ),
             ),
+          // 往来 + 撤回（0084）。结案后只读（组件自己会把输入框收掉）。
+          ReportThread(
+            reportId: report.id,
+            isOpen: !settled,
+            onChanged: onChanged,
+          ),
         ],
       ),
     );
