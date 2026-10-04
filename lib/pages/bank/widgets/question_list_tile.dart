@@ -20,6 +20,8 @@ class QuestionListTile extends StatelessWidget {
     required this.isFavorite,
     required this.onTap,
     required this.onToggleFavorite,
+    this.accuracyAttempts = 0,
+    this.accuracyCorrect = 0,
   });
 
   final QuestionBrief brief;
@@ -29,6 +31,11 @@ class QuestionListTile extends StatelessWidget {
 
   final VoidCallback onTap;
   final VoidCallback onToggleFavorite;
+
+  /// 全站作答统计（question_accuracy）。没数据时是 0/0 —— 那时**不渲染**统计标签
+  /// （「0 次作答 ≠ 0% 错误率」，摆一个 0% 会被读成"大家都做对了"）。
+  final int accuracyAttempts;
+  final int accuracyCorrect;
 
   @override
   Widget build(BuildContext context) {
@@ -80,6 +87,13 @@ class QuestionListTile extends StatelessWidget {
                     // 与错题本/收藏/复盘卡片共用同一个标签：以前这里自带一份
                     // 映射，结果「中」在本页是橙色、在其它三处是灰色。
                     DifficultyChip(difficulty: brief.difficulty),
+                    // 全站错误率 / 易错标识。没作答记录时整枚不渲染（Wrap 的空孩子
+                    // 也会占一个 spacing 的宽度，所以这里必须条件渲染，不能靠内部返回空）。
+                    if (accuracyAttempts > 0)
+                      AccuracyChip(
+                        attempts: accuracyAttempts,
+                        correct: accuracyCorrect,
+                      ),
                     for (final tag in tags) DuoChip(label: tag, dense: true),
                   ],
                 ),

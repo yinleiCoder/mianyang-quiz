@@ -6,6 +6,7 @@
 
 library values;
 
+export 'accuracy_meta.dart';
 export 'app_metrics.dart';
 export 'app_navigation_bar_theme.dart';
 export 'app_text_styles.dart';

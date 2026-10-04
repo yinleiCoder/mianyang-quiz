@@ -32,6 +32,9 @@ class _SessionReviewPageState extends State<SessionReviewPage> {
   AsyncValue<PracticeSessionSnapshot> _state =
       const AsyncLoading<PracticeSessionSnapshot>();
 
+  /// 这一场题目的全站作答统计（question_id → 作答/答对）。缺项 = 没做过，不是错误。
+  Map<String, QuestionAccuracy> _accuracy = const {};
+
   @override
   void initState() {
     super.initState();
@@ -44,11 +47,29 @@ class _SessionReviewPageState extends State<SessionReviewPage> {
       final snapshot = await context.read<PracticeRepository>().fetchSession(
         widget.sessionId,
       );
+      final accuracy = await _loadAccuracy(snapshot);
       if (!mounted) return;
-      setState(() => _state = AsyncData(snapshot));
+      setState(() {
+        _state = AsyncData(snapshot);
+        _accuracy = accuracy;
+      });
     } on AppException catch (error) {
       if (!mounted) return;
       setState(() => _state = AsyncFailure(error));
+    }
+  }
+
+  /// 全站错误率是附加信息：取不到就当作"没有统计"，复盘主体照常显示。
+  Future<Map<String, QuestionAccuracy>> _loadAccuracy(
+    PracticeSessionSnapshot snapshot,
+  ) async {
+    final ids = snapshot.items.map((item) => item.questionId).toList();
+    if (ids.isEmpty) return const {};
+    try {
+      return await context.read<ListRepository>().fetchAccuracy(ids);
+    } catch (_) {
+      // 同题库列表：拿不到就退化成"没有统计"，复盘主体照常显示
+      return const {};
     }
   }
 
@@ -61,7 +82,8 @@ class _SessionReviewPageState extends State<SessionReviewPage> {
           state: _state,
           loadingMessage: '正在取回这次练习…',
           onRetry: _load,
-          builder: (snapshot) => _ReviewBody(snapshot: snapshot),
+          builder: (snapshot) =>
+              _ReviewBody(snapshot: snapshot, accuracy: _accuracy),
         ),
       ),
     );
@@ -70,9 +92,12 @@ class _SessionReviewPageState extends State<SessionReviewPage> {
 
 /// 复盘正文：概览 + 逐题。
 class _ReviewBody extends StatelessWidget {
-  const _ReviewBody({required this.snapshot});
+  const _ReviewBody({required this.snapshot, this.accuracy = const {}});
 
   final PracticeSessionSnapshot snapshot;
+
+  /// 这一场题目的全站作答统计（question_id → 作答/答对）。缺项 = 没做过。
+  final Map<String, QuestionAccuracy> accuracy;
 
   @override
   Widget build(BuildContext context) {
@@ -87,10 +112,13 @@ class _ReviewBody extends StatelessWidget {
             itemBuilder: (context, index) {
               if (index == 0) return _header(context);
               final item = items[index - 1];
+              final stat = accuracy[item.questionId];
               return ReviewQuestionCard(
                 index: index - 1,
                 item: item,
                 record: answers[item.questionId],
+                accuracyAttempts: stat?.attempts ?? 0,
+                accuracyCorrect: stat?.correct ?? 0,
               );
             },
           );

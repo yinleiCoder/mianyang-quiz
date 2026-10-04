@@ -75,6 +75,9 @@ void main() {
         builder: (context, _) => MultiProvider(
           providers: [
             Provider<QuestionRepository>.value(value: questions),
+            // 全站错误率（question_accuracy）走的仓储。这里是真仓储 + 测试环境的
+            // HTTP 桩（一律 400）——刚好把"统计失败要静默降级"那条路也跑了一遍。
+            Provider<ListRepository>(create: (_) => ListRepository(client)),
             Provider<SubjectRepository>(create: (_) => _FakeSubjectRepository(client)),
             ChangeNotifierProvider(
               create: (_) => FavoriteStore(FavoriteRepository(client)),

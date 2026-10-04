@@ -37,6 +37,10 @@ class _QuestionDetailPageState extends State<QuestionDetailPage> {
   /// 这是本功能与通用意见反馈最大的不同 —— 那边没有回复闭环，这边有。
   QuestionReport? _myReport;
 
+  /// 全站作答统计（作答/答对次数）。0/0 = 没人做过，那时详情页不显示统计标签。
+  int _accuracyAttempts = 0;
+  int _accuracyCorrect = 0;
+
   @override
   void initState() {
     super.initState();
@@ -46,17 +50,21 @@ class _QuestionDetailPageState extends State<QuestionDetailPage> {
   Future<void> _load() async {
     setState(() => _state = const AsyncLoading());
     try {
-      // 两道请求并行：题目本身与"我的反馈"互不依赖，串行会白白多等一轮往返
+      // 三道请求并行：题目本身、"我的反馈"、全站作答统计互不依赖，串行会白白多等两轮往返
       final detailFuture = context.read<QuestionRepository>().fetchDetail(
         widget.questionId,
       );
       final reportFuture = _loadMyReport();
+      final accuracyFuture = _loadAccuracy();
       final detail = await detailFuture;
       final myReport = await reportFuture;
+      final accuracy = await accuracyFuture;
       if (!mounted) return;
       setState(() {
         _state = AsyncData(detail);
         _myReport = myReport;
+        _accuracyAttempts = accuracy?.attempts ?? 0;
+        _accuracyCorrect = accuracy?.correct ?? 0;
       });
     } on AppException catch (error) {
       if (!mounted) return;
@@ -71,6 +79,19 @@ class _QuestionDetailPageState extends State<QuestionDetailPage> {
       return await context.read<QuestionReportRepository>().fetchMyReport(
         widget.questionId,
       );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// 全站作答统计，失败同样**不影响整页**（同 _loadMyReport 的理由）：
+  /// 拿不到就是"没有统计"，题目本身照常看。
+  Future<QuestionAccuracy?> _loadAccuracy() async {
+    try {
+      final map = await context.read<ListRepository>().fetchAccuracy([
+        widget.questionId,
+      ]);
+      return map[widget.questionId];
     } catch (_) {
       return null;
     }
@@ -172,7 +193,12 @@ class _QuestionDetailPageState extends State<QuestionDetailPage> {
           // null 是"题目已下线或不可见"——它不是错误，所以不走错误态
           builder: (detail) => detail == null
               ? const _Invisible()
-              : _Body(detail: detail, myReport: _myReport),
+              : _Body(
+                  detail: detail,
+                  myReport: _myReport,
+                  accuracyAttempts: _accuracyAttempts,
+                  accuracyCorrect: _accuracyCorrect,
+                ),
         ),
       ),
     );
@@ -193,13 +219,22 @@ class _Invisible extends StatelessWidget {
 
 /// 详情正文。可滚动：题干、选项、答案、解析加起来通常超过一屏。
 class _Body extends StatelessWidget {
-  const _Body({required this.detail, this.myReport});
+  const _Body({
+    required this.detail,
+    this.myReport,
+    this.accuracyAttempts = 0,
+    this.accuracyCorrect = 0,
+  });
 
   final QuestionDetail detail;
 
   /// 我提过的反馈（含作者回复）。为 null 时整块不渲染 —— 没反馈过的人
   /// 不该看到一个空盒子。
   final QuestionReport? myReport;
+
+  /// 全站作答统计。0/0 = 没人做过，元信息条那时不显示统计标签。
+  final int accuracyAttempts;
+  final int accuracyCorrect;
 
   @override
   Widget build(BuildContext context) {
@@ -212,7 +247,12 @@ class _Body extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // 署名交给元信息条：标签与署名同一行两端对齐（见该组件注释）
-            QuestionMetaHeader(brief: brief, credits: detail.credits),
+            QuestionMetaHeader(
+              brief: brief,
+              credits: detail.credits,
+              accuracyAttempts: accuracyAttempts,
+              accuracyCorrect: accuracyCorrect,
+            ),
             SizedBox(height: AppMetrics.gapMd.r),
             // 题干套白卡（用户 2026-09-24）。原先刻意不套（"卡片只是多包一层框"），
             // 但这一页现在统一白卡，题干不套就会跟下面的解析卡长得不一样。

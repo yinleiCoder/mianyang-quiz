@@ -81,6 +81,21 @@ class ListRepository {
       throw mapError(error);
     }
   }
+
+  /// 全站统计的**尽力而为**版本：失败一律返回空表，不抛。
+  ///
+  /// 给「错误率只是附加信息」的几个面用（题库列表、题目详情、练习复盘）——
+  /// 它们的主体是题目本身，不该因为一份统计取不到就整页进错误态。
+  /// 口径与 fetchAccuracy 完全一致（缺项 = 没人做过，不是 0%）。
+  Future<Map<String, QuestionAccuracy>> fetchAccuracyOrEmpty(
+    List<String> questionIds,
+  ) async {
+    try {
+      return await fetchAccuracy(questionIds);
+    } catch (_) {
+      return const {};
+    }
+  }
 }
 
 /// PostgREST 返回的行是 `Map<String, dynamic>`，但静态类型是 dynamic——

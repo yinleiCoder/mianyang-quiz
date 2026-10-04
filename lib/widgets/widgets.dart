@@ -6,6 +6,7 @@
 
 library widgets;
 
+export 'accuracy_chip.dart';
 export 'analysis_view.dart';
 export 'answer_sheet_data.dart';
 export 'answer_sheet_grid.dart';

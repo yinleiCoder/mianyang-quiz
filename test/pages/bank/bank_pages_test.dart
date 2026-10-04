@@ -95,6 +95,9 @@ Future<void> _pump(
           Provider<QuestionRepository>(
             create: (_) => QuestionRepository(client),
           ),
+          // 全站错误率（question_accuracy）：真仓储 + 测试环境的 HTTP 桩（400）→
+          // 页面把它降级成"没有统计"，正好覆盖那条分支。
+          Provider<ListRepository>(create: (_) => ListRepository(client)),
           ChangeNotifierProvider(
             create: (_) => FavoriteStore(FavoriteRepository(client)),
           ),

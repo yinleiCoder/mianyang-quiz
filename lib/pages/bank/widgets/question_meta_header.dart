@@ -21,12 +21,18 @@ class QuestionMetaHeader extends StatelessWidget {
     super.key,
     required this.brief,
     this.credits = const [],
+    this.accuracyAttempts = 0,
+    this.accuracyCorrect = 0,
   });
 
   final QuestionBrief brief;
 
   /// 作者 + 两级审核通过人。为空（取不到或已注销）时这一行只剩标签。
   final List<QuestionCredit> credits;
+
+  /// 全站作答统计。没数据时是 0/0，那时不渲染统计标签（0 次作答 ≠ 0% 错误率）。
+  final int accuracyAttempts;
+  final int accuracyCorrect;
 
   @override
   Widget build(BuildContext context) {
@@ -56,6 +62,13 @@ class QuestionMetaHeader extends StatelessWidget {
             ),
             if (brief.difficulty != null)
               DuoChip(label: '难度 ${difficultyLabel(brief.difficulty)}'),
+            // 全站错误率 / 易错标识（判据见 values/accuracy_meta.dart，与网页端同源）
+            if (accuracyAttempts > 0)
+              AccuracyChip(
+                attempts: accuracyAttempts,
+                correct: accuracyCorrect,
+                dense: false,
+              ),
             if (brief.versionNo != null) DuoChip(label: '第 ${brief.versionNo} 版'),
             if (published.isNotEmpty) DuoChip(label: '入库 $published'),
           ],

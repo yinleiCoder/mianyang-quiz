@@ -1,7 +1,9 @@
 // 一道题的作答统计卡：摘要一行（题号/分值/正确率/作答人数），点开看选项分布与错答名单。
 //
 // 为什么默认折叠：一份卷子二三十题，全展开要滚很久；而学生真正想看的是"哪几道题全班都错了"。
-// 摘要里正确率低于门槛的会标红（门槛与题库页同一条线，见 lib/accuracy.js 的 HIGH_ERROR_RATE）。
+// 摘要里正确率低于门槛的会标红 —— 门槛不再写在本地：**值在 values/accuracy_meta.dart，
+// 与题库页、复习复盘、网页端同一条线**（这里原先自带一个 0.4，与 my_standing_page 的 0.6
+// 已经分叉过一次，别再各写一份）。
 //
 // 题干不在这里：服务端不下发题干（返回体只有计数与姓名），学生对着题号去成绩单看原题即可。
 
@@ -12,8 +14,8 @@ import 'package:mianyang_quiz/utils/utils.dart';
 import 'package:mianyang_quiz/entity/entity.dart';
 import 'package:mianyang_quiz/widgets/widgets.dart';
 
-/// 正确率低于它就算"这道题要讲"——与 lib/accuracy.js 的 HIGH_ERROR_RATE（错误率 ≥ 60%）同一条线。
-const double _lowCorrectRate = 0.4;
+/// 正确率低于它就算"这道题要讲"。由错误率那条线推出来，**别在本地再写 0.4**。
+final double _lowCorrectRate = 1 - kHighErrorRate;
 
 class QuestionStatCard extends StatefulWidget {
   const QuestionStatCard({super.key, required this.stat, required this.qtypeLabel});

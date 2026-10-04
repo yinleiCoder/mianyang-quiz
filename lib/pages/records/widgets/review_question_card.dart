@@ -23,6 +23,8 @@ class ReviewQuestionCard extends StatelessWidget {
     required this.index,
     required this.item,
     this.record,
+    this.accuracyAttempts = 0,
+    this.accuracyCorrect = 0,
   });
 
   /// 题号，从 0 开始（显示时 +1）。
@@ -32,6 +34,11 @@ class ReviewQuestionCard extends StatelessWidget {
 
   /// 该题的历史作答；null = 当时没作答。
   final PracticeAnswerRecord? record;
+
+  /// 全站作答统计（question_accuracy）。0/0 = 没人做过，那时不显示 ——
+  /// 复盘页要回答的是"这题是不是很多人都错"，没有数据就别摆一个 0%。
+  final int accuracyAttempts;
+  final int accuracyCorrect;
 
   @override
   Widget build(BuildContext context) {
@@ -56,6 +63,13 @@ class ReviewQuestionCard extends StatelessWidget {
                     ),
                     DuoChip(label: item.type.label, dense: true),
                     DifficultyChip(difficulty: item.difficulty),
+                    // 全站错误率 / 易错标识：复盘时"我错在哪"之外，还想知道
+                    // "这题是不是本来就难"（判据两端同源，见 values/accuracy_meta.dart）
+                    if (accuracyAttempts > 0)
+                      AccuracyChip(
+                        attempts: accuracyAttempts,
+                        correct: accuracyCorrect,
+                      ),
                   ],
                 ),
               ),

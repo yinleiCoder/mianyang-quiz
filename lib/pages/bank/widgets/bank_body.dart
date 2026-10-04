@@ -23,10 +23,14 @@ class BankBody extends StatelessWidget {
     required this.isFavorite,
     required this.onOpen,
     required this.onToggleFavorite,
+    this.accuracy = const {},
   });
 
   /// 当前这一页的加载状态。
   final AsyncValue<QuestionPage> state;
+
+  /// 全站作答统计（question_id → 作答/答对次数），由页面取好传进来。
+  final Map<String, QuestionAccuracy> accuracy;
 
   /// 是否设了筛选条件（决定空态说哪句话）。
   final bool filtered;
@@ -55,6 +59,7 @@ class BankBody extends StatelessWidget {
           )
         : QuestionListView(
             rows: page.rows,
+            accuracy: accuracy,
             isFavorite: isFavorite,
             onOpen: onOpen,
             onToggleFavorite: onToggleFavorite,

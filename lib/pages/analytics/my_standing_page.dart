@@ -157,7 +157,9 @@ class _WeakNodes extends StatelessWidget {
                     Formatters.percent(n.accuracy),
                     style: theme.textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w700,
-                      color: n.accuracy < 0.6
+                      // 掌握度的关注线（kWeakNodeAccuracy）**故意比单题那条宽松**：
+                      // 一个知识点跨很多题，混着易题和难题。别拿题目的线来判它。
+                      color: n.accuracy < kWeakNodeAccuracy
                           ? theme.colorScheme.error
                           : context.semantic.success,
                     ),

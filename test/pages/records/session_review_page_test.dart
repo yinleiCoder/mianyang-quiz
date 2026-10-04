@@ -15,6 +15,15 @@ import 'package:mianyang_quiz/entity/entity.dart';
 import 'package:mianyang_quiz/apis/apis.dart';
 import 'package:mianyang_quiz/pages/pages.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+/// 只为 ListRepository 造一个客户端。**autoRefreshToken 必须关掉**：它起的是周期定时器，
+/// flutter_test 会因为「widget 树销毁后仍有 pending timer」判失败（同 bank_pages_test）。
+SupabaseClient _client() => SupabaseClient(
+  'https://example.supabase.co',
+  'sb_publishable_x',
+  authOptions: const AuthClientOptions(autoRefreshToken: false),
+);
 
 void main() {
   testWidgets('复盘页：答对/未作答都如实展示，标准答案与解析齐全', (tester) async {
@@ -58,8 +67,15 @@ Future<void> _pump(WidgetTester tester, Size size) async {
   await tester.pumpWidget(
     ScreenUtilInit(
       designSize: const Size(390, 844),
-      builder: (context, child) => Provider<PracticeRepository>.value(
-        value: _FakePracticeRepository(_snapshot),
+      builder: (context, child) => MultiProvider(
+        providers: [
+          Provider<PracticeRepository>.value(
+            value: _FakePracticeRepository(_snapshot),
+          ),
+          // 复盘页还会取一次全站错误率（question_accuracy）。用真仓储 + 测试环境的
+          // HTTP 桩（一律 400）→ 页面降级成"没有统计"，逐题卡片照常渲染。
+          Provider<ListRepository>(create: (_) => ListRepository(_client())),
+        ],
         child: MaterialApp(
           theme: AppTheme.light(),
           home: const SessionReviewPage(sessionId: 's1'),

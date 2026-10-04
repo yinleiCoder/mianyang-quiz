@@ -20,6 +20,7 @@ class ExamReviewCard extends StatelessWidget {
     required this.item,
     required this.record,
     required this.revealed,
+    this.stat,
   });
 
   /// 题号（1 起）。
@@ -32,6 +33,10 @@ class ExamReviewCard extends StatelessWidget {
 
   /// 是否揭示对错与标准答案（出分后为 true）。
   final bool revealed;
+
+  /// 这道题在本卷范围内的作答统计（判分人数/答对人数）。为 null 时不显示 ——
+  /// 没出分、没作答、或统计取不到都走这一支，不该因此少一块别的东西。
+  final QuestionStat? stat;
 
   @override
   Widget build(BuildContext context) {
@@ -51,6 +56,16 @@ class ExamReviewCard extends StatelessWidget {
                 tone: DuoChipTone.neutral,
                 dense: true,
               ),
+              // 本卷的易错标识（错误率 ≥60% 且 ≥5 人判过分，口径见 values/accuracy_meta.dart）。
+              // 门禁：只有出分后才拿得到统计，所以 stat 为 null 就是不显示。
+              if (revealed && stat != null && stat!.graded > 0) ...[
+                SizedBox(width: AppMetrics.gapXs.r),
+                AccuracyChip(
+                  attempts: stat!.graded,
+                  correct: stat!.correct,
+                  scopeLabel: '本卷',
+                ),
+              ],
               SizedBox(width: AppMetrics.gapXs.r),
               // Flexible：得分文案的长度随卷面分值变（"得 12.5 / 20 分"比"得 1 / 2 分"
               // 宽一倍多），不给孩子宽度上限的 Row 在窄屏上会直接溢出。

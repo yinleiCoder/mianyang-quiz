@@ -17,6 +17,7 @@ import 'package:mianyang_quiz/values/values.dart';
 import 'package:mianyang_quiz/entity/entity.dart';
 import 'package:mianyang_quiz/apis/apis.dart';
 import 'package:mianyang_quiz/widgets/widgets.dart';
+import 'package:mianyang_quiz/pages/exam/widgets/exam_result_footer.dart';
 import 'package:mianyang_quiz/pages/exam/widgets/exam_result_summary.dart';
 import 'package:mianyang_quiz/pages/exam/widgets/exam_review_card.dart';
 import 'package:provider/provider.dart';
@@ -32,6 +33,9 @@ class ExamResultPage extends StatefulWidget {
 
 class _ExamResultPageState extends State<ExamResultPage> {
   AsyncValue<ExamSnapshot> _state = const AsyncLoading();
+
+  /// 逐题作答统计（paper_items.id → 统计），只在出分后取得到。
+  Map<String, QuestionStat> _stats = const {};
 
   @override
   void initState() {
@@ -51,10 +55,32 @@ class _ExamResultPageState extends State<ExamResultPage> {
         context.pushReplacement(AppRoutes.examAttemptOf(widget.attemptId));
         return;
       }
-      setState(() => _state = AsyncData(snapshot));
+      final stats = await _loadStats(snapshot);
+      if (!mounted) return;
+      setState(() {
+        _state = AsyncData(snapshot);
+        _stats = stats;
+      });
     } catch (error) {
       if (!mounted) return;
       setState(() => _state = AsyncFailure(mapError(error)));
+    }
+  }
+
+  /// 每题的作答统计（正确率 / 易错标识的来源）。
+  ///
+  /// **三项都要求出分**：没出分服务端会拒（选项分布 + 标准答案 = 答案本身，见 0078），
+  /// 所以这里先看 `isFinal` 再请求。任何失败都**静默降级**为空 ——
+  /// 成绩单主体（分数、逐题得分）不该因为一份附加统计而整页报错。
+  Future<Map<String, QuestionStat>> _loadStats(ExamSnapshot snapshot) async {
+    if (!snapshot.attempt.statusValue.isFinal) return const {};
+    try {
+      final stats = await context.read<AnalyticsRepository>().fetchQuestionStats(
+        paperId: snapshot.attempt.paperId,
+      );
+      return {for (final item in stats.items) item.itemId: item};
+    } catch (_) {
+      return const {};
     }
   }
 
@@ -67,7 +93,7 @@ class _ExamResultPageState extends State<ExamResultPage> {
           state: _state,
           loadingMessage: '正在加载成绩…',
           onRetry: _load,
-          builder: (snapshot) => _Body(snapshot: snapshot),
+          builder: (snapshot) => _Body(snapshot: snapshot, stats: _stats),
         ),
       ),
     );
@@ -75,9 +101,12 @@ class _ExamResultPageState extends State<ExamResultPage> {
 }
 
 class _Body extends StatelessWidget {
-  const _Body({required this.snapshot});
+  const _Body({required this.snapshot, this.stats = const {}});
 
   final ExamSnapshot snapshot;
+
+  /// 逐题作答统计（paper_items.id → 统计）。没出分或取不到时是空表。
+  final Map<String, QuestionStat> stats;
 
   @override
   Widget build(BuildContext context) {
@@ -142,10 +171,11 @@ class _Body extends StatelessWidget {
                   item: items[i],
                   record: answers[items[i].id],
                   revealed: revealed,
+                  stat: stats[items[i].id],
                 ),
               ],
               SizedBox(height: AppMetrics.gapXl.r),
-              _Footer(attempt: attempt, paper: paper),
+              ExamResultFooter(attempt: attempt, paper: paper),
             ],
           ),
         ),
@@ -154,38 +184,3 @@ class _Body extends StatelessWidget {
   }
 }
 
-/// 交卷时间与卷面信息。放最后：看完成绩与逐题之后，才是"这场是什么时候考的"。
-class _Footer extends StatelessWidget {
-  const _Footer({required this.attempt, required this.paper});
-
-  final ExamAttempt attempt;
-  final ExamPaper paper;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final lines = <String>[
-      if (attempt.submittedAt != null)
-        '交卷时间：${Formatters.dateTime(attempt.submittedAt)}',
-      if (attempt.gradedAt != null)
-        '出分时间：${Formatters.dateTime(attempt.gradedAt)}',
-      '科目：${paper.subjectLabel?.trim().isNotEmpty ?? false ? paper.subjectLabel! : '—'}',
-      '满分：${Formatters.score(paper.totalScore)} 分 · 限时 ${paper.durationMinutes} 分钟',
-    ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        for (final line in lines)
-          Padding(
-            padding: EdgeInsets.only(bottom: AppMetrics.gapXs.r),
-            child: Text(
-              line,
-              style: AppTextStyles.caption(context)
-                  .copyWith(color: scheme.onSurfaceVariant),
-            ),
-          ),
-      ],
-    );
-  }
-}

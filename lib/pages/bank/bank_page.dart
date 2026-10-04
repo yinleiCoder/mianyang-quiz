@@ -20,6 +20,7 @@ import 'package:mianyang_quiz/entity/entity.dart';
 import 'package:mianyang_quiz/apis/apis.dart';
 import 'package:mianyang_quiz/state/state.dart';
 import 'package:mianyang_quiz/widgets/widgets.dart';
+import 'package:mianyang_quiz/pages/bank/bank_reference.dart';
 import 'package:mianyang_quiz/pages/bank/widgets/bank_body.dart';
 import 'package:mianyang_quiz/pages/bank/widgets/bank_header.dart';
 import 'package:mianyang_quiz/pages/bank/widgets/bank_filter_sheet.dart';
@@ -40,9 +41,11 @@ class _BankPageState extends State<BankPage> {
   int _page = 1;
   AsyncValue<QuestionPage> _state = const AsyncLoading();
 
-  /// 参考数据（科目树、标签）在一次会话里几乎不变，进页面取一次，翻页不再重复请求。
-  List<SubjectNode> _nodes = const [];
-  List<QuestionTag> _tags = const [];
+  /// 全站作答统计（question_id → 作答/答对）。缺项 = 这道题还没人做过，不是错误。
+  Map<String, QuestionAccuracy> _accuracy = const {};
+
+  /// 参考数据（科目树、标签）：一次会话里几乎不变，进页面取一次（见 bank_reference.dart）。
+  BankReference _ref = const BankReference();
 
   @override
   void initState() {
@@ -51,33 +54,43 @@ class _BankPageState extends State<BankPage> {
   }
 
   Future<void> _bootstrap() async {
+    // read 先取出来再用：把 context 的使用留在 await 之前（否则触发
+    // use_build_context_synchronously —— 这个仓库的老写法也是这么做的）
     final subjects = context.read<SubjectRepository>();
-    try {
-      final nodes = await subjects.fetchNodes();
-      final tags = await subjects.fetchTags();
-      if (!mounted) return;
-      setState(() {
-        _nodes = nodes;
-        _tags = tags;
-      });
-    } on AppException {
-      // 参考数据失败不阻断列表：筛选面板会退化成"只有关键词与题型"，
-      // 题目本身仍能正常浏览，比整页报错合理。
-    }
+    final ref = await BankReference.load(subjects);
+    if (!mounted) return;
+    setState(() => _ref = ref);
     await _load();
+  }
+
+  /// 这一页的题目 + 全站作答统计。两个请求串行（统计要拿题目 id），
+  /// 但它是附加信息，取不到就退化成空表（fetchAccuracyOrEmpty），不影响列表。
+  Future<(QuestionPage, Map<String, QuestionAccuracy>)> _fetchPage() async {
+    // 两个仓储都在 await 之前取好：第二次 context.read 落在 await 之后会触发
+    // use_build_context_synchronously（widget 在第一段 await 里被卸载就危险了）
+    final questions = context.read<QuestionRepository>();
+    final lists = context.read<ListRepository>();
+    final page = await questions.listQuestions(
+      filter: _filter,
+      page: _page,
+      pageSize: _pageSize,
+      nodes: _ref.nodes.isEmpty ? null : _ref.nodes,
+    );
+    final accuracy = await lists.fetchAccuracyOrEmpty(
+      page.rows.map((row) => row.questionId).toList(),
+    );
+    return (page, accuracy);
   }
 
   Future<void> _load() async {
     setState(() => _state = const AsyncLoading());
     try {
-      final page = await context.read<QuestionRepository>().listQuestions(
-        filter: _filter,
-        page: _page,
-        pageSize: _pageSize,
-        nodes: _nodes.isEmpty ? null : _nodes,
-      );
+      final (page, accuracy) = await _fetchPage();
       if (!mounted) return;
-      setState(() => _state = AsyncData(page));
+      setState(() {
+        _state = AsyncData(page);
+        _accuracy = accuracy;
+      });
     } on AppException catch (error) {
       if (!mounted) return;
       setState(() => _state = AsyncFailure(error));
@@ -91,14 +104,12 @@ class _BankPageState extends State<BankPage> {
   /// 失败也只提示、保留原内容（与 PagedListState.loadMore 同一口径）。
   Future<void> _refresh() async {
     try {
-      final page = await context.read<QuestionRepository>().listQuestions(
-        filter: _filter,
-        page: _page,
-        pageSize: _pageSize,
-        nodes: _nodes.isEmpty ? null : _nodes,
-      );
+      final (page, accuracy) = await _fetchPage();
       if (!mounted) return;
-      setState(() => _state = AsyncData(page));
+      setState(() {
+        _state = AsyncData(page);
+        _accuracy = accuracy;
+      });
     } on AppException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -125,8 +136,8 @@ class _BankPageState extends State<BankPage> {
     final picked = await BankFilterSheet.show(
       context,
       initial: _filter,
-      nodes: _nodes,
-      tags: _tags,
+      nodes: _ref.nodes,
+      tags: _ref.tags,
     );
     if (picked == null || !mounted) return; // null = 取消，保持原条件
     _applyFilter(picked);
@@ -148,8 +159,8 @@ class _BankPageState extends State<BankPage> {
             BankHeader(
               total: total,
               filter: _filter,
-              nodes: _nodes,
-              tags: _tags,
+              nodes: _ref.nodes,
+              tags: _ref.tags,
               onOpenSheet: _openSheet,
               onClear: _clearFilter,
             ),
@@ -157,6 +168,7 @@ class _BankPageState extends State<BankPage> {
             Expanded(
               child: BankBody(
                 state: _state,
+                accuracy: _accuracy,
                 filtered: _filter.hasAny,
                 onClear: _clearFilter,
                 onRetry: _load,
