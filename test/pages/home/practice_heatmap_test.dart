@@ -87,7 +87,9 @@ void main() {
     final scale = _heatmapOf(tester).customColorScale!;
 
     final scheme = Theme.of(_context(tester)).colorScheme;
-    expect(scale(0), scheme.surfaceContainerHighest, reason: '没作答的日子是空槽色');
+    // 0 题 = GitHub 那套里最浅的灰（不是主题的 surfaceContainerHighest —— 配色是
+    // 刻意钉死 GitHub 的 primer 值，见 practice_heatmap.dart 里 _githubLight 的注释）
+    expect(scale(0), const Color(0xFFEBEDF0), reason: '没作答的日子是空槽色');
 
     // 亮度必须单调下降 = 颜色越来越深
     final luminances = [1, 3, 8, 20].map((n) => scale(n).computeLuminance()).toList();
@@ -101,11 +103,14 @@ void main() {
     expect(scale(1), isNot(scheme.surfaceContainerHighest), reason: '答过题就要看得出来');
   });
 
-  testWidgets('深浅取自语义绿（不是主题里那个会被当成"成功"的第三色）', (tester) async {
+  testWidgets('配色是 GitHub 那套绿（primer 五个值），不走主题语义色', (tester) async {
     await _pump(tester, from: '2026-09-01', to: '2026-09-17', days: const []);
     final scale = _heatmapOf(tester).customColorScale!;
 
-    expect(scale(999), _context(tester).semantic.success);
+    // 需求原话是"要 GitHub 那个绿"（见 _githubLight 的注释），所以这里钉死 primer 的值：
+    // 换配色要先改这条断言，而不是让热力图慢慢跟主题漂移。
+    expect(scale(0), const Color(0xFFEBEDF0), reason: '最浅档 = calendar-graph-day-bg');
+    expect(scale(999), const Color(0xFF216E39), reason: '最深档 = calendar-graph-day-L4-bg');
   });
 
   testWidgets('窗口缺失或格式不对时整块不画（宁可不显示，也不显示错位的图）', (tester) async {

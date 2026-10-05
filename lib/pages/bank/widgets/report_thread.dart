@@ -1,16 +1,11 @@
 // 「我的反馈」下的往来消息 + 撤回（迁移 0084 的申诉机制在客户端的落点）。
 //
-// 两件事在 App 里原本都缺：学生只能看到作者那一句处理说明（0066），
-// 既不能追问、也没有撤回 —— 而网页端 0084 起已经能（提交人 / 作者 / 审题人三方对话）。
+// 口径跟服务端走，这里不复制判据：能发言 / 能撤回 = 反馈还没结案（status == open），
+// 服务端各有一道守卫，这里只是提前把输入框收掉。撤回**不是删除**（状态变 withdrawn，
+// 往来消息保留）。
 //
-// 口径跟服务端走，这里不复制判据：
-//   · 能发言 / 能撤回 = 反馈还没结案（status == open）；服务端 can_post_question_report_message
-//     与 withdraw_question_report 各有一道，这里只是提前把输入框收掉。
-//   · 撤回**不是删除**：那条反馈仍在（状态变 withdrawn），往来消息保留。
-//
-// 不显示发言人姓名：客户端没有 people 加载器（那是网页端的 lib/people.js），
-// 而这一段里能出现的只有"我"和"对方"（作者/审题人）—— 按 uid 比一下就够了，
-// 猜错名字比不显示更糟（见 AGENTS.md 里那类"别猜"的教训）。
+// 不显示发言人姓名：客户端没有 people 加载器（那是网页端的 lib/people.js），而这一段里
+// 只有"我"和"对方"，按 uid 比一下就够 —— 猜错名字比不显示更糟。
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/utils/utils.dart';
@@ -18,6 +13,7 @@ import 'package:mianyang_quiz/values/values.dart';
 import 'package:mianyang_quiz/entity/entity.dart';
 import 'package:mianyang_quiz/apis/apis.dart';
 import 'package:mianyang_quiz/widgets/widgets.dart';
+import 'package:mianyang_quiz/pages/bank/widgets/report_message_bubble.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -160,30 +156,9 @@ class _ReportThreadState extends State<ReportThread> {
           for (final m in messages)
             Padding(
               padding: EdgeInsets.only(top: AppMetrics.gapXs.r),
-              child: Container(
-                padding: EdgeInsets.all(AppMetrics.gapSm.r),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(AppMetrics.radiusCard.r),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          m.authorId != null && m.authorId == _uid ? '我' : '对方',
-                          style: AppTextStyles.caption(context)
-                              .copyWith(fontWeight: FontWeight.w700),
-                        ),
-                        const Spacer(),
-                        Text(Formatters.dateTime(m.createdAt), style: muted),
-                      ],
-                    ),
-                    SizedBox(height: AppMetrics.gapXs.r),
-                    Text(m.body, style: AppTextStyles.body(context)),
-                  ],
-                ),
+              child: ReportMessageBubble(
+                message: m,
+                isMine: m.authorId != null && m.authorId == _uid,
               ),
             ),
         if (widget.isOpen) ...[

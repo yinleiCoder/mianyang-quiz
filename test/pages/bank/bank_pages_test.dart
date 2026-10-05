@@ -22,10 +22,11 @@ import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() {
-  testWidgets('题库页：拉不到题目时给出重试，标题与筛选条仍在', (tester) async {
+  testWidgets('题库页：拉不到题目时给出重试，筛选条仍在', (tester) async {
     await _pump(tester, const Size(390, 844), AppRoutes.bankPath);
 
-    expect(find.text('题库'), findsOneWidget);
+    // 页面标题「题库」已被刻意去掉（底部导航已标明，见 bank_header.dart 文件头），
+    // 所以这里不再断言它 —— 这一条要守的是"出错时筛选条与重试入口还在"。
     expect(find.text('筛选'), findsOneWidget);
     expect(find.text('未设置筛选条件'), findsOneWidget);
     expect(find.text('重试'), findsOneWidget);
@@ -37,15 +38,18 @@ void main() {
     await _pump(tester, const Size(1280, 800), AppRoutes.bankPath, desktop: true);
 
     expect(tester.takeException(), isNull);
-    expect(find.text('题库'), findsOneWidget);
+    // 「题库」这个页面标题已被刻意去掉（见 bank_header.dart 文件头），
+    // 改用它下面的筛选条文字当锚点。
+    expect(find.text('筛选'), findsOneWidget);
 
     // 数据页**不套 MaxWidthBox**：内容区要铺满窗口宽度（只留左右内边距），
     // 否则限宽那一条会把滚动条推到内容区右边而不是窗口侧边。
-    final header = find
-        .ancestor(of: find.text('题库'), matching: find.byType(Row))
-        .first;
+    // 取最外层那个 Column（页面骨架，stretch 铺满内容区）。
+    final content = find
+        .ancestor(of: find.text('筛选'), matching: find.byType(Column))
+        .last;
     expect(
-      tester.getSize(header).width,
+      tester.getSize(content).width,
       1280 - AppMetrics.pagePadding * 2,
     );
   });

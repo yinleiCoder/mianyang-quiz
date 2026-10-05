@@ -57,7 +57,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
-    expect(find.text('我的记录'), findsOneWidget);
+    // 标题「我的记录」已被刻意去掉（底部导航已标「记录」，见 records_page.dart 里的注释），
+    // 改用它下面的分段控件文字当锚点。
+    expect(find.text('练习记录'), findsWidgets);
     // 铺满窗口宽度：内容区（TabBarView）应等于窗口宽度，而不是被限宽在 640。
     expect(tester.getSize(find.byType(TabBarView)).width, 1280);
   });

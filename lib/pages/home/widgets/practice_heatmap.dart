@@ -5,7 +5,8 @@
 //
 // 用 pub.dev 的 contribution_heatmap：它是自定义 RenderBox，**不读 Material 主题**
 // （源码里 Theme.of 零处，只有工具类用了 Colors 常量），所以不会踩本项目
-// "两套 Material" 那个坑；颜色由 customColorScale 从我们的语义色算出来。
+// "两套 Material" 那个坑；颜色由 customColorScale 给，用的是 **GitHub 那套 primer 绿**
+// （刻意钉死，不是从语义色算 —— 原因见 _githubLight 的注释）。
 // 代价是它的标签只有 en/de/fr/es，所以这里**关掉它自带的月份标签**，
 // 中文说明由外层那行小字给（见 heatmap_block.dart）。
 //

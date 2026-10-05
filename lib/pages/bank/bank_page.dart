@@ -54,8 +54,7 @@ class _BankPageState extends State<BankPage> {
   }
 
   Future<void> _bootstrap() async {
-    // read 先取出来再用：把 context 的使用留在 await 之前（否则触发
-    // use_build_context_synchronously —— 这个仓库的老写法也是这么做的）
+    // read 先取出来再用：把 context 的使用留在 await 之前（否则触发 use_build_context_synchronously）
     final subjects = context.read<SubjectRepository>();
     final ref = await BankReference.load(subjects);
     if (!mounted) return;
@@ -63,8 +62,7 @@ class _BankPageState extends State<BankPage> {
     await _load();
   }
 
-  /// 这一页的题目 + 全站作答统计。两个请求串行（统计要拿题目 id），
-  /// 但它是附加信息，取不到就退化成空表（fetchAccuracyOrEmpty），不影响列表。
+  /// 这一页的题目 + 全站作答统计。两个请求串行（统计要拿题目 id），但它是附加信息，取不到就退化成空表。
   Future<(QuestionPage, Map<String, QuestionAccuracy>)> _fetchPage() async {
     // 两个仓储都在 await 之前取好：第二次 context.read 落在 await 之后会触发
     // use_build_context_synchronously（widget 在第一段 await 里被卸载就危险了）
