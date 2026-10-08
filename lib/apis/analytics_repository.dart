@@ -12,11 +12,16 @@ import 'package:mianyang_quiz/utils/utils.dart';
 import 'package:mianyang_quiz/entity/entity.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-/// 榜单口径：与 SQL 的 p_scope 一一对应。
+/// 榜单口径：与 SQL 的 p_scope 一一对应（0077 建三档、0086 加 province）。
+///
+/// 注意「全市」0086 起是**真按市筛**（人的市由 profile → school → city 推导，0082），
+/// 「全省」才是全平台 —— 在此之前 city 档实际是全平台，两档会给出同一份数字。
+/// 键名必须与服务端 resolve_paper_scope 的白名单一字不差，否则服务端直接报"范围不合法"。
 enum LeaderboardScopeKey {
   classScope('class', '全班'),
   school('school', '全校'),
-  city('city', '全市');
+  city('city', '全市'),
+  province('province', '全省');
 
   const LeaderboardScopeKey(this.wire, this.label);
 

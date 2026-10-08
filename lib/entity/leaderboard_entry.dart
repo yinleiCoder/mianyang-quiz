@@ -49,7 +49,7 @@ abstract class LeaderboardRow with _$LeaderboardRow {
       _$LeaderboardRowFromJson(json);
 }
 
-/// 我在这场考试上的全部位置信息（三档名次一次算完，见 0077 的 window 分区）。
+/// 我在这场考试上的全部位置信息（四档名次一次算完，见 0077 的 window 分区、0086 的 province）。
 @freezed
 abstract class LeaderboardViewer with _$LeaderboardViewer {
   const factory LeaderboardViewer({
@@ -74,7 +74,10 @@ abstract class LeaderboardViewer with _$LeaderboardViewer {
     @JsonKey(name: 'school_total') int? schoolTotal,
     @JsonKey(name: 'city_rank') int? cityRank,
     @JsonKey(name: 'city_total') int? cityTotal,
+    @JsonKey(name: 'province_rank') int? provinceRank,
+    @JsonKey(name: 'province_total') int? provinceTotal,
     /// 超过全市多少比例的人（0~1）。榜上只有我一人时是 1。
+    /// 推不出市（没绑学校）时服务端给 null → 按 0 读。
     @Default(0) double percentile,
     LeaderboardChase? chase,
   }) = _LeaderboardViewer;

@@ -92,6 +92,8 @@ class MyRankCard extends StatelessWidget {
                 _Line(text: '全校 ${me.schoolRank}/${me.schoolTotal}'),
               if ((me.cityRank ?? 0) > 0)
                 _Line(text: '全市 ${me.cityRank}/${me.cityTotal}（超过 ${(me.percentile * 100).round()}%）'),
+              if ((me.provinceRank ?? 0) > 0)
+                _Line(text: '全省 ${me.provinceRank}/${me.provinceTotal}'),
             ],
           ),
         ],
@@ -124,7 +126,10 @@ class MyRankCard extends StatelessWidget {
     'not_submitted' => '你还没交过这份卷子：交卷后就会出现在榜上。',
     'not_official' => '你这一场是自主练习。同一份卷只有第一次交卷计入排行。',
     'not_graded' => '你已交卷，等主观题判完出分后才会进榜。',
-    'not_in_class' => '你还没有分班，看不到全班榜——先看全校或全市。',
+    'not_in_class' => '你还没有分班，看不到全班榜——先看全校或全省。',
+    // 0086 起"全市"是真按市筛的：没绑学校就推不出市（原先这档能看到全平台，
+    // 收口后是一张空榜——必须给出下一步，否则等于告诉学生"你的成绩没了"）
+    'no_school' => '你还没有绑定学校，看不到全校/全市的榜单——先看全省。',
     'empty_scope' => '这个范围里还没有可比的成绩。',
     _ => null,
   };

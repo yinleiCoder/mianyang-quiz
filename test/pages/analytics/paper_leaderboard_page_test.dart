@@ -57,6 +57,40 @@ void main() {
     expect(fake.scopes, [LeaderboardScopeKey.classScope, LeaderboardScopeKey.school]);
   });
 
+  testWidgets('切到全省：带着新 scope 重新取数', (tester) async {
+    final fake = _FakeAnalytics(_board());
+    await _pump(tester, fake);
+    expect(fake.scopes, [LeaderboardScopeKey.classScope]);
+
+    await tester.tap(find.text('全省'));
+    await tester.pumpAndSettle();
+
+    expect(fake.scopes, [LeaderboardScopeKey.classScope, LeaderboardScopeKey.province]);
+  });
+
+  testWidgets('我的位置：四档名次一起显示（全校 · 全市 · 全省）', (tester) async {
+    final fake = _FakeAnalytics(
+      _board(
+        viewer: const LeaderboardViewer(
+          userId: 'u1', name: '唐涛', rank: 2, scopeTotal: 3, score: 80, fullScore: 100, percent: 0.8,
+          schoolRank: 3, schoolTotal: 10, cityRank: 3, cityTotal: 10, provinceRank: 3, provinceTotal: 10,
+        ),
+      ),
+    );
+    await _pump(tester, fake);
+
+    expect(find.textContaining('全校 3/10'), findsOneWidget);
+    expect(find.textContaining('全市 3/10'), findsOneWidget);
+    expect(find.textContaining('全省 3/10'), findsOneWidget);
+  });
+
+  testWidgets('没绑学校：全市空榜时说出原因（no_school）', (tester) async {
+    final fake = _FakeAnalytics(_board(viewerNote: 'no_school'));
+    await _pump(tester, fake);
+
+    expect(find.textContaining('先看全省'), findsOneWidget);
+  });
+
   testWidgets('桌面 1280×800 下不出现布局异常', (tester) async {
     final fake = _FakeAnalytics(
       _board(

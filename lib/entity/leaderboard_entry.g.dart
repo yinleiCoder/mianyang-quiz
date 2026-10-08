@@ -127,6 +127,14 @@ _LeaderboardViewer _$LeaderboardViewerFromJson(
       schoolTotal: $checkedConvert('school_total', (v) => (v as num?)?.toInt()),
       cityRank: $checkedConvert('city_rank', (v) => (v as num?)?.toInt()),
       cityTotal: $checkedConvert('city_total', (v) => (v as num?)?.toInt()),
+      provinceRank: $checkedConvert(
+        'province_rank',
+        (v) => (v as num?)?.toInt(),
+      ),
+      provinceTotal: $checkedConvert(
+        'province_total',
+        (v) => (v as num?)?.toInt(),
+      ),
       percentile: $checkedConvert(
         'percentile',
         (v) => (v as num?)?.toDouble() ?? 0,
@@ -157,6 +165,8 @@ _LeaderboardViewer _$LeaderboardViewerFromJson(
     'schoolTotal': 'school_total',
     'cityRank': 'city_rank',
     'cityTotal': 'city_total',
+    'provinceRank': 'province_rank',
+    'provinceTotal': 'province_total',
   },
 );
 
@@ -182,6 +192,8 @@ Map<String, dynamic> _$LeaderboardViewerToJson(_LeaderboardViewer instance) =>
       'school_total': instance.schoolTotal,
       'city_rank': instance.cityRank,
       'city_total': instance.cityTotal,
+      'province_rank': instance.provinceRank,
+      'province_total': instance.provinceTotal,
       'percentile': instance.percentile,
       'chase': instance.chase?.toJson(),
     };
