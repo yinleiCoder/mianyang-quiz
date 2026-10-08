@@ -55,12 +55,36 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(tester.widget<Slider>(find.byType(Slider)).value, 100);
   });
+
+  // 练习方式那一组是**遍历 PracticeMode.values 画的**，所以新增一种模式
+  // 会自动多一张卡——多出来的那张会不会把窄屏撑破，只有真渲染一次才知道。
+  testWidgets('三种练习方式都能在窄屏画出来，且没有溢出', (tester) async {
+    await _pump(tester, limit: 20, mode: PracticeMode.sequential);
+
+    expect(find.text(PracticeMode.instant.label), findsOneWidget);
+    expect(find.text(PracticeMode.batch.label), findsOneWidget);
+    expect(find.text(PracticeMode.sequential.label), findsOneWidget);
+    expect(find.text(PracticeMode.sequential.description), findsOneWidget);
+    expect(tester.takeException(), isNull, reason: '390 宽下不许 RenderFlex 溢出');
+  });
+
+  testWidgets('点一下就回调那个模式（顺序练习要能选得中）', (tester) async {
+    final picked = <PracticeMode>[];
+    await _pump(tester, limit: 20, onModeChanged: picked.add);
+
+    await tester.tap(find.text(PracticeMode.sequential.label));
+    await tester.pump();
+
+    expect(picked, [PracticeMode.sequential]);
+  });
 }
 
 Future<void> _pump(
   WidgetTester tester, {
   required int limit,
   ValueChanged<int>? onChanged,
+  PracticeMode mode = PracticeMode.instant,
+  ValueChanged<PracticeMode>? onModeChanged,
 }) async {
   tester.view.physicalSize = const Size(390, 844);
   tester.view.devicePixelRatio = 1.0;
@@ -75,11 +99,11 @@ Future<void> _pump(
         home: Scaffold(
           body: SingleChildScrollView(
             child: ComposeOptions(
-              mode: PracticeMode.instant,
+              mode: mode,
               limit: limit,
               shuffle: true,
               sound: true,
-              onModeChanged: (_) {},
+              onModeChanged: onModeChanged ?? (_) {},
               onLimitChanged: onChanged ?? (_) {},
               onShuffleChanged: (_) {},
               onSoundChanged: (_) {},

@@ -123,7 +123,11 @@ class _Body extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              ExamResultSummary(attempt: attempt, title: paper.title),
+              // 交卷后的一次性落位：成绩卡先到，逐题卡片随后依次出现。**只做入场**——
+              // 分数是拿来读的，不做数字滚动或撒花。
+              FadeSlideIn(
+                child: ExamResultSummary(attempt: attempt, title: paper.title),
+              ),
               SizedBox(height: AppMetrics.gapMd.r),
               // 成绩榜入口就放在成绩旁边：看完分数最想知道的就是"我这分在班里算什么水平"。
               // 卷名随 extra 带过去，榜页标题不用等一次加载。
@@ -166,12 +170,15 @@ class _Body extends StatelessWidget {
               SizedBox(height: AppMetrics.gapMd.r),
               for (var i = 0; i < items.length; i++) ...[
                 if (i > 0) SizedBox(height: AppMetrics.gapMd.r),
-                ExamReviewCard(
-                  number: i + 1,
-                  item: items[i],
-                  record: answers[items[i].id],
-                  revealed: revealed,
-                  stat: stats[items[i].id],
+                FadeSlideIn(
+                  order: i,
+                  child: ExamReviewCard(
+                    number: i + 1,
+                    item: items[i],
+                    record: answers[items[i].id],
+                    revealed: revealed,
+                    stat: stats[items[i].id],
+                  ),
                 ),
               ],
               SizedBox(height: AppMetrics.gapXl.r),

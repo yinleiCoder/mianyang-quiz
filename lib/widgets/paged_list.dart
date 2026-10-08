@@ -22,6 +22,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/utils/utils.dart';
 import 'package:mianyang_quiz/values/values.dart';
 import 'package:mianyang_quiz/widgets/async_view.dart';
+import 'package:mianyang_quiz/widgets/fade_slide_in.dart';
 import 'package:mianyang_quiz/widgets/list_footer.dart';
 import 'package:mianyang_quiz/widgets/pull_to_refresh.dart';
 
@@ -178,13 +179,12 @@ mixin PagedListState<T, W extends StatefulWidget> on State<W> {
           separatorBuilder: (_, _) => SizedBox(height: rowGap),
           itemBuilder: (context, index) => index == loaded.length
               ? ListFooter(hasMore: _hasMore, loading: _loadingMore, onLoadMore: loadMore)
-              : buildRow(context, loaded[index]),
+              : rowEntrance(index, buildRow(context, loaded[index])),
         ),
       );
 
       final header = buildHeader(context);
-      // 没有顶栏就直接返回列表：多包一层 Column 会让 ListView 失去
-      // "自己是滚动根"的身份（要再套 Expanded 才不报错），纯属自找麻烦。
+      // 没有顶栏就直接返回列表：多包一层 Column 会让 ListView 失去"自己是滚动根"的身份。
       if (header == null) return list;
       return Column(
         children: [

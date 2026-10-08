@@ -9,6 +9,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/values/values.dart';
 import 'package:mianyang_quiz/entity/entity.dart';
 import 'package:mianyang_quiz/apis/apis.dart';
+import 'package:mianyang_quiz/widgets/widgets.dart';
 import 'package:mianyang_quiz/pages/bank/widgets/question_list_tile.dart';
 
 class QuestionListView extends StatelessWidget {
@@ -49,7 +50,7 @@ class QuestionListView extends StatelessWidget {
         itemBuilder: (context, index) {
           final brief = rows[index];
           final stat = accuracy[brief.questionId];
-          return QuestionListTile(
+          final tile = QuestionListTile(
             brief: brief,
             isFavorite: isFavorite(brief.questionId),
             onTap: () => onOpen(brief),
@@ -57,6 +58,8 @@ class QuestionListView extends StatelessWidget {
             accuracyAttempts: stat?.attempts ?? 0,
             accuracyCorrect: stat?.correct ?? 0,
           );
+          // 长列表的行入场只给首屏那几行（见 widgets/fade_slide_in.dart 的 rowEntrance）
+          return rowEntrance(index, tile);
         },
       ),
     );

@@ -66,7 +66,7 @@ class _WrongQuestionsTabState extends State<WrongQuestionsTab>
 
   @override
   Widget buildEmpty(BuildContext context) => EmptyState(
-    icon: Icons.emoji_events_outlined,
+    art: true,
     title: '还没有错题，继续保持',
     message: '做错的题会自动收进这里，随时可以重练',
     action: DuoButton(

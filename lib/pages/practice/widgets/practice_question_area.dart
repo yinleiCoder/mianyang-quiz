@@ -35,7 +35,21 @@ class PracticeQuestionArea extends StatelessWidget {
         vertical: AppMetrics.gapLg,
       ),
       child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 180),
+        duration: AppMotion.medium,
+        // 新题从下方 12px 淡入（默认只有淡入）。切题是刷题里最高频的动作，
+        // 一点方向感能让"换了一题"和"这题刷新了"区分开——**别加长时长**：
+        // 一场练习要切几十次，超过 250ms 就成了可感知的等待。
+        transitionBuilder: (child, animation) => FadeTransition(
+          opacity: animation,
+          child: AnimatedBuilder(
+            animation: animation,
+            child: child,
+            builder: (context, inner) => Transform.translate(
+              offset: Offset(0, 12.r * (1 - animation.value)),
+              child: inner,
+            ),
+          ),
+        ),
         // key 必须给 child，不能给 AnimatedSwitcher 本身：
         // 它靠 `Widget.canUpdate(新 child, 旧 child)` 判断"是不是换人了"，
         // 而 canUpdate 比的是 runtimeType + key。child 不带 key 时恒为 true，

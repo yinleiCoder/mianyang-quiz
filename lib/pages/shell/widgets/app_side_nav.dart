@@ -36,7 +36,9 @@ class AppSideNav extends StatelessWidget {
     return Container(
       width: width,
       decoration: BoxDecoration(
-        color: scheme.surfaceContainer,
+        // Windows 亮色下取纯白、其余取 surfaceContainer（规则与理由见 AppSurfaces）。
+        // 别在这里改成写死的颜色：暗色模式会跟着一起白掉。
+        color: AppSurfaces.sideNav(theme),
         border: Border(right: BorderSide(color: scheme.outlineVariant)),
       ),
       child: SafeArea(

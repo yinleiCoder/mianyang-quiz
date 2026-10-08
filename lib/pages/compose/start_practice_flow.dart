@@ -51,10 +51,14 @@ Future<bool> startPracticeFlow(
 
   final repository = context.read<PracticeRepository>();
   try {
+    // sequential 这个开关只改一件事：走哪个 RPC（见 practice_repository.startSession）。
+    // 顺序练习那条**没有"今天该练的都练完了"**——它不看到期与当日额度，
+    // 所以下面那支分支对它永远不会命中，不必单独写一遍流程。
     var outcome = await repository.startSession(
       filter: draft.filter,
       limit: draft.limit,
       source: draft.source,
+      sequential: draft.mode == PracticeMode.sequential,
     );
     if (!context.mounted) return false;
 

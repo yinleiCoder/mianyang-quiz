@@ -104,12 +104,15 @@ class _PaperAnalysisPageState extends State<PaperAnalysisPage> {
                 ),
               )
             else
-              for (final item in stats.items) ...[
-                QuestionStatCard(
-                  stat: item,
-                  // 题型中文名的唯一出处是 values/qtype_meta.dart；
-                  // 认不出的取值落到「未知题型」而不是崩（题库加新题型时旧客户端照常显示）
-                  qtypeLabel: questionTypeFrom(item.qtype).label,
+              for (final (i, item) in stats.items.indexed) ...[
+                FadeSlideIn(
+                  order: i,
+                  child: QuestionStatCard(
+                    stat: item,
+                    // 题型中文名的唯一出处是 values/qtype_meta.dart；
+                    // 认不出的取值落到「未知题型」而不是崩（题库加新题型时旧客户端照常显示）
+                    qtypeLabel: questionTypeFrom(item.qtype).label,
+                  ),
                 ),
                 SizedBox(height: AppMetrics.gapSm.r),
               ],

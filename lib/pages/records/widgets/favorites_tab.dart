@@ -95,7 +95,7 @@ class _FavoritesTabState extends State<FavoritesTab>
 
   @override
   Widget buildEmpty(BuildContext context) => EmptyState(
-    icon: Icons.bookmark_border_rounded,
+    art: true,
     title: '还没有收藏的题',
     message: '在题库或题目详情里点收藏，题会收进这里',
     action: DuoButton(

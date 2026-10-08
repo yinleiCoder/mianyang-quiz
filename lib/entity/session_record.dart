@@ -32,6 +32,10 @@ abstract class PracticeSessionRecord with _$PracticeSessionRecord {
     @JsonKey(name: 'total_count') @Default(0) int totalCount,
     @JsonKey(name: 'answered_count') @Default(0) int answeredCount,
     @JsonKey(name: 'correct_count') @Default(0) int correctCount,
+
+    /// 是否计入学习统计（0090）。false = 课堂顺序练习：这一轮没往 practice_answers
+    /// 写任何东西，所以它的 correct_count 恒为 0 —— 列表里**不能**照常显示正确率。
+    @Default(true) bool scored,
   }) = _PracticeSessionRecord;
 
   factory PracticeSessionRecord.fromJson(Map<String, dynamic> json) =>

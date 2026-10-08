@@ -72,51 +72,68 @@ class _DashboardBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final active = dashboard.activeSession;
 
+    // 一屏几块内容依次落位（order 是错开顺序，封顶 6 档）。**只包内容块不包间距**：
+    // 空隙本来就看不见，让它占一份错开延迟是白等。
     return ListView(
       padding: const EdgeInsets.all(AppMetrics.pagePadding),
       children: [
-        StreakHeader(name: name, dashboard: dashboard),
+        FadeSlideIn(child: StreakHeader(name: name, dashboard: dashboard)),
         if (active != null) ...[
           const SizedBox(height: AppMetrics.gapLg),
-          ActiveSessionCard(session: active),
+          FadeSlideIn(order: 1, child: ActiveSessionCard(session: active)),
         ],
         const SizedBox(height: AppMetrics.gapLg),
-        const HomeActions(),
+        const FadeSlideIn(order: 2, child: HomeActions()),
         const SizedBox(height: AppMetrics.gapXl),
-        _StatGrid(dashboard: dashboard),
+        FadeSlideIn(order: 3, child: _StatGrid(dashboard: dashboard)),
         const SizedBox(height: AppMetrics.gapXl),
-        const SectionHeader(title: '最近做过的题'),
-        RecentAnswersSection(answers: dashboard.recent),
-        const SizedBox(height: AppMetrics.gapXl),
-        const SectionHeader(
-          title: '近两周练习',
-          subtitle: '每天答对的题数越多，说明手感越稳',
+        const FadeSlideIn(order: 4, child: SectionHeader(title: '最近做过的题')),
+        FadeSlideIn(
+          order: 5,
+          child: RecentAnswersSection(answers: dashboard.recent),
         ),
-        DuoCard(
-          padding: const EdgeInsets.fromLTRB(
-            AppMetrics.gapMd,
-            AppMetrics.gapLg,
-            AppMetrics.gapLg,
-            AppMetrics.gapMd,
+        const SizedBox(height: AppMetrics.gapXl),
+        const FadeSlideIn(
+          order: 4,
+          child: SectionHeader(
+            title: '近两周练习',
+            subtitle: '每天答对的题数越多，说明手感越稳',
           ),
-          child: DailyTrendChart(daily: dashboard.daily),
+        ),
+        FadeSlideIn(
+          order: 5,
+          child: DuoCard(
+            padding: const EdgeInsets.fromLTRB(
+              AppMetrics.gapMd,
+              AppMetrics.gapLg,
+              AppMetrics.gapLg,
+              AppMetrics.gapMd,
+            ),
+            child: DailyTrendChart(daily: dashboard.daily),
+          ),
         ),
         const SizedBox(height: AppMetrics.gapXl),
         // 与上面那张是同一个话题的两面：**练了多少** vs **记得多牢**。
         // 数据服务端早就在算（迁移 0067 给 practice_dashboard 加了 forgetting_curve），
         // 客户端一直没接——这张图就是把它接上。
-        const SectionHeader(
-          title: '遗忘曲线',
-          subtitle: '你自己的保持率 vs 艾宾浩斯理论曲线',
-        ),
-        DuoCard(
-          padding: const EdgeInsets.fromLTRB(
-            AppMetrics.gapMd,
-            AppMetrics.gapLg,
-            AppMetrics.gapLg,
-            AppMetrics.gapMd,
+        const FadeSlideIn(
+          order: 4,
+          child: SectionHeader(
+            title: '遗忘曲线',
+            subtitle: '你自己的保持率 vs 艾宾浩斯理论曲线',
           ),
-          child: ForgettingCurveCard(buckets: dashboard.forgettingCurve),
+        ),
+        FadeSlideIn(
+          order: 5,
+          child: DuoCard(
+            padding: const EdgeInsets.fromLTRB(
+              AppMetrics.gapMd,
+              AppMetrics.gapLg,
+              AppMetrics.gapLg,
+              AppMetrics.gapMd,
+            ),
+            child: ForgettingCurveCard(buckets: dashboard.forgettingCurve),
+          ),
         ),
       ],
     );

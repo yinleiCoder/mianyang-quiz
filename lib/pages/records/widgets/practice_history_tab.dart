@@ -71,7 +71,7 @@ class _PracticeHistoryTabState extends State<PracticeHistoryTab>
 
   @override
   Widget buildEmpty(BuildContext context) => EmptyState(
-    icon: Icons.history_rounded,
+    art: true,
     title: '还没有练习记录',
     message: '组一套题练完，成绩与复盘会留在这里',
     action: DuoButton(

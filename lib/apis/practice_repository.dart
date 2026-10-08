@@ -39,16 +39,20 @@ class PracticeRepository {
     PracticeSource source = PracticeSource.all,
     List<String>? questionIds,
     bool allowSameDay = false,
+    bool sequential = false,
   }) async {
     try {
       final data = await _client.rpc<Map<String, dynamic>>(
-        'start_practice_session',
+        // 顺序练习（教师讲练）走另一个函数：挑法与排法都不同，也不计入学情统计（0090）。
+        // 服务端两个函数共用同一个候选池，所以参数表只差一个"允不允许当天加练"。
+        sequential ? 'start_sequential_practice' : 'start_practice_session',
         params: {
           ...filter.toRpcParams(),
           'p_limit': limit,
           'p_source': source.wire,
           'p_question_ids': questionIds,
-          'p_allow_same_day': allowSameDay,
+          // 顺序练习那个函数没有这个参数 —— 多传一个未知参数 PostgREST 会直接拒（PGRST202）
+          if (!sequential) 'p_allow_same_day': allowSameDay,
         },
       );
       // 这一支的 session_id 是 null（服务端没建会话），不能交给快照模型解析。
@@ -165,7 +169,7 @@ class PracticeRepository {
           .from('practice_sessions')
           .select(
             'id, source, status, started_at, submitted_at, duration_ms, '
-            'total_count, answered_count, correct_count',
+            'total_count, answered_count, correct_count, scored',
           )
           .order('started_at', ascending: false)
           .range(offset, offset + limit - 1);

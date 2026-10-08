@@ -9,12 +9,16 @@
 //
 // 参数故意只收**展示用的字段**而不是一个 NavDestination：
 // 硬塞一个 destination 会在类型上假装快捷入口也有选中态。
+//
+// 悬停高亮**只在鼠标真的进来时**出现（MouseRegion 的 onEnter/onExit）：侧栏是宽屏
+// 桌面端的形态，触屏与键盘用户不会经过那条路径，所以它只是"锦上添花"，
+// 不能是唯一的选中提示——选中态另有实心图标 + 浅色底 + 加粗三层表达。
 
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/values/values.dart';
 
-class SideNavItem extends StatelessWidget {
+class SideNavItem extends StatefulWidget {
   const SideNavItem({
     super.key,
     required this.label,
@@ -37,10 +41,23 @@ class SideNavItem extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
+  State<SideNavItem> createState() => _SideNavItemState();
+}
+
+class _SideNavItemState extends State<SideNavItem> {
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final color = selected ? scheme.onPrimaryContainer : scheme.onSurfaceVariant;
+    final color = widget.selected
+        ? scheme.onPrimaryContainer
+        : scheme.onSurfaceVariant;
+    // 悬停底比选中底淡一档：让人看出"这里可以点"，又不至于误以为已经选中
+    final background = widget.selected
+        ? scheme.primaryContainer
+        : (_hovered ? scheme.surfaceContainerHighest : null);
 
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -49,35 +66,47 @@ class SideNavItem extends StatelessWidget {
       ),
       child: Semantics(
         button: true,
-        selected: selected,
-        label: label,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(AppMetrics.radiusButton.r),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 120),
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppMetrics.gapMd,
-              vertical: AppMetrics.gapMd,
-            ),
-            decoration: BoxDecoration(
-              color: selected ? scheme.primaryContainer : null,
-              borderRadius: BorderRadius.circular(AppMetrics.radiusButton.r),
-            ),
-            child: Row(
-              children: [
-                Icon(selected ? activeIcon : icon, size: 22.r, color: color),
-                const SizedBox(width: AppMetrics.gapMd),
-                Expanded(
-                  child: Text(
-                    label,
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      color: color,
-                      fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+        selected: widget.selected,
+        label: widget.label,
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          onEnter: (_) => setState(() => _hovered = true),
+          onExit: (_) => setState(() => _hovered = false),
+          child: InkWell(
+            onTap: widget.onTap,
+            borderRadius: BorderRadius.circular(AppMetrics.radiusButton.r),
+            child: AnimatedContainer(
+              duration: AppMotion.fast,
+              curve: AppMotion.standard,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppMetrics.gapMd,
+                vertical: AppMetrics.gapMd,
+              ),
+              decoration: BoxDecoration(
+                color: background,
+                borderRadius: BorderRadius.circular(AppMetrics.radiusButton.r),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    widget.selected ? widget.activeIcon : widget.icon,
+                    size: 22.r,
+                    color: color,
+                  ),
+                  const SizedBox(width: AppMetrics.gapMd),
+                  Expanded(
+                    child: Text(
+                      widget.label,
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        color: color,
+                        fontWeight: widget.selected
+                            ? FontWeight.w700
+                            : FontWeight.w400,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

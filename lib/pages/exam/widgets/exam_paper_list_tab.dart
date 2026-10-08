@@ -44,7 +44,7 @@ class _ExamPaperListTabState extends State<ExamPaperListTab>
 
   @override
   Widget buildEmpty(BuildContext context) => EmptyState(
-    icon: Icons.assignment_outlined,
+    art: true,
     title: '还没有试卷',
     message: '老师把试卷提交入库后，这里就能看到。\n在那之前，先去题库刷几道题吧。',
     action: DuoButton(

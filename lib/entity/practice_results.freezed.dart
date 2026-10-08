@@ -318,7 +318,9 @@ mixin _$FinishSummary {
 
  int get total; int get answered; int get correct; int get wrong;/// 未作答数 = total - answered。
  int get omitted;/// 正确率 = correct / **total**（分母是总题数，不是已答数——与看板口径不同）。
- double get accuracy;@JsonKey(name: 'duration_ms') int get durationMs;
+ double get accuracy;@JsonKey(name: 'duration_ms') int get durationMs;/// 这一轮是否计入学习统计（0090）。服务端返回的结算里没有这个字段 → 默认 true；
+/// 顺序练习（课堂讲练）的结算是在本机算的，会把它置为 false，结果页据此加一句说明。
+ bool get scored;
 /// Create a copy of FinishSummary
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -332,20 +334,20 @@ $FinishSummaryCopyWith<FinishSummary> get copyWith => _$FinishSummaryCopyWithImp
 @override
 bool operator ==(Object other) {
   final _this = this as FinishSummary;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is FinishSummary&&(identical(other.total, _this.total) || other.total == _this.total)&&(identical(other.answered, _this.answered) || other.answered == _this.answered)&&(identical(other.correct, _this.correct) || other.correct == _this.correct)&&(identical(other.wrong, _this.wrong) || other.wrong == _this.wrong)&&(identical(other.omitted, _this.omitted) || other.omitted == _this.omitted)&&(identical(other.accuracy, _this.accuracy) || other.accuracy == _this.accuracy)&&(identical(other.durationMs, _this.durationMs) || other.durationMs == _this.durationMs));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is FinishSummary&&(identical(other.total, _this.total) || other.total == _this.total)&&(identical(other.answered, _this.answered) || other.answered == _this.answered)&&(identical(other.correct, _this.correct) || other.correct == _this.correct)&&(identical(other.wrong, _this.wrong) || other.wrong == _this.wrong)&&(identical(other.omitted, _this.omitted) || other.omitted == _this.omitted)&&(identical(other.accuracy, _this.accuracy) || other.accuracy == _this.accuracy)&&(identical(other.durationMs, _this.durationMs) || other.durationMs == _this.durationMs)&&(identical(other.scored, _this.scored) || other.scored == _this.scored));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as FinishSummary;
-  return Object.hash(runtimeType,_this.total,_this.answered,_this.correct,_this.wrong,_this.omitted,_this.accuracy,_this.durationMs);
+  return Object.hash(runtimeType,_this.total,_this.answered,_this.correct,_this.wrong,_this.omitted,_this.accuracy,_this.durationMs,_this.scored);
 }
 
 @override
 String toString() {
   final _this = this as FinishSummary;
-  return 'FinishSummary(total: ${_this.total}, answered: ${_this.answered}, correct: ${_this.correct}, wrong: ${_this.wrong}, omitted: ${_this.omitted}, accuracy: ${_this.accuracy}, durationMs: ${_this.durationMs})';
+  return 'FinishSummary(total: ${_this.total}, answered: ${_this.answered}, correct: ${_this.correct}, wrong: ${_this.wrong}, omitted: ${_this.omitted}, accuracy: ${_this.accuracy}, durationMs: ${_this.durationMs}, scored: ${_this.scored})';
 }
 
 
@@ -356,7 +358,7 @@ abstract mixin class $FinishSummaryCopyWith<$Res>  {
   factory $FinishSummaryCopyWith(FinishSummary value, $Res Function(FinishSummary) _then) = _$FinishSummaryCopyWithImpl;
 @useResult
 $Res call({
- int total, int answered, int correct, int wrong, int omitted, double accuracy,@JsonKey(name: 'duration_ms') int durationMs
+ int total, int answered, int correct, int wrong, int omitted, double accuracy,@JsonKey(name: 'duration_ms') int durationMs, bool scored
 });
 
 
@@ -373,7 +375,7 @@ class _$FinishSummaryCopyWithImpl<$Res>
 
 /// Create a copy of FinishSummary
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? total = null,Object? answered = null,Object? correct = null,Object? wrong = null,Object? omitted = null,Object? accuracy = null,Object? durationMs = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? total = null,Object? answered = null,Object? correct = null,Object? wrong = null,Object? omitted = null,Object? accuracy = null,Object? durationMs = null,Object? scored = null,}) {
   return _then(FinishSummary(
 total: null == total ? _self.total : total // ignore: cast_nullable_to_non_nullable
 as int,answered: null == answered ? _self.answered : answered // ignore: cast_nullable_to_non_nullable
@@ -382,7 +384,8 @@ as int,wrong: null == wrong ? _self.wrong : wrong // ignore: cast_nullable_to_no
 as int,omitted: null == omitted ? _self.omitted : omitted // ignore: cast_nullable_to_non_nullable
 as int,accuracy: null == accuracy ? _self.accuracy : accuracy // ignore: cast_nullable_to_non_nullable
 as double,durationMs: null == durationMs ? _self.durationMs : durationMs // ignore: cast_nullable_to_non_nullable
-as int,
+as int,scored: null == scored ? _self.scored : scored // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 
@@ -467,10 +470,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int total,  int answered,  int correct,  int wrong,  int omitted,  double accuracy, @JsonKey(name: 'duration_ms')  int durationMs)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int total,  int answered,  int correct,  int wrong,  int omitted,  double accuracy, @JsonKey(name: 'duration_ms')  int durationMs,  bool scored)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _FinishSummary() when $default != null:
-return $default(_that.total,_that.answered,_that.correct,_that.wrong,_that.omitted,_that.accuracy,_that.durationMs);case _:
+return $default(_that.total,_that.answered,_that.correct,_that.wrong,_that.omitted,_that.accuracy,_that.durationMs,_that.scored);case _:
   return orElse();
 
 }
@@ -488,10 +491,10 @@ return $default(_that.total,_that.answered,_that.correct,_that.wrong,_that.omitt
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int total,  int answered,  int correct,  int wrong,  int omitted,  double accuracy, @JsonKey(name: 'duration_ms')  int durationMs)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int total,  int answered,  int correct,  int wrong,  int omitted,  double accuracy, @JsonKey(name: 'duration_ms')  int durationMs,  bool scored)  $default,) {final _that = this;
 switch (_that) {
 case _FinishSummary():
-return $default(_that.total,_that.answered,_that.correct,_that.wrong,_that.omitted,_that.accuracy,_that.durationMs);case _:
+return $default(_that.total,_that.answered,_that.correct,_that.wrong,_that.omitted,_that.accuracy,_that.durationMs,_that.scored);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -508,10 +511,10 @@ return $default(_that.total,_that.answered,_that.correct,_that.wrong,_that.omitt
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int total,  int answered,  int correct,  int wrong,  int omitted,  double accuracy, @JsonKey(name: 'duration_ms')  int durationMs)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int total,  int answered,  int correct,  int wrong,  int omitted,  double accuracy, @JsonKey(name: 'duration_ms')  int durationMs,  bool scored)?  $default,) {final _that = this;
 switch (_that) {
 case _FinishSummary() when $default != null:
-return $default(_that.total,_that.answered,_that.correct,_that.wrong,_that.omitted,_that.accuracy,_that.durationMs);case _:
+return $default(_that.total,_that.answered,_that.correct,_that.wrong,_that.omitted,_that.accuracy,_that.durationMs,_that.scored);case _:
   return null;
 
 }
@@ -523,7 +526,7 @@ return $default(_that.total,_that.answered,_that.correct,_that.wrong,_that.omitt
 @JsonSerializable()
 
 class _FinishSummary implements FinishSummary {
-  const _FinishSummary({this.total = 0, this.answered = 0, this.correct = 0, this.wrong = 0, this.omitted = 0, this.accuracy = 0, @JsonKey(name: 'duration_ms') this.durationMs = 0});
+  const _FinishSummary({this.total = 0, this.answered = 0, this.correct = 0, this.wrong = 0, this.omitted = 0, this.accuracy = 0, @JsonKey(name: 'duration_ms') this.durationMs = 0, this.scored = true});
   factory _FinishSummary.fromJson(Map<String, dynamic> json) => _$FinishSummaryFromJson(json);
 
 @override@JsonKey() final  int total;
@@ -535,6 +538,9 @@ class _FinishSummary implements FinishSummary {
 /// 正确率 = correct / **total**（分母是总题数，不是已答数——与看板口径不同）。
 @override@JsonKey() final  double accuracy;
 @override@JsonKey(name: 'duration_ms') final  int durationMs;
+/// 这一轮是否计入学习统计（0090）。服务端返回的结算里没有这个字段 → 默认 true；
+/// 顺序练习（课堂讲练）的结算是在本机算的，会把它置为 false，结果页据此加一句说明。
+@override@JsonKey() final  bool scored;
 
 /// Create a copy of FinishSummary
 /// with the given fields replaced by the non-null parameter values.
@@ -549,18 +555,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _FinishSummary&&(identical(other.total, total) || other.total == total)&&(identical(other.answered, answered) || other.answered == answered)&&(identical(other.correct, correct) || other.correct == correct)&&(identical(other.wrong, wrong) || other.wrong == wrong)&&(identical(other.omitted, omitted) || other.omitted == omitted)&&(identical(other.accuracy, accuracy) || other.accuracy == accuracy)&&(identical(other.durationMs, durationMs) || other.durationMs == durationMs));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _FinishSummary&&(identical(other.total, total) || other.total == total)&&(identical(other.answered, answered) || other.answered == answered)&&(identical(other.correct, correct) || other.correct == correct)&&(identical(other.wrong, wrong) || other.wrong == wrong)&&(identical(other.omitted, omitted) || other.omitted == omitted)&&(identical(other.accuracy, accuracy) || other.accuracy == accuracy)&&(identical(other.durationMs, durationMs) || other.durationMs == durationMs)&&(identical(other.scored, scored) || other.scored == scored));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,total,answered,correct,wrong,omitted,accuracy,durationMs);
+    return Object.hash(runtimeType,total,answered,correct,wrong,omitted,accuracy,durationMs,scored);
 }
 
 @override
 String toString() {
-    return 'FinishSummary(total: $total, answered: $answered, correct: $correct, wrong: $wrong, omitted: $omitted, accuracy: $accuracy, durationMs: $durationMs)';
+    return 'FinishSummary(total: $total, answered: $answered, correct: $correct, wrong: $wrong, omitted: $omitted, accuracy: $accuracy, durationMs: $durationMs, scored: $scored)';
 }
 
 
@@ -571,7 +577,7 @@ abstract mixin class _$FinishSummaryCopyWith<$Res> implements $FinishSummaryCopy
   factory _$FinishSummaryCopyWith(_FinishSummary value, $Res Function(_FinishSummary) _then) = __$FinishSummaryCopyWithImpl;
 @override @useResult
 $Res call({
- int total, int answered, int correct, int wrong, int omitted, double accuracy,@JsonKey(name: 'duration_ms') int durationMs
+ int total, int answered, int correct, int wrong, int omitted, double accuracy,@JsonKey(name: 'duration_ms') int durationMs, bool scored
 });
 
 
@@ -588,7 +594,7 @@ class __$FinishSummaryCopyWithImpl<$Res>
 
 /// Create a copy of FinishSummary
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? total = null,Object? answered = null,Object? correct = null,Object? wrong = null,Object? omitted = null,Object? accuracy = null,Object? durationMs = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? total = null,Object? answered = null,Object? correct = null,Object? wrong = null,Object? omitted = null,Object? accuracy = null,Object? durationMs = null,Object? scored = null,}) {
   return _then(_FinishSummary(
 total: null == total ? _self.total : total // ignore: cast_nullable_to_non_nullable
 as int,answered: null == answered ? _self.answered : answered // ignore: cast_nullable_to_non_nullable
@@ -597,7 +603,8 @@ as int,wrong: null == wrong ? _self.wrong : wrong // ignore: cast_nullable_to_no
 as int,omitted: null == omitted ? _self.omitted : omitted // ignore: cast_nullable_to_non_nullable
 as int,accuracy: null == accuracy ? _self.accuracy : accuracy // ignore: cast_nullable_to_non_nullable
 as double,durationMs: null == durationMs ? _self.durationMs : durationMs // ignore: cast_nullable_to_non_nullable
-as int,
+as int,scored: null == scored ? _self.scored : scored // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 

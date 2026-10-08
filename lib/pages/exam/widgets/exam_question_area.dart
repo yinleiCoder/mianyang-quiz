@@ -46,7 +46,20 @@ class ExamQuestionArea extends StatelessWidget {
               .clamp(AppMetrics.pageMaxWidth, AppMetrics.pageWideMaxWidth)
               .toDouble(),
           child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 180),
+            duration: AppMotion.medium,
+            // 与练习页同一套切题动效（淡入 + 从下方 12px 落位）：两页是同一个动作，
+            // 快慢与方向必须一致，否则同一场考试里翻到练习过的题会"手感不对"。
+            transitionBuilder: (child, animation) => FadeTransition(
+              opacity: animation,
+              child: AnimatedBuilder(
+                animation: animation,
+                child: child,
+                builder: (context, inner) => Transform.translate(
+                  offset: Offset(0, 12.r * (1 - animation.value)),
+                  child: inner,
+                ),
+              ),
+            ),
             // key 必须给 child（理由见 PracticeQuestionArea）：用题号做 key，
             // 切题时整块重建，上一题的输入焦点不会残留到下一题。
             child: Column(

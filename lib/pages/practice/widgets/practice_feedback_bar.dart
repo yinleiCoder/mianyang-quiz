@@ -59,10 +59,20 @@ class _PracticeFeedbackBarState extends State<PracticeFeedbackBar> {
 
   Timer? _auto;
 
+  /// 入场：第一帧先落在下方 20%，下一帧回到 0，AnimatedSlide 于是自己升上来。
+  ///
+  /// 为什么绕这一下：AnimatedSlide 是**隐式**动画，只在"值变化"时播——
+  /// 直接写 `offset: Offset.zero` 一次都不动（原样就是这样，白等一场）。
+  /// 判定结果出来时这条从底部升起，正好承接"往上看了一眼题、结果在下面出来了"的视线。
+  double _slide = 0.2;
+
   @override
   void initState() {
     super.initState();
     _schedule();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _slide = 0);
+    });
   }
 
   @override
@@ -100,8 +110,9 @@ class _PracticeFeedbackBarState extends State<PracticeFeedbackBar> {
     final autoAdvancing = widget.correct && !widget.isLast;
 
     return AnimatedSlide(
-      duration: const Duration(milliseconds: 180),
-      offset: Offset.zero,
+      duration: AppMotion.medium,
+      curve: AppMotion.standard,
+      offset: Offset(0, _slide),
       child: Container(
         width: double.infinity,
         decoration: BoxDecoration(

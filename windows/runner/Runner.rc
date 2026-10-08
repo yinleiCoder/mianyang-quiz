@@ -89,13 +89,21 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
+            // FileDescription / ProductName 是**给人看的名字**（exe 属性页、任务管理器的
+            // 「说明」列都读它们），所以是中文；InternalName / OriginalFilename 是文件名本身，
+            // 必须保持 ASCII 的 mianyang_quiz（改了名字就对不上实际文件）。
+            //
+            // 中文能安全地写在这里，靠的是文件开头那句 `#pragma code_page(65001)`
+            // （Flutter 模板自带）：rc.exe 因此按 UTF-8 解码本文件，再存成 UTF-16 资源。
+            // **文件必须保持 UTF-8 无 BOM**（现状如此）——加了 BOM 或改回 ANSI 都会乱码。
+            // 实测：改动后用 rc.exe 编译通过，且 .res 里能找到 "职教高考联盟" 的 UTF-16LE 字节。
             VALUE "CompanyName", "com.quiz" "\0"
-            VALUE "FileDescription", "mianyang_quiz" "\0"
+            VALUE "FileDescription", "职教高考联盟" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "mianyang_quiz" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 com.quiz. All rights reserved." "\0"
             VALUE "OriginalFilename", "mianyang_quiz.exe" "\0"
-            VALUE "ProductName", "mianyang_quiz" "\0"
+            VALUE "ProductName", "职教高考联盟" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

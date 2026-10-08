@@ -41,7 +41,12 @@ class LeaderboardList extends StatelessWidget {
       children: [
         _Card(
           children: [
-            for (final row in board.rows) LeaderboardRowTile(row: row, showSchool: showSchool),
+            // 名次依次落位：榜单是"看结果"的地方，一行行落下来比整块闪出来好读
+            for (final (i, row) in board.rows.indexed)
+              FadeSlideIn(
+                order: i,
+                child: LeaderboardRowTile(row: row, showSchool: showSchool),
+              ),
           ],
         ),
         if (!inRows && board.nearby.isNotEmpty) ...[
@@ -55,8 +60,11 @@ class LeaderboardList extends StatelessWidget {
           SizedBox(height: AppMetrics.gapXs.r),
           _Card(
             children: [
-              for (final row in board.nearby)
-                LeaderboardRowTile(row: row, showSchool: showSchool),
+              for (final (i, row) in board.nearby.indexed)
+                FadeSlideIn(
+                  order: i,
+                  child: LeaderboardRowTile(row: row, showSchool: showSchool),
+                ),
             ],
           ),
         ],

@@ -113,6 +113,12 @@ class _Cell extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final semantic = context.semantic;
+    // 格子的形状：**圆角矩形（12），不是圆**。
+    //
+    // 40×40 的正方形配 radiusChip(999) 画出来就是一个正圆，一整片看过去像一排"灯泡"，
+    // 和全站其它圆角（卡片、按钮都是 12）也不成体系。**别为了这个去改
+    // AppMetrics.radiusChip**——那个 999 是胶囊标签（Chip / tile）在用的，它们本来就该是圆的。
+    final radius = BorderRadius.circular(AppMetrics.radiusCard.r);
     final (background, foreground, border) = switch (state) {
       // 当前题：实心主色，一眼看到"我在哪"
       AnswerSheetCellState.current => (scheme.primary, scheme.onPrimary, scheme.primary),
@@ -144,7 +150,7 @@ class _Cell extends StatelessWidget {
       label: '第 $number 题',
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(AppMetrics.radiusChip.r),
+        borderRadius: radius,
         child: Container(
           width: 40.r,
           height: 40.r,
@@ -152,7 +158,7 @@ class _Cell extends StatelessWidget {
           decoration: BoxDecoration(
             color: background,
             border: Border.all(color: border),
-            borderRadius: BorderRadius.circular(AppMetrics.radiusChip.r),
+            borderRadius: radius,
           ),
           child: Text(
             '$number',

@@ -47,6 +47,25 @@ void main() {
 
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('格子是圆角矩形（12），不是圆', (tester) async {
+    await _pump(tester, (_) {});
+
+    // 第 1 格最外层的那个 Container 就是带底色的格子本体
+    final container = tester.widget<Container>(
+      find
+          .ancestor(of: find.text('1'), matching: find.byType(Container))
+          .first,
+    );
+    final decoration = container.decoration! as BoxDecoration;
+    final shape = decoration.borderRadius! as BorderRadius;
+    expect(
+      shape.topLeft.x,
+      AppMetrics.radiusCard.r,
+      reason: '格子是圆角矩形；radiusChip(999) 会把它画成正圆',
+    );
+    expect(shape.topLeft.x, lessThan(20), reason: '半径小于半边长才算矩形而非圆形');
+  });
 }
 
 Future<void> _pump(

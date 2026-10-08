@@ -120,6 +120,44 @@ export 'duo_card.dart';
 
 ---
 
+## 二·七、动效
+
+界面不能"死板"，但动效也不能是随手撒的特效。三条硬约束：
+
+- **不加依赖。** 一律用框架原语手写（`AnimatedContainer` / `AnimatedSwitcher` /
+  `TweenAnimationBuilder` / `AnimationController`）。`flutter_animate`、`lottie`、
+  `rive` 都**不要加**——它们解决的是"动画写起来快"，而这里的问题从来不是写得慢。
+- **不做"减弱动效"开关。** 不读 `MediaQuery.disableAnimations`，动画一律播
+  （用户的取舍，别再提议加回去）。
+- **时长与曲线只从 `values/app_motion.dart` 取。** 同一个动作在两个页面上快慢不同，
+  一屏里就显得杂乱；调整体手感 = 改那一个文件。**没有一档超过 350ms**：
+  刷题时用户的手是连续的，每慢 100ms 就是一整场练习里几十次可感知的等待。
+
+落点：
+
+| 场景 | 用什么 |
+|---|---|
+| 列表 / 卡片**第一次出现** | `widgets/fade_slide_in.dart` 的 `FadeSlideIn`（`order` 错开，封顶 6 档） |
+| **换内容**（练习/考试切题、反馈条升起） | `AnimatedSwitcher` / `AnimatedSlide` + `AppMotion` 时长 |
+| 会动的插画（吉祥物） | `widgets/floating_art.dart` + `assets/art/*.svg` |
+
+**长列表只给首屏那几行播入场**（`AppMotion.entranceRows`，见 `paged_list.dart` 与
+`bank/widgets/question_list_view.dart`）。原因：列表行滚出屏幕会被回收、滚回来时重建，
+逐行播 = 每滚回来一次重播一次；而 `staggerFor` 封顶后深层行还带 240ms 延迟，
+于是快速滚动时整屏内容都慢半拍才出现。屏幕外的行本来也不是"入场"——是被滚出来的。
+
+**"会动的 SVG"只有一条路**：flutter_svg **不播放** SVG 内部的 SMIL / CSS 动画
+（只把矢量图形画出来）。所以图形写在 `assets/art/` 里（静态、手写、小），
+动作写在 `FloatingArt` 里——**资源与代码各管一半，别指望 SVG 自己动**。
+
+漂浮刻意是**有限次数**（三个来回后停住），不是无限循环：无限动画会让
+`pumpAndSettle` 永远等不到静止（本仓的加载转圈就是这个毛病，集成测试里只能改用 `waitFor`），
+一个装饰插图不该把全仓测试都逼成那样。这是"播几次然后安静"，**不是**关掉动画。
+
+**不要动**：正在读的正文、考试倒计时的紧迫感、任何会挡在点击前面的东西。
+
+---
+
 ## 三、目录职责速查
 
 | 目录 | 放什么 | 判定标准 |
@@ -165,6 +203,19 @@ export 'duo_card.dart';
 ### 背题模式
 **背题不能开会话。** `start_practice_session` 会写 `practice_sessions` 一行（练习记录页正是读这张表），
 还会**静默作废**用户正在进行中的刷题会话。背题 = 纯 PostgREST 查询 + 本地翻题，全程不调 practice RPC。
+
+### 顺序练习（教师讲练，0090）：**一轮里一个答案都不提交**
+`PracticeMode.sequential` 的会话 `scored = false`，客户端**从不调 `submit_practice_answer`**：
+错题本 / 正确率 / 遗忘曲线 / 今日已练 / 热力图全部派生自 `practice_answers`，不写就是干净。
+- **别"顺手"把提交加回去**：那会把课堂讲练灌进学生的个人统计，而且没有任何一处会报错。
+  `test/pages/practice/practice_sequential_test.dart` 里有一条断言钉着"判题不发请求"。
+- 判定改由本地镜像给（与即时练习同一条反馈链），成绩单在 `PracticeRunner._localSummary()` 本机算
+  （服务端那份只会是 0/N，所以**不用它**）。交卷仍要调 `finish_practice_session` 把会话关掉 ——
+  不关就一直是"进行中"，下次开始练习会弹「上次的练习还没做完」。
+- 因为服务端没有记录，结果页那一轮**不能给「逐题复盘」和「练这些错题」**：
+  前者打开是空的，后者用的是学生别处的错题本。改成「再来一轮」（见 `result_body.dart`）。
+- 挑题走 `start_sequential_practice`（**没动** `start_practice_session` —— 那是全站智能练习的主链路）：
+  按题库列表顺序（`published_at desc`）连排，不过滤"今天已练"，不随机、不按遗忘曲线。
 
 ### 选项乱序
 乱序后用户看到的 "A" 可能是原始 "C"。**提交只认原始 key**。

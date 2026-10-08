@@ -27,18 +27,31 @@
   #define FileVersion "0.0.0"
 #endif
 
-#define AppName "绵阳市中职共建题库"
+; 应用名。**改名不影响老用户升级**：Inno 找"上一次装到哪"靠的是 [Setup] 里的 AppId
+; （见下面那条注释），不是这个名字；而 UsePreviousAppDir 默认就是 yes，
+; 所以老用户装新版时仍然落在原来的目录里，不会并排出第二份。
+; 桌面/开始菜单快捷方式会按新名字重建（旧的由上一次的安装日志清理）。
+;
+; 只有一种情况会变成"并排装两份"：有人手动把 AppId 改了，或者上次是用
+; /DIR= 指定的非默认目录装的 —— 那时 Setup 认不出旧目录，会用新名字重新建一个。
+; 与 Dart 侧的 _appTitle、windows/runner/main.cpp 的窗口标题、Android 的 android:label 同源。
+#define AppName "职教高考联盟"
 #define AppExeName "mianyang_quiz.exe"
-#define AppPublisher "绵阳市中职共建题库"
+#define AppPublisher "职教高考联盟"
 
 [Setup]
 ; AppId 必须**永远不变** —— 换了它，新版本会被当成另一个软件并排装，而不是覆盖升级。
+; **改名（AppName）不受这条约束**：升级认的是 AppId，所以换名字之后老用户照旧在原目录覆盖。
+; 代价是：安装目录名还是旧的（AppName 变了，但 UsePreviousAppDir 会沿用上次那个目录），
+; 这是刻意的取舍——为了目录名好看而让老用户并排装第二份，得不偿失。
 AppId={{8F3A7C21-5B4E-4D9A-9E17-2C6D4A8B1F03}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppVerName={#AppName} {#AppVersion}
 AppPublisher={#AppPublisher}
 VersionInfoVersion={#FileVersion}
+; 安装目录**由 AppName 派生**。改名字对全新安装就意味着新目录（%LOCALAPPDATA%\Programs\职教高考联盟），
+; 对老用户则由 UsePreviousAppDir 沿用旧目录 —— 见 AppName 上面那段说明。
 DefaultDirName={autopf}\{#AppName}
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes

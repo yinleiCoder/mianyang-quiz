@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  吉祥物「小书」：一顶学士帽 + 一张笑脸 + 一本书。
+
+  手写的纯静态图形（**没有** SMIL / CSS 动画）：flutter_svg 不播放 SVG 内部的动画，
+  "活着"的那部分是 Flutter 侧的 FloatingArt（上下漂浮 + 轻微呼吸）。所以这里
+  只负责形状与配色，一行动画都不写。
+
+  配色跟随应用主题（deepPurple 种子 + 品牌里的琥珀色）：
+    紫 #6750A4 / 浅紫 #EADDFF / 琥珀 #F4A200 / 奶油 #FFF3DC / 墨 #3B2A5A
+  与 assets/mianyang.svg 同理：SVG 是位图/矢量资源，取色写死在资源里，
+  **组件里不许出现颜色**（色值只在这份资源与 values/ 主题里）。
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <!-- 两侧的小星：给静止画面一点"在发光"的暗示 -->
+  <path d="M20 20 l3 8 8 3 -8 3 -3 8 -3 -8 -8 -3 8 -3 z" fill="#F4A200"/>
+  <path d="M99 40 l2 6 6 2 -6 2 -2 6 -2 -6 -6 -2 6 -2 z" fill="#FFC24D"/>
+  <!-- 学士帽 -->
+  <path d="M60 10 L100 28 L60 46 L20 28 Z" fill="#6750A4"/>
+  <path d="M60 20 L84 31 L60 42 L36 31 Z" fill="#EADDFF"/>
+  <path d="M96 31 l0 16" stroke="#F4A200" stroke-width="3" stroke-linecap="round" fill="none"/>
+  <circle cx="96" cy="50" r="4" fill="#F4A200"/>
+  <!-- 头 -->
+  <circle cx="60" cy="62" r="26" fill="#FFF3DC"/>
+  <!-- 眼睛与笑容 -->
+  <circle cx="50" cy="60" r="3.4" fill="#3B2A5A"/>
+  <circle cx="70" cy="60" r="3.4" fill="#3B2A5A"/>
+  <path d="M51 71 q9 8 18 0" stroke="#3B2A5A" stroke-width="3" stroke-linecap="round" fill="none"/>
+  <!-- 腮红 -->
+  <circle cx="43" cy="70" r="4" fill="#FFB4A2" opacity="0.75"/>
+  <circle cx="77" cy="70" r="4" fill="#FFB4A2" opacity="0.75"/>
+  <!-- 身体：一本合上的书 -->
+  <rect x="36" y="84" width="48" height="28" rx="8" fill="#6750A4"/>
+  <rect x="50" y="90" width="20" height="16" rx="3" fill="#FFFFFF"/>
+  <path d="M60 90 v16" stroke="#EADDFF" stroke-width="2"/>
+</svg>

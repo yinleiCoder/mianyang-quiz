@@ -166,7 +166,9 @@ class _PracticeStageState extends State<PracticeStage> {
         return PracticeLayout(
           runner: _runner,
           graded: _runner.current.isGraded,
-          instant: _runner.mode == PracticeMode.instant,
+          // 判完就锁定选项、并把标准答案与解析摆出来。顺序练习与即时练习同属"选中即判"，
+          // 所以这里用 mode 的能力位而不是枚举比较——将来再加一种即时类模式不用改三处。
+          instant: _runner.mode.gradesImmediately,
           checking: _checking,
           finishing: _finishing,
           onAnswerChanged: _onAnswerChanged,

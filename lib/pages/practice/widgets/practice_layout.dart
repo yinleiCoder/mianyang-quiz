@@ -79,7 +79,7 @@ class PracticeLayout extends StatelessWidget {
               index: runner.index + 1,
               total: runner.total,
               progress: runner.progress,
-              startedAt: runner.startedAt,
+              runner: runner,
               onExit: onExit,
               onOpenAnswerSheet: wide
                   ? null

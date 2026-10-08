@@ -59,6 +59,13 @@ class SessionRecordTile extends StatelessWidget {
                       tone: _statusTone(record.statusValue),
                       dense: true,
                     ),
+                    // 课堂讲练单独标一下：它和别的记录不是一回事（不计分、不进错题本）
+                    if (!record.scored)
+                      const DuoChip(
+                        label: '课堂讲练',
+                        tone: DuoChipTone.neutral,
+                        dense: true,
+                      ),
                   ],
                 ),
               ),
@@ -101,6 +108,13 @@ String _summary(PracticeSessionRecord record) {
   if (!record.isFinished) {
     return '已答 ${record.answeredCount}/${record.totalCount} 题'
         ' · 已对 ${record.correctCount} 题';
+  }
+  // 不计分的（课堂顺序练习）**不报正确率**：这一轮压根没往服务端写作答，
+  // correct_count 恒为 0，照常显示就是一句"正确率 0%"的假话。
+  if (!record.scored) {
+    return '课堂讲练 · 共 ${record.totalCount} 题'
+        ' · 用时 ${Formatters.duration(record.durationMs)}'
+        ' · 不计入统计';
   }
   return '共 ${record.totalCount} 题'
       ' · 正确率 ${Formatters.percent(record.accuracy)}'

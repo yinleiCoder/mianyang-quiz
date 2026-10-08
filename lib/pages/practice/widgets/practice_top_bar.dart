@@ -10,6 +10,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/values/values.dart';
 import 'package:mianyang_quiz/widgets/widgets.dart';
+import 'package:mianyang_quiz/pages/practice/state/practice_runner.dart';
 import 'package:mianyang_quiz/pages/practice/widgets/practice_timer.dart';
 
 class PracticeTopBar extends StatelessWidget {
@@ -18,7 +19,7 @@ class PracticeTopBar extends StatelessWidget {
     required this.index,
     required this.total,
     required this.progress,
-    required this.startedAt,
+    required this.runner,
     required this.onExit,
     this.onOpenAnswerSheet,
   });
@@ -30,8 +31,9 @@ class PracticeTopBar extends StatelessWidget {
   /// 0~1，已作答占比（不是"看到第几题"——这样进度条只在真正完成时走满）。
   final double progress;
 
-  /// 计时起点（练习页打开的时刻）。
-  final DateTime startedAt;
+  /// 计时的事实来源。计时器要能暂停，而暂停状态在 Runner 里（见 PracticeRunner）——
+  /// 所以这里传整个 runner，而不是一个 startedAt 快照。
+  final PracticeRunner runner;
 
   final VoidCallback onExit;
 
@@ -50,6 +52,17 @@ class PracticeTopBar extends StatelessWidget {
           color: theme.colorScheme.onSurfaceVariant,
           tooltip: '退出练习',
         ),
+        // 不计分的那一轮（课堂讲练 / 顺序练习）在这里挂一枚小标：学生答错一堆之后
+        // 回头翻错题本找不到，会以为软件坏了——**在错的那一刻就告诉他这一轮不入库**。
+        if (!runner.mode.countsTowardStats)
+          const Padding(
+            padding: EdgeInsets.only(right: AppMetrics.gapSm),
+            child: DuoChip(
+              label: '不计分',
+              tone: DuoChipTone.neutral,
+              dense: true,
+            ),
+          ),
         Expanded(
           child: DuoProgressBar(value: progress),
         ),
@@ -64,13 +77,14 @@ class PracticeTopBar extends StatelessWidget {
           ),
         ),
         // 计时在题号**右侧**：左侧留给"还剩多少"（进度条 + 计数），
-        // 时间属于"已经过去"的信息，跟它们分开摆不容易读串
+        // 时间属于"已经过去"的信息，跟它们分开摆不容易读串。
+        // 它同时是暂停按钮——学生接电话、被叫走时点一下，那段时间不走进任何用时。
         //
         // 右边留一口气：宽屏时右边紧挨着答题卡栏的竖分割线（PracticeLayout），
         // 不留白数字就贴上去——与考试页同一条（学生反馈的是考试页）。
         Padding(
           padding: const EdgeInsets.only(right: AppMetrics.gapMd),
-          child: PracticeTimer(startedAt: startedAt),
+          child: PracticeTimer(runner: runner),
         ),
         if (onOpenAnswerSheet != null)
           IconButton(

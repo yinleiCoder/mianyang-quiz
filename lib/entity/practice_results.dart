@@ -46,6 +46,10 @@ abstract class FinishSummary with _$FinishSummary {
     /// 正确率 = correct / **total**（分母是总题数，不是已答数——与看板口径不同）。
     @Default(0) double accuracy,
     @JsonKey(name: 'duration_ms') @Default(0) int durationMs,
+
+    /// 这一轮是否计入学习统计（0090）。服务端返回的结算里没有这个字段 → 默认 true；
+    /// 顺序练习（课堂讲练）的结算是在本机算的，会把它置为 false，结果页据此加一句说明。
+    @Default(true) bool scored,
   }) = _FinishSummary;
 
   factory FinishSummary.fromJson(Map<String, dynamic> json) =>

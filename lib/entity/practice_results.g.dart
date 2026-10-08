@@ -50,6 +50,7 @@ _FinishSummary _$FinishSummaryFromJson(Map<String, dynamic> json) =>
           'duration_ms',
           (v) => (v as num?)?.toInt() ?? 0,
         ),
+        scored: $checkedConvert('scored', (v) => v as bool? ?? true),
       );
       return val;
     }, fieldKeyMap: const {'durationMs': 'duration_ms'});
@@ -63,4 +64,5 @@ Map<String, dynamic> _$FinishSummaryToJson(_FinishSummary instance) =>
       'omitted': instance.omitted,
       'accuracy': instance.accuracy,
       'duration_ms': instance.durationMs,
+      'scored': instance.scored,
     };

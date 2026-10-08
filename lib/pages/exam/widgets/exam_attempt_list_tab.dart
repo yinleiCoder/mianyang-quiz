@@ -35,7 +35,7 @@ class _ExamAttemptListTabState extends State<ExamAttemptListTab>
 
   @override
   Widget buildEmpty(BuildContext context) => EmptyState(
-    icon: Icons.history_edu_outlined,
+    art: true,
     title: '还没考过试',
     message: '去「试卷库」挑一套卷子开始吧。',
     action: DuoButton(

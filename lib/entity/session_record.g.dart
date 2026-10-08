@@ -40,6 +40,7 @@ _PracticeSessionRecord _$PracticeSessionRecordFromJson(
         'correct_count',
         (v) => (v as num?)?.toInt() ?? 0,
       ),
+      scored: $checkedConvert('scored', (v) => v as bool? ?? true),
     );
     return val;
   },
@@ -65,4 +66,5 @@ Map<String, dynamic> _$PracticeSessionRecordToJson(
   'total_count': instance.totalCount,
   'answered_count': instance.answeredCount,
   'correct_count': instance.correctCount,
+  'scored': instance.scored,
 };

@@ -8,7 +8,9 @@ library values;
 
 export 'accuracy_meta.dart';
 export 'app_metrics.dart';
+export 'app_motion.dart';
 export 'app_navigation_bar_theme.dart';
+export 'app_surfaces.dart';
 export 'app_text_styles.dart';
 export 'app_theme.dart';
 export 'difficulty_meta.dart';

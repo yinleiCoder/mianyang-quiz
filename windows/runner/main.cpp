@@ -33,8 +33,15 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   // ASCII and the CMake setup does not pass /utf-8, so a raw CJK literal could be
   // decoded with the local ANSI codepage and turn into mojibake. Code points are
   // immune to that. Same string as Dart's _appTitle and Android's android:label.
-  const std::wstring window_title = {0x7EF5, 0x9633, 0x5E02, 0x4E2D, 0x804C,
-                                     0x5171, 0x5EFA, 0x9898, 0x5E93};
+  // Above: U+804C U+6559 U+9AD8 U+8003 U+8054 U+76DF = the product name in
+  // Chinese ("ZhiJiao GaoKao LianMeng") -- the same string as Dart's _appTitle,
+  // Android's android:label and the installer's AppName.
+  //
+  // This comment stays ASCII on purpose: /W4 /WX turns C4819 (a CJK character the
+  // local code page cannot represent) into a build error unless CL=/utf-8 is set,
+  // which is exactly why the title itself is built from code points.
+  const std::wstring window_title = {0x804C, 0x6559, 0x9AD8,
+                                     0x8003, 0x8054, 0x76DF};
   if (!window.Create(window_title, origin, size)) {
     return EXIT_FAILURE;
   }
