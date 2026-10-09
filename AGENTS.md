@@ -139,22 +139,20 @@ export 'duo_card.dart';
 |---|---|
 | 列表 / 卡片**第一次出现** | `widgets/fade_slide_in.dart` 的 `FadeSlideIn`（`order` 错开，封顶 6 档） |
 | **换内容**（练习/考试切题、反馈条升起） | `AnimatedSwitcher` / `AnimatedSlide` + `AppMotion` 时长 |
-| 会动的插画（吉祥物） | `widgets/floating_art.dart` + `assets/art/*.svg` |
+| **空状态** | `widgets/empty_state.dart` 的中性图标徽章（**不放插画**，见下） |
 
 **长列表只给首屏那几行播入场**（`AppMotion.entranceRows`，见 `paged_list.dart` 与
 `bank/widgets/question_list_view.dart`）。原因：列表行滚出屏幕会被回收、滚回来时重建，
 逐行播 = 每滚回来一次重播一次；而 `staggerFor` 封顶后深层行还带 240ms 延迟，
 于是快速滚动时整屏内容都慢半拍才出现。屏幕外的行本来也不是"入场"——是被滚出来的。
 
-**"会动的 SVG"只有一条路**：flutter_svg **不播放** SVG 内部的 SMIL / CSS 动画
-（只把矢量图形画出来）。所以图形写在 `assets/art/` 里（静态、手写、小），
-动作写在 `FloatingArt` 里——**资源与代码各管一半，别指望 SVG 自己动**。
-
-漂浮刻意是**有限次数**（三个来回后停住），不是无限循环：无限动画会让
-`pumpAndSettle` 永远等不到静止（本仓的加载转圈就是这个毛病，集成测试里只能改用 `waitFor`），
-一个装饰插图不该把全仓测试都逼成那样。这是"播几次然后安静"，**不是**关掉动画。
-
 **不要动**：正在读的正文、考试倒计时的紧迫感、任何会挡在点击前面的东西。
+
+**空状态不放插画**（2026-10-09 起）：原先空状态与登录页挂过一个会漂浮的吉祥物
+（`FloatingArt` + `assets/art/mascot_study.svg`），用户嫌不好看，已整体删除——
+包括 `assets/art/` 目录、`floating_art.dart`、`AppMotion.loop`/`loopCurve`。
+空状态一律用 `EmptyState` 的中性图标徽章（每个页面各自挑一个贴切的图标）。
+**不要加回插画或吉祥物**；确需重做，先确认那不是又一次"用户明确否掉的东西"。
 
 ---
 

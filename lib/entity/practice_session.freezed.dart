@@ -616,7 +616,15 @@ as DateTime?,
 /// @nodoc
 mixin _$PracticeSessionSnapshot {
 
-@JsonKey(name: 'session_id') String get sessionId; String get source; String get status;@JsonKey(name: 'started_at') DateTime? get startedAt;@JsonKey(name: 'submitted_at') DateTime? get submittedAt;@JsonKey(name: 'duration_ms') int get durationMs;@JsonKey(name: 'total_count') int get totalCount;@JsonKey(name: 'answered_count') int get answeredCount;@JsonKey(name: 'correct_count') int get correctCount; List<PracticeItem> get items; List<PracticeAnswerRecord> get answers;
+@JsonKey(name: 'session_id') String get sessionId; String get source; String get status;@JsonKey(name: 'started_at') DateTime? get startedAt;@JsonKey(name: 'submitted_at') DateTime? get submittedAt;@JsonKey(name: 'duration_ms') int get durationMs;@JsonKey(name: 'total_count') int get totalCount;@JsonKey(name: 'answered_count') int get answeredCount;@JsonKey(name: 'correct_count') int get correctCount;/// 是否计入学习统计。false = 课堂讲练（顺序练习，见 0090）。
+///
+/// **续练时必须读它**：默认 true 只为兼容不返回该字段的旧服务端
+/// （start_practice_session 就不返回）；课堂讲练的会话由 get_practice_session 明确给出 false，
+/// 客户端据此按顺序练习重开，否则会把作答提交到服务端、静默污染统计（0095 修复）。
+ bool get scored;/// 本轮的起点（第几道题开始的，0 起）。只有顺序练习会返回。
+ int get offset;/// 符合筛选条件的题目**总数**（不是本轮题数）。只有顺序练习会返回，
+/// 用来算"共几轮、还有没有下一轮"；null = 未知，界面就别显示轮次。
+@JsonKey(name: 'total_available') int? get totalAvailable; List<PracticeItem> get items; List<PracticeAnswerRecord> get answers;
 /// Create a copy of PracticeSessionSnapshot
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -630,20 +638,20 @@ $PracticeSessionSnapshotCopyWith<PracticeSessionSnapshot> get copyWith => _$Prac
 @override
 bool operator ==(Object other) {
   final _this = this as PracticeSessionSnapshot;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is PracticeSessionSnapshot&&(identical(other.sessionId, _this.sessionId) || other.sessionId == _this.sessionId)&&(identical(other.source, _this.source) || other.source == _this.source)&&(identical(other.status, _this.status) || other.status == _this.status)&&(identical(other.startedAt, _this.startedAt) || other.startedAt == _this.startedAt)&&(identical(other.submittedAt, _this.submittedAt) || other.submittedAt == _this.submittedAt)&&(identical(other.durationMs, _this.durationMs) || other.durationMs == _this.durationMs)&&(identical(other.totalCount, _this.totalCount) || other.totalCount == _this.totalCount)&&(identical(other.answeredCount, _this.answeredCount) || other.answeredCount == _this.answeredCount)&&(identical(other.correctCount, _this.correctCount) || other.correctCount == _this.correctCount)&&const DeepCollectionEquality().equals(other.items, _this.items)&&const DeepCollectionEquality().equals(other.answers, _this.answers));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is PracticeSessionSnapshot&&(identical(other.sessionId, _this.sessionId) || other.sessionId == _this.sessionId)&&(identical(other.source, _this.source) || other.source == _this.source)&&(identical(other.status, _this.status) || other.status == _this.status)&&(identical(other.startedAt, _this.startedAt) || other.startedAt == _this.startedAt)&&(identical(other.submittedAt, _this.submittedAt) || other.submittedAt == _this.submittedAt)&&(identical(other.durationMs, _this.durationMs) || other.durationMs == _this.durationMs)&&(identical(other.totalCount, _this.totalCount) || other.totalCount == _this.totalCount)&&(identical(other.answeredCount, _this.answeredCount) || other.answeredCount == _this.answeredCount)&&(identical(other.correctCount, _this.correctCount) || other.correctCount == _this.correctCount)&&(identical(other.scored, _this.scored) || other.scored == _this.scored)&&(identical(other.offset, _this.offset) || other.offset == _this.offset)&&(identical(other.totalAvailable, _this.totalAvailable) || other.totalAvailable == _this.totalAvailable)&&const DeepCollectionEquality().equals(other.items, _this.items)&&const DeepCollectionEquality().equals(other.answers, _this.answers));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as PracticeSessionSnapshot;
-  return Object.hash(runtimeType,_this.sessionId,_this.source,_this.status,_this.startedAt,_this.submittedAt,_this.durationMs,_this.totalCount,_this.answeredCount,_this.correctCount,const DeepCollectionEquality().hash(_this.items),const DeepCollectionEquality().hash(_this.answers));
+  return Object.hash(runtimeType,_this.sessionId,_this.source,_this.status,_this.startedAt,_this.submittedAt,_this.durationMs,_this.totalCount,_this.answeredCount,_this.correctCount,_this.scored,_this.offset,_this.totalAvailable,const DeepCollectionEquality().hash(_this.items),const DeepCollectionEquality().hash(_this.answers));
 }
 
 @override
 String toString() {
   final _this = this as PracticeSessionSnapshot;
-  return 'PracticeSessionSnapshot(sessionId: ${_this.sessionId}, source: ${_this.source}, status: ${_this.status}, startedAt: ${_this.startedAt}, submittedAt: ${_this.submittedAt}, durationMs: ${_this.durationMs}, totalCount: ${_this.totalCount}, answeredCount: ${_this.answeredCount}, correctCount: ${_this.correctCount}, items: ${_this.items}, answers: ${_this.answers})';
+  return 'PracticeSessionSnapshot(sessionId: ${_this.sessionId}, source: ${_this.source}, status: ${_this.status}, startedAt: ${_this.startedAt}, submittedAt: ${_this.submittedAt}, durationMs: ${_this.durationMs}, totalCount: ${_this.totalCount}, answeredCount: ${_this.answeredCount}, correctCount: ${_this.correctCount}, scored: ${_this.scored}, offset: ${_this.offset}, totalAvailable: ${_this.totalAvailable}, items: ${_this.items}, answers: ${_this.answers})';
 }
 
 
@@ -654,7 +662,7 @@ abstract mixin class $PracticeSessionSnapshotCopyWith<$Res>  {
   factory $PracticeSessionSnapshotCopyWith(PracticeSessionSnapshot value, $Res Function(PracticeSessionSnapshot) _then) = _$PracticeSessionSnapshotCopyWithImpl;
 @useResult
 $Res call({
-@JsonKey(name: 'session_id') String sessionId, String source, String status,@JsonKey(name: 'started_at') DateTime? startedAt,@JsonKey(name: 'submitted_at') DateTime? submittedAt,@JsonKey(name: 'duration_ms') int durationMs,@JsonKey(name: 'total_count') int totalCount,@JsonKey(name: 'answered_count') int answeredCount,@JsonKey(name: 'correct_count') int correctCount, List<PracticeItem> items, List<PracticeAnswerRecord> answers
+@JsonKey(name: 'session_id') String sessionId, String source, String status,@JsonKey(name: 'started_at') DateTime? startedAt,@JsonKey(name: 'submitted_at') DateTime? submittedAt,@JsonKey(name: 'duration_ms') int durationMs,@JsonKey(name: 'total_count') int totalCount,@JsonKey(name: 'answered_count') int answeredCount,@JsonKey(name: 'correct_count') int correctCount, bool scored, int offset,@JsonKey(name: 'total_available') int? totalAvailable, List<PracticeItem> items, List<PracticeAnswerRecord> answers
 });
 
 
@@ -671,7 +679,7 @@ class _$PracticeSessionSnapshotCopyWithImpl<$Res>
 
 /// Create a copy of PracticeSessionSnapshot
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? sessionId = null,Object? source = null,Object? status = null,Object? startedAt = freezed,Object? submittedAt = freezed,Object? durationMs = null,Object? totalCount = null,Object? answeredCount = null,Object? correctCount = null,Object? items = null,Object? answers = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? sessionId = null,Object? source = null,Object? status = null,Object? startedAt = freezed,Object? submittedAt = freezed,Object? durationMs = null,Object? totalCount = null,Object? answeredCount = null,Object? correctCount = null,Object? scored = null,Object? offset = null,Object? totalAvailable = freezed,Object? items = null,Object? answers = null,}) {
   return _then(PracticeSessionSnapshot(
 sessionId: null == sessionId ? _self.sessionId : sessionId // ignore: cast_nullable_to_non_nullable
 as String,source: null == source ? _self.source : source // ignore: cast_nullable_to_non_nullable
@@ -682,7 +690,10 @@ as DateTime?,durationMs: null == durationMs ? _self.durationMs : durationMs // i
 as int,totalCount: null == totalCount ? _self.totalCount : totalCount // ignore: cast_nullable_to_non_nullable
 as int,answeredCount: null == answeredCount ? _self.answeredCount : answeredCount // ignore: cast_nullable_to_non_nullable
 as int,correctCount: null == correctCount ? _self.correctCount : correctCount // ignore: cast_nullable_to_non_nullable
-as int,items: null == items ? _self.items : items // ignore: cast_nullable_to_non_nullable
+as int,scored: null == scored ? _self.scored : scored // ignore: cast_nullable_to_non_nullable
+as bool,offset: null == offset ? _self.offset : offset // ignore: cast_nullable_to_non_nullable
+as int,totalAvailable: freezed == totalAvailable ? _self.totalAvailable : totalAvailable // ignore: cast_nullable_to_non_nullable
+as int?,items: null == items ? _self.items : items // ignore: cast_nullable_to_non_nullable
 as List<PracticeItem>,answers: null == answers ? _self.answers : answers // ignore: cast_nullable_to_non_nullable
 as List<PracticeAnswerRecord>,
   ));
@@ -769,10 +780,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'session_id')  String sessionId,  String source,  String status, @JsonKey(name: 'started_at')  DateTime? startedAt, @JsonKey(name: 'submitted_at')  DateTime? submittedAt, @JsonKey(name: 'duration_ms')  int durationMs, @JsonKey(name: 'total_count')  int totalCount, @JsonKey(name: 'answered_count')  int answeredCount, @JsonKey(name: 'correct_count')  int correctCount,  List<PracticeItem> items,  List<PracticeAnswerRecord> answers)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'session_id')  String sessionId,  String source,  String status, @JsonKey(name: 'started_at')  DateTime? startedAt, @JsonKey(name: 'submitted_at')  DateTime? submittedAt, @JsonKey(name: 'duration_ms')  int durationMs, @JsonKey(name: 'total_count')  int totalCount, @JsonKey(name: 'answered_count')  int answeredCount, @JsonKey(name: 'correct_count')  int correctCount,  bool scored,  int offset, @JsonKey(name: 'total_available')  int? totalAvailable,  List<PracticeItem> items,  List<PracticeAnswerRecord> answers)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _PracticeSessionSnapshot() when $default != null:
-return $default(_that.sessionId,_that.source,_that.status,_that.startedAt,_that.submittedAt,_that.durationMs,_that.totalCount,_that.answeredCount,_that.correctCount,_that.items,_that.answers);case _:
+return $default(_that.sessionId,_that.source,_that.status,_that.startedAt,_that.submittedAt,_that.durationMs,_that.totalCount,_that.answeredCount,_that.correctCount,_that.scored,_that.offset,_that.totalAvailable,_that.items,_that.answers);case _:
   return orElse();
 
 }
@@ -790,10 +801,10 @@ return $default(_that.sessionId,_that.source,_that.status,_that.startedAt,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'session_id')  String sessionId,  String source,  String status, @JsonKey(name: 'started_at')  DateTime? startedAt, @JsonKey(name: 'submitted_at')  DateTime? submittedAt, @JsonKey(name: 'duration_ms')  int durationMs, @JsonKey(name: 'total_count')  int totalCount, @JsonKey(name: 'answered_count')  int answeredCount, @JsonKey(name: 'correct_count')  int correctCount,  List<PracticeItem> items,  List<PracticeAnswerRecord> answers)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'session_id')  String sessionId,  String source,  String status, @JsonKey(name: 'started_at')  DateTime? startedAt, @JsonKey(name: 'submitted_at')  DateTime? submittedAt, @JsonKey(name: 'duration_ms')  int durationMs, @JsonKey(name: 'total_count')  int totalCount, @JsonKey(name: 'answered_count')  int answeredCount, @JsonKey(name: 'correct_count')  int correctCount,  bool scored,  int offset, @JsonKey(name: 'total_available')  int? totalAvailable,  List<PracticeItem> items,  List<PracticeAnswerRecord> answers)  $default,) {final _that = this;
 switch (_that) {
 case _PracticeSessionSnapshot():
-return $default(_that.sessionId,_that.source,_that.status,_that.startedAt,_that.submittedAt,_that.durationMs,_that.totalCount,_that.answeredCount,_that.correctCount,_that.items,_that.answers);case _:
+return $default(_that.sessionId,_that.source,_that.status,_that.startedAt,_that.submittedAt,_that.durationMs,_that.totalCount,_that.answeredCount,_that.correctCount,_that.scored,_that.offset,_that.totalAvailable,_that.items,_that.answers);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -810,10 +821,10 @@ return $default(_that.sessionId,_that.source,_that.status,_that.startedAt,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'session_id')  String sessionId,  String source,  String status, @JsonKey(name: 'started_at')  DateTime? startedAt, @JsonKey(name: 'submitted_at')  DateTime? submittedAt, @JsonKey(name: 'duration_ms')  int durationMs, @JsonKey(name: 'total_count')  int totalCount, @JsonKey(name: 'answered_count')  int answeredCount, @JsonKey(name: 'correct_count')  int correctCount,  List<PracticeItem> items,  List<PracticeAnswerRecord> answers)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'session_id')  String sessionId,  String source,  String status, @JsonKey(name: 'started_at')  DateTime? startedAt, @JsonKey(name: 'submitted_at')  DateTime? submittedAt, @JsonKey(name: 'duration_ms')  int durationMs, @JsonKey(name: 'total_count')  int totalCount, @JsonKey(name: 'answered_count')  int answeredCount, @JsonKey(name: 'correct_count')  int correctCount,  bool scored,  int offset, @JsonKey(name: 'total_available')  int? totalAvailable,  List<PracticeItem> items,  List<PracticeAnswerRecord> answers)?  $default,) {final _that = this;
 switch (_that) {
 case _PracticeSessionSnapshot() when $default != null:
-return $default(_that.sessionId,_that.source,_that.status,_that.startedAt,_that.submittedAt,_that.durationMs,_that.totalCount,_that.answeredCount,_that.correctCount,_that.items,_that.answers);case _:
+return $default(_that.sessionId,_that.source,_that.status,_that.startedAt,_that.submittedAt,_that.durationMs,_that.totalCount,_that.answeredCount,_that.correctCount,_that.scored,_that.offset,_that.totalAvailable,_that.items,_that.answers);case _:
   return null;
 
 }
@@ -825,7 +836,7 @@ return $default(_that.sessionId,_that.source,_that.status,_that.startedAt,_that.
 @JsonSerializable()
 
 class _PracticeSessionSnapshot implements PracticeSessionSnapshot {
-  const _PracticeSessionSnapshot({@JsonKey(name: 'session_id') required this.sessionId, this.source = 'all', this.status = 'active', @JsonKey(name: 'started_at') this.startedAt, @JsonKey(name: 'submitted_at') this.submittedAt, @JsonKey(name: 'duration_ms') this.durationMs = 0, @JsonKey(name: 'total_count') this.totalCount = 0, @JsonKey(name: 'answered_count') this.answeredCount = 0, @JsonKey(name: 'correct_count') this.correctCount = 0,  List<PracticeItem> items = const <PracticeItem>[],  List<PracticeAnswerRecord> answers = const <PracticeAnswerRecord>[]}): _items = items,_answers = answers;
+  const _PracticeSessionSnapshot({@JsonKey(name: 'session_id') required this.sessionId, this.source = 'all', this.status = 'active', @JsonKey(name: 'started_at') this.startedAt, @JsonKey(name: 'submitted_at') this.submittedAt, @JsonKey(name: 'duration_ms') this.durationMs = 0, @JsonKey(name: 'total_count') this.totalCount = 0, @JsonKey(name: 'answered_count') this.answeredCount = 0, @JsonKey(name: 'correct_count') this.correctCount = 0, this.scored = true, this.offset = 0, @JsonKey(name: 'total_available') this.totalAvailable,  List<PracticeItem> items = const <PracticeItem>[],  List<PracticeAnswerRecord> answers = const <PracticeAnswerRecord>[]}): _items = items,_answers = answers;
   factory _PracticeSessionSnapshot.fromJson(Map<String, dynamic> json) => _$PracticeSessionSnapshotFromJson(json);
 
 @override@JsonKey(name: 'session_id') final  String sessionId;
@@ -837,6 +848,17 @@ class _PracticeSessionSnapshot implements PracticeSessionSnapshot {
 @override@JsonKey(name: 'total_count') final  int totalCount;
 @override@JsonKey(name: 'answered_count') final  int answeredCount;
 @override@JsonKey(name: 'correct_count') final  int correctCount;
+/// 是否计入学习统计。false = 课堂讲练（顺序练习，见 0090）。
+///
+/// **续练时必须读它**：默认 true 只为兼容不返回该字段的旧服务端
+/// （start_practice_session 就不返回）；课堂讲练的会话由 get_practice_session 明确给出 false，
+/// 客户端据此按顺序练习重开，否则会把作答提交到服务端、静默污染统计（0095 修复）。
+@override@JsonKey() final  bool scored;
+/// 本轮的起点（第几道题开始的，0 起）。只有顺序练习会返回。
+@override@JsonKey() final  int offset;
+/// 符合筛选条件的题目**总数**（不是本轮题数）。只有顺序练习会返回，
+/// 用来算"共几轮、还有没有下一轮"；null = 未知，界面就别显示轮次。
+@override@JsonKey(name: 'total_available') final  int? totalAvailable;
  final  List<PracticeItem> _items;
 @override@JsonKey() List<PracticeItem> get items {
   if (_items is EqualUnmodifiableListView) return _items;
@@ -865,18 +887,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _PracticeSessionSnapshot&&(identical(other.sessionId, sessionId) || other.sessionId == sessionId)&&(identical(other.source, source) || other.source == source)&&(identical(other.status, status) || other.status == status)&&(identical(other.startedAt, startedAt) || other.startedAt == startedAt)&&(identical(other.submittedAt, submittedAt) || other.submittedAt == submittedAt)&&(identical(other.durationMs, durationMs) || other.durationMs == durationMs)&&(identical(other.totalCount, totalCount) || other.totalCount == totalCount)&&(identical(other.answeredCount, answeredCount) || other.answeredCount == answeredCount)&&(identical(other.correctCount, correctCount) || other.correctCount == correctCount)&&const DeepCollectionEquality().equals(other.items, _items)&&const DeepCollectionEquality().equals(other.answers, _answers));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _PracticeSessionSnapshot&&(identical(other.sessionId, sessionId) || other.sessionId == sessionId)&&(identical(other.source, source) || other.source == source)&&(identical(other.status, status) || other.status == status)&&(identical(other.startedAt, startedAt) || other.startedAt == startedAt)&&(identical(other.submittedAt, submittedAt) || other.submittedAt == submittedAt)&&(identical(other.durationMs, durationMs) || other.durationMs == durationMs)&&(identical(other.totalCount, totalCount) || other.totalCount == totalCount)&&(identical(other.answeredCount, answeredCount) || other.answeredCount == answeredCount)&&(identical(other.correctCount, correctCount) || other.correctCount == correctCount)&&(identical(other.scored, scored) || other.scored == scored)&&(identical(other.offset, offset) || other.offset == offset)&&(identical(other.totalAvailable, totalAvailable) || other.totalAvailable == totalAvailable)&&const DeepCollectionEquality().equals(other.items, _items)&&const DeepCollectionEquality().equals(other.answers, _answers));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,sessionId,source,status,startedAt,submittedAt,durationMs,totalCount,answeredCount,correctCount,const DeepCollectionEquality().hash(_items),const DeepCollectionEquality().hash(_answers));
+    return Object.hash(runtimeType,sessionId,source,status,startedAt,submittedAt,durationMs,totalCount,answeredCount,correctCount,scored,offset,totalAvailable,const DeepCollectionEquality().hash(_items),const DeepCollectionEquality().hash(_answers));
 }
 
 @override
 String toString() {
-    return 'PracticeSessionSnapshot(sessionId: $sessionId, source: $source, status: $status, startedAt: $startedAt, submittedAt: $submittedAt, durationMs: $durationMs, totalCount: $totalCount, answeredCount: $answeredCount, correctCount: $correctCount, items: $items, answers: $answers)';
+    return 'PracticeSessionSnapshot(sessionId: $sessionId, source: $source, status: $status, startedAt: $startedAt, submittedAt: $submittedAt, durationMs: $durationMs, totalCount: $totalCount, answeredCount: $answeredCount, correctCount: $correctCount, scored: $scored, offset: $offset, totalAvailable: $totalAvailable, items: $items, answers: $answers)';
 }
 
 
@@ -887,7 +909,7 @@ abstract mixin class _$PracticeSessionSnapshotCopyWith<$Res> implements $Practic
   factory _$PracticeSessionSnapshotCopyWith(_PracticeSessionSnapshot value, $Res Function(_PracticeSessionSnapshot) _then) = __$PracticeSessionSnapshotCopyWithImpl;
 @override @useResult
 $Res call({
-@JsonKey(name: 'session_id') String sessionId, String source, String status,@JsonKey(name: 'started_at') DateTime? startedAt,@JsonKey(name: 'submitted_at') DateTime? submittedAt,@JsonKey(name: 'duration_ms') int durationMs,@JsonKey(name: 'total_count') int totalCount,@JsonKey(name: 'answered_count') int answeredCount,@JsonKey(name: 'correct_count') int correctCount, List<PracticeItem> items, List<PracticeAnswerRecord> answers
+@JsonKey(name: 'session_id') String sessionId, String source, String status,@JsonKey(name: 'started_at') DateTime? startedAt,@JsonKey(name: 'submitted_at') DateTime? submittedAt,@JsonKey(name: 'duration_ms') int durationMs,@JsonKey(name: 'total_count') int totalCount,@JsonKey(name: 'answered_count') int answeredCount,@JsonKey(name: 'correct_count') int correctCount, bool scored, int offset,@JsonKey(name: 'total_available') int? totalAvailable, List<PracticeItem> items, List<PracticeAnswerRecord> answers
 });
 
 
@@ -904,7 +926,7 @@ class __$PracticeSessionSnapshotCopyWithImpl<$Res>
 
 /// Create a copy of PracticeSessionSnapshot
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? sessionId = null,Object? source = null,Object? status = null,Object? startedAt = freezed,Object? submittedAt = freezed,Object? durationMs = null,Object? totalCount = null,Object? answeredCount = null,Object? correctCount = null,Object? items = null,Object? answers = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? sessionId = null,Object? source = null,Object? status = null,Object? startedAt = freezed,Object? submittedAt = freezed,Object? durationMs = null,Object? totalCount = null,Object? answeredCount = null,Object? correctCount = null,Object? scored = null,Object? offset = null,Object? totalAvailable = freezed,Object? items = null,Object? answers = null,}) {
   return _then(_PracticeSessionSnapshot(
 sessionId: null == sessionId ? _self.sessionId : sessionId // ignore: cast_nullable_to_non_nullable
 as String,source: null == source ? _self.source : source // ignore: cast_nullable_to_non_nullable
@@ -915,7 +937,10 @@ as DateTime?,durationMs: null == durationMs ? _self.durationMs : durationMs // i
 as int,totalCount: null == totalCount ? _self.totalCount : totalCount // ignore: cast_nullable_to_non_nullable
 as int,answeredCount: null == answeredCount ? _self.answeredCount : answeredCount // ignore: cast_nullable_to_non_nullable
 as int,correctCount: null == correctCount ? _self.correctCount : correctCount // ignore: cast_nullable_to_non_nullable
-as int,items: null == items ? _self._items : items // ignore: cast_nullable_to_non_nullable
+as int,scored: null == scored ? _self.scored : scored // ignore: cast_nullable_to_non_nullable
+as bool,offset: null == offset ? _self.offset : offset // ignore: cast_nullable_to_non_nullable
+as int,totalAvailable: freezed == totalAvailable ? _self.totalAvailable : totalAvailable // ignore: cast_nullable_to_non_nullable
+as int?,items: null == items ? _self._items : items // ignore: cast_nullable_to_non_nullable
 as List<PracticeItem>,answers: null == answers ? _self._answers : answers // ignore: cast_nullable_to_non_nullable
 as List<PracticeAnswerRecord>,
   ));

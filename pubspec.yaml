@@ -114,9 +114,6 @@ flutter:
     # 品牌标识：与网页端 public/mianyang.svg 同一张图（两端一致），
     # 用矢量是因为它在 36~56px 之间变化，不必按尺寸各出一档位图。
     - assets/mianyang.svg
-    # 插画资源（手写 SVG）。**SVG 内部的动画不会被播放**——flutter_svg 不支持
-    # SMIL/CSS 动画，动的那部分在 Flutter 侧（见 widgets/floating_art.dart）。
-    - assets/art/
     # 答题音效（程序合成，见 data/services/sfx_service.dart 文件头）
     - assets/sounds/
 

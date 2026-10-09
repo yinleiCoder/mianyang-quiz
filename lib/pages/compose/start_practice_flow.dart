@@ -59,6 +59,11 @@ Future<bool> startPracticeFlow(
       limit: draft.limit,
       source: draft.source,
       sequential: draft.mode == PracticeMode.sequential,
+      // 讲练从第几道开始由轮次决定（0095）；其余模式这个参数根本不发出去。
+      offset: draft.offset,
+      // 批量选题：题库里勾出来的那几道。为空就是按筛选条件抽（服务端 p_question_ids
+      // 为 null 时才走条件分支）。
+      questionIds: draft.questionIds,
     );
     if (!context.mounted) return false;
 
@@ -81,6 +86,14 @@ Future<bool> startPracticeFlow(
       }
     }
     if (outcome is! PracticeStarted) return false;
+
+    // 服务端刚告诉我们这一轮实际落在哪、以及符合条件的题共多少道（0095）。
+    // 记回草稿：结果页的「上一轮 / 下一轮」要按它算边界，回组卷页时也该停在同一个轮次上。
+    // 非顺序模式返回的是默认值（0 / null），正好把轮次清干净。
+    draft.setRoundInfo(
+      offset: outcome.snapshot.offset,
+      totalAvailable: outcome.snapshot.totalAvailable,
+    );
 
     // 看板刷新不 await：练习页根本不显示看板，交卷后的结果页还会再刷一次。
     // 等它等于把一次 practice_dashboard RPC 塞进「开始练习」的等待路径，

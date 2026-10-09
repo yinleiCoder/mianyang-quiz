@@ -22,6 +22,7 @@ class QuestionListTile extends StatelessWidget {
     required this.onToggleFavorite,
     this.accuracyAttempts = 0,
     this.accuracyCorrect = 0,
+    this.selected,
   });
 
   final QuestionBrief brief;
@@ -31,6 +32,13 @@ class QuestionListTile extends StatelessWidget {
 
   final VoidCallback onTap;
   final VoidCallback onToggleFavorite;
+
+  /// 选题讲练模式下这一行是否被选中；**null = 不在选题模式**。
+  ///
+  /// 放在这里只是为了让卡片长得不一样（勾选框 + 选中底色）：点了之后干什么
+  /// 由调用方通过 [onTap] 决定——页面在选题模式下把它接成"切换选中"。
+  /// 不新增回调是有意的：多一条回调就多一处可能忘记接线的分支。
+  final bool? selected;
 
   /// 全站作答统计（question_accuracy）。没数据时是 0/0 —— 那时**不渲染**统计标签
   /// （「0 次作答 ≠ 0% 错误率」，摆一个 0% 会被读成"大家都做对了"）。
@@ -49,10 +57,15 @@ class QuestionListTile extends StatelessWidget {
         .join(' · ');
     final tags = brief.tags.take(3);
 
+    final selected = this.selected;
+
     return DuoCard(
       onTap: onTap,
-      // 白卡（用户 2026-09-24：题库列表卡片、题目详情、记录页都改白，复盘页不动）
-      color: theme.colorScheme.surface,
+      // 白卡（用户 2026-09-24：题库列表卡片、题目详情、记录页都改白，复盘页不动）。
+      // 选题模式下选中的行换成 primaryContainer：一屏扫过去能直接数出选了哪几道。
+      color: selected == true
+          ? theme.colorScheme.primaryContainer
+          : theme.colorScheme.surface,
       padding: EdgeInsets.all(AppMetrics.gapLg.r),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -110,12 +123,32 @@ class QuestionListTile extends StatelessWidget {
             ),
           ),
           SizedBox(width: AppMetrics.gapSm.r),
-          _FavoriteButton(
-            isFavorite: isFavorite,
-            onToggle: onToggleFavorite,
-          ),
+          // 选题模式下收藏心形让位给勾选框：两个都是"点右边这一小块"，摆一起必然点错。
+          // 收藏在选题时也用不上（讲练不写收藏），所以不是"暂时藏起来"而是"换掉"。
+          if (selected == null)
+            _FavoriteButton(isFavorite: isFavorite, onToggle: onToggleFavorite)
+          else
+            _SelectionMark(selected: selected),
         ],
       ),
+    );
+  }
+}
+
+/// 选题模式的勾选标记。与行点击是同一个动作（点整张卡也能选中），
+/// 所以它本身**不是**按钮——摆在这里只为让"这行能不能选、选没选"一眼可见。
+class _SelectionMark extends StatelessWidget {
+  const _SelectionMark({required this.selected});
+
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Icon(
+      selected ? Icons.check_circle : Icons.circle_outlined,
+      size: 22.r,
+      color: selected ? scheme.primary : scheme.onSurfaceVariant,
     );
   }
 }

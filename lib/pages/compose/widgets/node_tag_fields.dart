@@ -39,6 +39,18 @@ class NodeTagFields extends StatelessWidget {
     final selectable = nodes.where(
       (n) => n.kind == SubjectKind.discipline.wire || n.kind == SubjectKind.course.wire,
     );
+    // 知识点跟着**已选科目**收口（0096）：选了「办公应用」就不该挑到别学科的知识点。
+    // 没选科目时不过滤——那时连属于哪个学科都还没定。
+    final scopedTags = tagsInScope(tags, selectedNodeId, nodes);
+    final tagPathOf = TagIndex(tags).ancestorPathOf;
+    // 已选的知识点若不在收口范围内（用户先挑了标签、又改了科目），**仍要留在列表里**：
+    // DropdownButtonFormField 找不到与 initialValue 匹配的项会直接抛断言。
+    // 它排在第一位，用户一眼能看到"这个选项已经不属于当前科目了"。
+    final selected = tags.where((t) => t.id == selectedTagId).firstOrNull;
+    final tagItems = [
+      if (selected != null && !scopedTags.any((t) => t.id == selected.id)) selected,
+      ...scopedTags,
+    ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -66,7 +78,7 @@ class NodeTagFields extends StatelessWidget {
           onChanged: onNodeChanged,
         ),
         const SizedBox(height: AppMetrics.gapLg),
-        const _FieldLabel('知识点标签'),
+        const _FieldLabel('知识点'),
         DropdownButtonFormField<String?>(
           initialValue: selectedTagId,
           isExpanded: true,
@@ -74,14 +86,30 @@ class NodeTagFields extends StatelessWidget {
           hint: const Text('不限'),
           items: [
             const DropdownMenuItem(value: null, child: Text('不限')),
-            for (final tag in tags)
-              DropdownMenuItem(value: tag.id, child: Text(tag.name)),
+            // 与筛选面板同一口径：按已选科目收口，并显示祖先链
+            // （见 utils/tag_tree.dart；两边都改才算改）
+            for (final tag in tagItems)
+              DropdownMenuItem(
+                value: tag.id,
+                child: Text(
+                  _tagLabel(tag, tagPathOf),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
           ],
           onChanged: onTagChanged,
         ),
       ],
     );
   }
+}
+
+/// 下拉里的标签文案：有父级的带上祖先链（"办公应用 / excel"）。
+/// 光看 "excel" 分不出它是顶层知识点还是某一支下面的子项。
+String _tagLabel(QuestionTag tag, String Function(String?) ancestorPathOf) {
+  final path = ancestorPathOf(tag.id);
+  return path.isEmpty ? tag.name : '$path / ${tag.name}';
 }
 
 class _FieldLabel extends StatelessWidget {

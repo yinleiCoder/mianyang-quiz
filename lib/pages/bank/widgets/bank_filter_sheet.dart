@@ -95,7 +95,11 @@ class _BankFilterSheetState extends State<BankFilterSheet> {
       selectedId: _nodeId,
     );
     if (picked == null || !mounted) return; // null = 直接关掉，保持原值
-    setState(() => _nodeId = picked.isEmpty ? null : picked);
+    final nodeId = picked.isEmpty ? null : picked;
+    setState(() {
+      _nodeId = nodeId;
+      _tagId = keepTagIfInScope(widget.tags, _tagId, nodeId, widget.nodes);
+    });
   }
 
   @override
@@ -135,7 +139,9 @@ class _BankFilterSheetState extends State<BankFilterSheet> {
                       onToggleDifficulty: (value) => setState(
                         () => _difficulty = _difficulty == value ? null : value,
                       ),
-                      tags: widget.tags,
+                      // 知识点按当前科目收口，并带上层级路径（见 utils/tag_tree.dart）
+                      tags: tagsInScope(widget.tags, _nodeId, widget.nodes),
+                      tagPathOf: TagIndex(widget.tags).ancestorPathOf,
                       tagId: _tagId,
                       onToggleTag: (tag) =>
                           setState(() => _tagId = _tagId == tag.id ? null : tag.id),

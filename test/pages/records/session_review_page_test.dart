@@ -14,6 +14,7 @@ import 'package:mianyang_quiz/values/values.dart';
 import 'package:mianyang_quiz/entity/entity.dart';
 import 'package:mianyang_quiz/apis/apis.dart';
 import 'package:mianyang_quiz/pages/pages.dart';
+import 'package:mianyang_quiz/widgets/widgets.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -39,6 +40,11 @@ void main() {
     expect(find.text('正确答案：'), findsOneWidget);
     expect(find.text('解析'), findsOneWidget);
 
+    // 选项标色：第一题选的是 B（答案是 A）。**只标绿是不够的**——那样学生
+    // 一眼看不出自己错在哪，正是这条用例要钉住的东西。
+    // 复盘按原始 key 标色，与刷题时是否乱序无关（见 review_question_card.dart 文件头）。
+    expect(_optionStates(tester), [OptionState.correct, OptionState.wrong]);
+
     // 第二题在首屏之下（ListView 懒构建），滚过去再断言它：题面在，且判定为未作答
     // （判定徽标、作答行、主观题的空白提示都会说「未作答」，所以这里只要求出现）。
     await tester.scrollUntilVisible(find.text('简述光合作用。'), 200);
@@ -58,6 +64,12 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 }
+
+/// 页面上每个选项的视觉状态，按渲染顺序（同 question_view_test 的 _states）。
+List<OptionState> _optionStates(WidgetTester tester) => tester
+    .widgetList<OptionTile>(find.byType(OptionTile))
+    .map((tile) => tile.state)
+    .toList();
 
 Future<void> _pump(WidgetTester tester, Size size) async {
   tester.view.physicalSize = size;

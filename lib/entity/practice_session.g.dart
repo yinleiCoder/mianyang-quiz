@@ -127,6 +127,12 @@ _PracticeSessionSnapshot _$PracticeSessionSnapshotFromJson(
         'correct_count',
         (v) => (v as num?)?.toInt() ?? 0,
       ),
+      scored: $checkedConvert('scored', (v) => v as bool? ?? true),
+      offset: $checkedConvert('offset', (v) => (v as num?)?.toInt() ?? 0),
+      totalAvailable: $checkedConvert(
+        'total_available',
+        (v) => (v as num?)?.toInt(),
+      ),
       items: $checkedConvert(
         'items',
         (v) =>
@@ -157,6 +163,7 @@ _PracticeSessionSnapshot _$PracticeSessionSnapshotFromJson(
     'totalCount': 'total_count',
     'answeredCount': 'answered_count',
     'correctCount': 'correct_count',
+    'totalAvailable': 'total_available',
   },
 );
 
@@ -172,6 +179,9 @@ Map<String, dynamic> _$PracticeSessionSnapshotToJson(
   'total_count': instance.totalCount,
   'answered_count': instance.answeredCount,
   'correct_count': instance.correctCount,
+  'scored': instance.scored,
+  'offset': instance.offset,
+  'total_available': instance.totalAvailable,
   'items': instance.items.map((e) => e.toJson()).toList(),
   'answers': instance.answers.map((e) => e.toJson()).toList(),
 };

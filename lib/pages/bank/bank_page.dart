@@ -10,21 +10,18 @@
 //
 // 本页由 AppShell 的 Scaffold 承载（题库是底部导航的一个 tab），所以不自己建 Scaffold。
 
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/utils/utils.dart';
 import 'package:mianyang_quiz/router/router.dart';
-import 'package:mianyang_quiz/values/values.dart';
 import 'package:mianyang_quiz/entity/entity.dart';
 import 'package:mianyang_quiz/apis/apis.dart';
 import 'package:mianyang_quiz/state/state.dart';
-import 'package:mianyang_quiz/widgets/widgets.dart';
+import 'package:mianyang_quiz/pages/bank/bank_loader.dart';
 import 'package:mianyang_quiz/pages/bank/bank_reference.dart';
-import 'package:mianyang_quiz/pages/bank/widgets/bank_body.dart';
-import 'package:mianyang_quiz/pages/bank/widgets/bank_header.dart';
+import 'package:mianyang_quiz/pages/bank/bank_selection.dart';
 import 'package:mianyang_quiz/pages/bank/widgets/bank_filter_sheet.dart';
-import 'package:mianyang_quiz/pages/bank/widgets/bank_pager.dart';
+import 'package:mianyang_quiz/pages/bank/widgets/bank_view.dart';
 import 'package:provider/provider.dart';
 
 class BankPage extends StatefulWidget {
@@ -47,6 +44,18 @@ class _BankPageState extends State<BankPage> {
   /// 参考数据（科目树、标签）：一次会话里几乎不变，进页面取一次（见 bank_reference.dart）。
   BankReference _ref = const BankReference();
 
+  /// 选题讲练的勾选状态（0095）。跨页保留——选题天然要翻页凑，
+  /// 翻一页就清空等于这个功能没法用；离开题库页才随本页一起丢掉。
+  final _selection = BankSelection();
+
+  /// 取数在 [BankLoader] 里；本页负责三态与把结果摆出来。
+  /// 在这里建（而不是每次现取 context）：下面每个 await 之前就不必再 read 一次 context。
+  late final BankLoader _loader = BankLoader(
+    questions: context.read<QuestionRepository>(),
+    lists: context.read<ListRepository>(),
+    subjects: context.read<SubjectRepository>(),
+  );
+
   @override
   void initState() {
     super.initState();
@@ -54,31 +63,19 @@ class _BankPageState extends State<BankPage> {
   }
 
   Future<void> _bootstrap() async {
-    // read 先取出来再用：把 context 的使用留在 await 之前（否则触发 use_build_context_synchronously）
-    final subjects = context.read<SubjectRepository>();
-    final ref = await BankReference.load(subjects);
+    final ref = await _loader.loadReference();
     if (!mounted) return;
     setState(() => _ref = ref);
     await _load();
   }
 
-  /// 这一页的题目 + 全站作答统计。两个请求串行（统计要拿题目 id），但它是附加信息，取不到就退化成空表。
-  Future<(QuestionPage, Map<String, QuestionAccuracy>)> _fetchPage() async {
-    // 两个仓储都在 await 之前取好：第二次 context.read 落在 await 之后会触发
-    // use_build_context_synchronously（widget 在第一段 await 里被卸载就危险了）
-    final questions = context.read<QuestionRepository>();
-    final lists = context.read<ListRepository>();
-    final page = await questions.listQuestions(
-      filter: _filter,
-      page: _page,
-      pageSize: _pageSize,
-      nodes: _ref.nodes.isEmpty ? null : _ref.nodes,
-    );
-    final accuracy = await lists.fetchAccuracyOrEmpty(
-      page.rows.map((row) => row.questionId).toList(),
-    );
-    return (page, accuracy);
-  }
+  Future<(QuestionPage, Map<String, QuestionAccuracy>)> _fetchPage() =>
+      _loader.fetchPage(
+        filter: _filter,
+        page: _page,
+        pageSize: _pageSize,
+        nodes: _ref.nodes,
+      );
 
   Future<void> _load() async {
     setState(() => _state = const AsyncLoading());
@@ -141,59 +138,42 @@ class _BankPageState extends State<BankPage> {
     _applyFilter(picked);
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final favorites = context.watch<FavoriteStore>();
-    final total = _state.valueOrNull?.total ?? 0;
-
-    return SafeArea(
-      // **不套 MaxWidthBox**：数据页铺满窗口宽度。限宽会让滚动视图只剩中间那一条，
-      // 滚动条就跑到内容区右边而不是窗口侧边，窗口越宽越明显。
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: AppMetrics.pagePadding.r),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            BankHeader(
-              total: total,
-              filter: _filter,
-              nodes: _ref.nodes,
-              tags: _ref.tags,
-              onOpenSheet: _openSheet,
-              onClear: _clearFilter,
-            ),
-            SizedBox(height: AppMetrics.gapMd.r),
-            Expanded(
-              child: BankBody(
-                state: _state,
-                accuracy: _accuracy,
-                filtered: _filter.hasAny,
-                onClear: _clearFilter,
-                onRetry: _load,
-                onRefresh: _refresh,
-                isFavorite: favorites.isFavorite,
-                onOpen: (brief) =>
-                    context.push(AppRoutes.questionDetailOf(brief.questionId)),
-                onToggleFavorite: (brief) => toggleFavoriteWithToast(
-                  context,
-                  questionId: brief.questionId,
-                  toggle: context.read<FavoriteStore>().toggle,
-                ),
-              ),
-            ),
-            if (total > 0)
-              BankPager(
-                page: _page,
-                pageSize: _pageSize,
-                total: total,
-                onPrev: () => _goToPage(_page - 1),
-                onNext: () => _goToPage(_page + 1),
-              ),
-          ],
-        ),
-      ),
-    );
+  /// 带着勾选的题去组卷页。**不在本页直接开练**：开练那一步（等看板、处理进行中的
+  /// 会话、今天练完了的重试）在组卷页那一侧，而 pages/bank 不准 import
+  /// pages/compose（跨模块复用必须上提，见 AGENTS.md 二）。
+  /// 顺带也让教师在组卷页确认一遍"这次只讲这 N 道"，再按开始。
+  void _startPicked(List<String> questionIds) {
+    final draft = context.read<PracticeDraftStore>();
+    draft.setMode(PracticeMode.sequential);
+    draft.setPickedQuestions(questionIds);
+    context.push(AppRoutes.composePath);
   }
+
+  @override
+  void dispose() {
+    _selection.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => BankView(
+    state: _state,
+    accuracy: _accuracy,
+    filter: _filter,
+    reference: _ref,
+    total: _state.valueOrNull?.total ?? 0,
+    page: _page,
+    pageSize: _pageSize,
+    selection: _selection,
+    onOpenSheet: _openSheet,
+    onClearFilter: _clearFilter,
+    onRetry: _load,
+    onRefresh: _refresh,
+    onGoToPage: _goToPage,
+    onStartPicked: _startPicked,
+    onOpen: (brief) =>
+        context.push(AppRoutes.questionDetailOf(brief.questionId)),
+  );
 
   void _clearFilter() => _applyFilter(const QuestionFilter());
 }

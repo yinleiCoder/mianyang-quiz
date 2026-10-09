@@ -12,6 +12,7 @@ import 'package:mianyang_quiz/utils/utils.dart';
 import 'package:mianyang_quiz/entity/entity.dart';
 import 'package:mianyang_quiz/state/state.dart';
 import 'package:mianyang_quiz/widgets/widgets.dart';
+import 'package:mianyang_quiz/pages/practice/widgets/round_nav_buttons.dart';
 
 class ResultBody extends StatelessWidget {
   const ResultBody({super.key, required this.summary, required this.sessionId});
@@ -54,15 +55,11 @@ class ResultBody extends StatelessWidget {
         ),
         const SizedBox(height: AppMetrics.gapMd),
       ],
+      // 课堂讲练：一轮讲完接着讲哪一轮（0095）。原先这里只有一个「再来一轮」，
+      // 而它每次都从第 1 道重新开始——第 101 道之后的题根本到不了。
+      // 详细口径与"为什么只挪轮次不直接开练"见 round_nav_buttons.dart。
       if (!summary.scored) ...[
-        DuoButton(
-          label: '再来一轮',
-          icon: Icons.replay,
-          variant: DuoButtonVariant.outline,
-          // 回组卷页；练习方式还留着"即时顺序练习"（draft store 记着），
-          // 想换筛选条件或题量就地能改。
-          onPressed: () => startPracticeFrom(context, PracticeSource.all),
-        ),
+        const RoundNavButtons(),
         const SizedBox(height: AppMetrics.gapMd),
       ],
       DuoButton(

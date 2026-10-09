@@ -72,6 +72,19 @@ abstract class PracticeSessionSnapshot with _$PracticeSessionSnapshot {
     @JsonKey(name: 'total_count') @Default(0) int totalCount,
     @JsonKey(name: 'answered_count') @Default(0) int answeredCount,
     @JsonKey(name: 'correct_count') @Default(0) int correctCount,
+    /// 是否计入学习统计。false = 课堂讲练（顺序练习，见 0090）。
+    ///
+    /// **续练时必须读它**：默认 true 只为兼容不返回该字段的旧服务端
+    /// （start_practice_session 就不返回）；课堂讲练的会话由 get_practice_session 明确给出 false，
+    /// 客户端据此按顺序练习重开，否则会把作答提交到服务端、静默污染统计（0095 修复）。
+    @Default(true) bool scored,
+
+    /// 本轮的起点（第几道题开始的，0 起）。只有顺序练习会返回。
+    @Default(0) int offset,
+
+    /// 符合筛选条件的题目**总数**（不是本轮题数）。只有顺序练习会返回，
+    /// 用来算"共几轮、还有没有下一轮"；null = 未知，界面就别显示轮次。
+    @JsonKey(name: 'total_available') int? totalAvailable,
     @Default(<PracticeItem>[]) List<PracticeItem> items,
     @Default(<PracticeAnswerRecord>[]) List<PracticeAnswerRecord> answers,
   }) = _PracticeSessionSnapshot;

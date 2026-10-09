@@ -33,6 +33,8 @@ class PracticeRepository {
   /// [filter] 与 [questionIds] 只在 [source] 为 all 时生效——错题/收藏两条分支由服务端
   /// 自己定题，不看筛选条件。参数名与类型统一由 QuestionFilter.toRpcParams() 给出
   /// （题型传的是线格式字符串，不是枚举名）。
+  /// [offset] 只对顺序练习有意义：这一轮从题库顺序的第几道开始（0 起，见 0095）。
+  /// 轮大小就是 [limit]，第 N 轮 = offset (N-1)*limit；服务端返回 total_available 供算轮次。
   Future<StartPracticeOutcome> startSession({
     QuestionFilter filter = const QuestionFilter(),
     int limit = 20,
@@ -40,19 +42,21 @@ class PracticeRepository {
     List<String>? questionIds,
     bool allowSameDay = false,
     bool sequential = false,
+    int offset = 0,
   }) async {
     try {
       final data = await _client.rpc<Map<String, dynamic>>(
         // 顺序练习（教师讲练）走另一个函数：挑法与排法都不同，也不计入学情统计（0090）。
-        // 服务端两个函数共用同一个候选池，所以参数表只差一个"允不允许当天加练"。
+        // 服务端两个函数共用同一个候选池，所以参数表只差"允不允许当天加练"与"从第几道开始"。
         sequential ? 'start_sequential_practice' : 'start_practice_session',
         params: {
           ...filter.toRpcParams(),
           'p_limit': limit,
           'p_source': source.wire,
           'p_question_ids': questionIds,
-          // 顺序练习那个函数没有这个参数 —— 多传一个未知参数 PostgREST 会直接拒（PGRST202）
+          // 下面两个参数顺序练习那个函数才有 —— 多传一个未知参数 PostgREST 会直接拒（PGRST202）
           if (!sequential) 'p_allow_same_day': allowSameDay,
+          if (sequential) 'p_offset': offset,
         },
       );
       // 这一支的 session_id 是 null（服务端没建会话），不能交给快照模型解析。

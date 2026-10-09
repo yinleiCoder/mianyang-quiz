@@ -21,9 +21,14 @@ class QuestionListView extends StatelessWidget {
     required this.onToggleFavorite,
     required this.onRefresh,
     this.accuracy = const {},
+    this.selection,
   });
 
   final List<QuestionBrief> rows;
+
+  /// 选题讲练的已选题目 id；**null = 不在选题模式**。
+  /// 页面在选题模式下会把 [onOpen] 接成"切换选中"。
+  final Set<String>? selection;
 
   /// 全站作答统计（question_id → 作答/答对次数）。缺项 = 没人做过，不是错误。
   final Map<String, QuestionAccuracy> accuracy;
@@ -57,6 +62,7 @@ class QuestionListView extends StatelessWidget {
             onToggleFavorite: () => onToggleFavorite(brief),
             accuracyAttempts: stat?.attempts ?? 0,
             accuracyCorrect: stat?.correct ?? 0,
+            selected: selection?.contains(brief.questionId),
           );
           // 长列表的行入场只给首屏那几行（见 widgets/fade_slide_in.dart 的 rowEntrance）
           return rowEntrance(index, tile);

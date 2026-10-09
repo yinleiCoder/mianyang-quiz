@@ -8,6 +8,7 @@
 
 import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/utils/utils.dart';
+import 'package:mianyang_quiz/entity/entity.dart';
 import 'package:mianyang_quiz/apis/apis.dart';
 import 'package:mianyang_quiz/state/state.dart';
 import 'package:mianyang_quiz/widgets/widgets.dart';
@@ -54,7 +55,7 @@ class _PracticePageState extends State<PracticePage> {
       _runner = PracticeRunner(
         repository: context.read<PracticeRepository>(),
         snapshot: snapshot,
-        mode: widget.mode,
+        mode: _modeFor(snapshot),
         shuffleOptions: widget.shuffleOptions,
       );
       setState(() => _load = const AsyncData(null));
@@ -63,6 +64,17 @@ class _PracticePageState extends State<PracticePage> {
       setState(() => _load = AsyncFailure(mapError(error)));
     }
   }
+
+  /// 会话自己说了它是不是"不计分的课堂讲练"（0095 让 get_practice_session 返回 scored）。
+  ///
+  /// **续练必须沿用当时的模式**，不能信路由的默认值：「继续练习」有几个入口
+  /// （首页卡片、练习记录）都是直接 push 不带 extra 的，路由于是按"即时练习"重开——
+  /// 而即时练习**每答一题就往服务端提交**，正好违反 0090「讲练一轮里一个答案都不提交」。
+  /// 表现是静默的：错题本、正确率、遗忘曲线被灌进课堂讲练的作答，没有任何地方会报错。
+  ///
+  /// 反过来（真会话 scored 为 true 时仍用路由给的模式）是安全的：即时与批量都计分。
+  PracticeMode _modeFor(PracticeSessionSnapshot snapshot) =>
+      snapshot.scored ? widget.mode : PracticeMode.sequential;
 
   @override
   void dispose() {

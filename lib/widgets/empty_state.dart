@@ -10,7 +10,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/values/values.dart';
 import 'package:mianyang_quiz/widgets/duo_icon_badge.dart';
-import 'package:mianyang_quiz/widgets/floating_art.dart';
 import 'package:mianyang_quiz/widgets/max_width_box.dart';
 
 class EmptyState extends StatelessWidget {
@@ -19,7 +18,6 @@ class EmptyState extends StatelessWidget {
     required this.title,
     this.message,
     this.icon,
-    this.art = false,
     this.action,
   });
 
@@ -30,13 +28,6 @@ class EmptyState extends StatelessWidget {
 
   /// 图标，可选；建议用 64 尺寸的中性徽章。
   final IconData? icon;
-
-  /// 换成会动的吉祥物（[kMascotStudy]），比中性徽章更"这里没出事，只是还没开始"。
-  ///
-  /// **只给"本来就是空的"那种空态开**（还没错题、还没收藏、还没记录）：
-  /// 「页面找不到」「这道题被下线了」这类**出错**的空态仍用中性徽章——
-  /// 一张笑脸摆在错误提示上是不合时宜的。开了之后 [icon] 不再显示。
-  final bool art;
 
   /// 推荐动作（如「去练习」），可选。
   final Widget? action;
@@ -55,10 +46,7 @@ class EmptyState extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (art) ...[
-                const FloatingArt(asset: kMascotStudy, size: 96),
-                SizedBox(height: AppMetrics.gapLg.r),
-              ] else if (icon != null) ...[
+              if (icon != null) ...[
                 DuoIconBadge(
                   icon: icon!,
                   tone: DuoIconBadgeTone.neutral,

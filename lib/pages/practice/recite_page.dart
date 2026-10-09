@@ -152,7 +152,7 @@ class _RecitePageState extends State<RecitePage> {
           onRetry: _loadQueue,
           builder: (entries) => entries.isEmpty
               ? const EmptyState(
-                  art: true,
+                  icon: Icons.menu_book_outlined,
                   title: '这里还没有可背的题',
                   message: '换个来源，或先去题库里找几道题。',
                 )

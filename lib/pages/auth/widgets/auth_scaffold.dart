@@ -115,10 +115,7 @@ class AuthScaffold extends StatelessWidget {
   }
 }
 
-/// 品牌区：图标 + 站名 + 会动的吉祥物。与首页同一套图形，让"这是哪个 App"一眼可辨。
-///
-/// 吉祥物只在这一屏、而且是**动的**（见 FloatingArt）：登录页是用户进来的第一眼，
-/// 一屏死图最显得"这是个内部工具"。它是纯装饰，不给语义标签——站名就在下面那行。
+/// 品牌区：图标 + 站名。与首页同一套图形，让"这是哪个 App"一眼可辨。
 class _Brand extends StatelessWidget {
   const _Brand();
 
@@ -127,14 +124,7 @@ class _Brand extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const BrandMark(size: 44),
-            SizedBox(width: AppMetrics.gapMd.r),
-            const FloatingArt(asset: kMascotStudy, size: 88),
-          ],
-        ),
+        const BrandMark(size: 44),
         SizedBox(height: AppMetrics.gapMd.r),
         Text(
           '职教高考联盟',

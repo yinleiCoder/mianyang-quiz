@@ -24,7 +24,11 @@ class BankBody extends StatelessWidget {
     required this.onOpen,
     required this.onToggleFavorite,
     this.accuracy = const {},
+    this.selection,
   });
+
+  /// 选题讲练的已选题目 id；null = 不在选题模式（见 QuestionListView.selection）。
+  final Set<String>? selection;
 
   /// 当前这一页的加载状态。
   final AsyncValue<QuestionPage> state;
@@ -64,6 +68,7 @@ class BankBody extends StatelessWidget {
             onOpen: onOpen,
             onToggleFavorite: onToggleFavorite,
             onRefresh: onRefresh,
+            selection: selection,
           ),
   );
 }

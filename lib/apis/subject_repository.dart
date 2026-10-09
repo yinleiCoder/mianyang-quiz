@@ -29,9 +29,18 @@ class SubjectRepository {
     }
   }
 
+  /// 知识点标签（0096 起带学科与层级）。
+  ///
+  /// 排序与服务端同义：先 sort_order 再 name，让同一父级下的兄弟保持人工排定的顺序。
+  /// **未归类的（subject_node_id 为空）也一并取回**：题库筛选那边要能看到它们，
+  /// 由调用方决定要不要按学科收口（见 filters 里的 tagScope）。
   Future<List<QuestionTag>> fetchTags() async {
     try {
-      final rows = await _client.from('tags').select('id, name').order('name');
+      final rows = await _client
+          .from('tags')
+          .select('id, name, parent_id, subject_node_id, sort_order')
+          .order('sort_order')
+          .order('name');
       return rows.map(QuestionTag.fromJson).toList();
     } catch (error) {
       throw mapError(error);

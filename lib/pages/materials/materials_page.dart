@@ -76,7 +76,7 @@ class _MaterialsPageState extends State<MaterialsPage>
 
   @override
   Widget buildEmpty(BuildContext context) => EmptyState(
-    art: true,
+    icon: Icons.folder_open_outlined,
     title: _filter.hasAny ? '没有符合条件的资料' : '还没有复习资料',
     message: _filter.hasAny
         ? '换个关键词、或清掉筛选再看看。'

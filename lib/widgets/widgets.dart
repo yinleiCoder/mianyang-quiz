@@ -34,7 +34,6 @@ export 'external_media_row.dart';
 export 'fade_slide_in.dart';
 export 'favorite_toggle.dart';
 export 'fill_blank_input_view.dart';
-export 'floating_art.dart';
 export 'filter_chip_group.dart';
 export 'image_block_view.dart';
 export 'list_footer.dart';

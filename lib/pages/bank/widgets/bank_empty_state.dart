@@ -23,10 +23,10 @@ class BankEmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!filtered) {
-      // 题库本来就没有内容（不是被筛没了）——这类"还没开始"的空态用吉祥物；
-      // 下面那种"筛没了"留中性图标，那是个需要用户动手的状态
+      // 题库本来就没有内容（不是被筛没了）：话要说清题目从哪来，图标仍用中性徽章
+      // ——它与下面"筛没了"的区别只在文案与动作上。
       return const EmptyState(
-        art: true,
+        icon: Icons.library_books_outlined,
         title: '题库还是空的',
         message: '老师审核通过并入库的题目会出现在这里。',
       );

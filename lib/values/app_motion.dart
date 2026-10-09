@@ -20,11 +20,8 @@ abstract final class AppMotion {
   /// 标准切换：列表项入场、卡片内容替换、反馈条升起。
   static const Duration medium = Duration(milliseconds: 220);
 
-  /// 大块内容入场：整段插画、空状态、结果卡。
+  /// 大块内容入场：空状态、结果卡。
   static const Duration slow = Duration(milliseconds: 320);
-
-  /// 循环类动画的周期（吉祥物漂浮/呼吸）：慢到不抢注意力，又足以看出"它是活的"。
-  static const Duration loop = Duration(milliseconds: 2600);
 
   /// 相邻列表项之间的错开间隔。**上限见 [maxStagger]**：长长的列表不是
   /// 让第 30 项等 1.2 秒，而是让前几项错开、后面的立刻跟上。
@@ -38,9 +35,6 @@ abstract final class AppMotion {
 
   /// 退场：比入场略快，用户的注意力已经跟着新内容走了。
   static const Curve exit = Curves.easeInCubic;
-
-  /// 循环往复（漂浮、呼吸）：两端都要平顺，否则会看到"顿一下"。
-  static const Curve loopCurve = Curves.easeInOutSine;
 
   /// 第 [order] 项（0 起）的入场延迟，已按 [maxStagger] 截断。
   static Duration staggerFor(int order) {

@@ -17,6 +17,7 @@ import 'package:mianyang_quiz/widgets/widgets.dart';
 import 'package:mianyang_quiz/pages/compose/start_practice_flow.dart';
 import 'package:mianyang_quiz/pages/compose/widgets/compose_options.dart';
 import 'package:mianyang_quiz/pages/compose/widgets/filter_fields.dart';
+import 'package:mianyang_quiz/pages/compose/widgets/round_selector.dart';
 import 'package:mianyang_quiz/pages/compose/widgets/source_selector.dart';
 import 'package:provider/provider.dart';
 
@@ -79,6 +80,28 @@ class _ComposePageState extends State<ComposePage> {
                           },
                         ),
                       ),
+                      // 批量选题（在题库里逐题勾出来的）：来源与筛选都被它顶掉了，
+                      // 必须显式说一句，否则教师会以为下面那些条件还在生效。
+                      if (draft.hasPickedQuestions) ...[
+                        const SizedBox(height: AppMetrics.gapMd),
+                        DuoCard(
+                          padding: const EdgeInsets.all(AppMetrics.gapMd),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  '本次只讲练你勾选的 ${draft.questionIds!.length} 道题',
+                                  style: AppTextStyles.body(context),
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: draft.clearPickedQuestions,
+                                child: const Text('改回按条件'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: AppMetrics.gapXl),
                       const SectionHeader(title: '练习方式'),
                       ComposeOptions(
@@ -91,6 +114,20 @@ class _ComposePageState extends State<ComposePage> {
                         onShuffleChanged: draft.setShuffleOptions,
                         onSoundChanged: context.read<SfxService>().setEnabled,
                       ),
+                      // 轮次只属于顺序讲练（0095）：其余模式按遗忘曲线抽题，没有"第几轮"。
+                      if (draft.mode == PracticeMode.sequential) ...[
+                        const SizedBox(height: AppMetrics.gapMd),
+                        RoundSelector(
+                          round: draft.round,
+                          from: draft.roundFrom,
+                          to: draft.roundTo,
+                          total: draft.totalAvailable,
+                          hasPrev: draft.hasPrevRound,
+                          hasNext: draft.hasNextRound,
+                          onPrev: draft.prevRound,
+                          onNext: draft.nextRound,
+                        ),
+                      ],
                       if (draft.filterApplies) ...[
                         const SizedBox(height: AppMetrics.gapXl),
                         const SectionHeader(

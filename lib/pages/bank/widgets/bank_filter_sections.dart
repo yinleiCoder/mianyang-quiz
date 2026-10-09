@@ -27,6 +27,7 @@ class BankFilterSections extends StatelessWidget {
     required this.tags,
     required this.tagId,
     required this.onToggleTag,
+    this.tagPathOf,
   });
 
   /// 未知题型不会出现在库里，列出来只会让人困惑。
@@ -50,9 +51,14 @@ class BankFilterSections extends StatelessWidget {
   final int? difficulty;
   final ValueChanged<int> onToggleDifficulty;
 
+  /// 可选的标签（**调用方已按当前科目收口**，见 bank_filter_sheet）。
   final List<QuestionTag> tags;
   final String? tagId;
   final ValueChanged<QuestionTag> onToggleTag;
+
+  /// 标签 id → 祖先名称链（不含自己）。有父级的标签靠它把层级显示出来；
+  /// 为 null 时退化成只显示名字。
+  final String Function(String?)? tagPathOf;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -101,10 +107,16 @@ class BankFilterSections extends StatelessWidget {
       if (tags.isNotEmpty)
         _section(
           context,
-          '标签',
+          '知识点',
           FilterChipGroup<QuestionTag>(
             items: tags,
-            labelOf: (tag) => tag.name,
+            // 有父级的把祖先链带上（"办公应用 / excel"）：光看 "excel" 分不出
+            // 它是顶层知识点还是某一支下面的子项。芯片上不缩进——芯片会换行，
+            // 缩进对不齐反而更乱。
+            labelOf: (tag) {
+              final path = tagPathOf?.call(tag.id) ?? '';
+              return path.isEmpty ? tag.name : '$path / ${tag.name}';
+            },
             selectedOf: (tag) => tagId == tag.id,
             onToggle: onToggleTag,
             // 标签可能上百个，限高后可滚动

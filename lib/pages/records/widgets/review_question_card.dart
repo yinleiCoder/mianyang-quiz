@@ -1,19 +1,27 @@
 // 复盘里的一道题：题面（只读、已揭示标准答案）+「你的作答」+ 正确答案与解析。
 //
-// 关于「为什么 QuestionView 的 answer 传 null」——这是复盘页最关键的一个取舍。
-// snapshot.answersByQuestion 里是**读到的作答记录**（Map<String,dynamic>，形状与
-// SubmittedAnswer.toJson() 相同，但没有经过反序列化）。硬把它重建为 SubmittedAnswer 有两个坑：
-//   · 主观题存的是 {'type':'text'}，不带任何内容；复合题的主观子题是 {'mastered':bool}，
-//     连 type 键都没有——重建出来要么丢信息，要么把「已答」显示成「未作答」；
-//   · 选项乱序结果没有存进快照（它是刷题时算一次物化的），重建后的作答会与眼前的
-//     选项顺序对不上，标错位置比不标更糟。
-// 所以：QuestionView 只揭示标准答案（reveal: graded + 不传作答），
-// 「当时选了什么」由下面的文字行如实列出——文字行不会因为解码猜错而说谎。
+// 关于「为什么要重建作答」：snapshot.answersByQuestion 里是**读到的作答记录**
+// （Map<String,dynamic>，形状与 SubmittedAnswer.toJson() 相同，但没有经过反序列化）。
+// 必须把它喂回 QuestionView，否则选项上只会标出标准答案的绿底——**学生选错的那一项
+// 反而是中性色**，一眼看不出自己错在哪（填空同理：不传作答时逐空的对错图标根本不画，
+// 见 fill_blank_input_view.dart 的 `widget.answer != null`）。
+//
+// 曾经这里刻意传 null，理由是"重建会标错位置"。**那个理由是错的**：
+//   · 选项乱序只改显示顺序，ChoiceAnswer.keys 存的**始终是原始 key**
+//     （见 utils/submitted_answer.dart 与 choice_input_view.dart 的文件头），
+//     optionStateOf 也是按原始 key 匹配的——所以无论按什么顺序画，红底都会落在
+//     学生真正选中的那个选项实体上。乱序结果没存进快照，只影响"显示字母"这一个
+//     对不上（复盘按原始顺序画），不影响标色对不对。
+//   · 主观题存的 {'type':'text'} 与复合题主观子题的 {'mastered':bool} 由
+//     submittedAnswerFrom 分别还原成 TextAnswer / SubMasteredAnswer；认不出的形状
+//     它返回 null，自动退化成"只标标准答案"，不会把「已答」显示成「未作答」。
+// 下面的文字行照旧保留：填空与主观题看不出选项标色，仍要靠它说清当时写了什么。
 
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/values/values.dart';
 import 'package:mianyang_quiz/entity/entity.dart';
+import 'package:mianyang_quiz/utils/utils.dart';
 import 'package:mianyang_quiz/widgets/widgets.dart';
 import 'package:mianyang_quiz/pages/records/widgets/submitted_answer_text.dart';
 
@@ -81,7 +89,8 @@ class ReviewQuestionCard extends StatelessWidget {
           QuestionView(
             qtype: item.qtype,
             content: item.content,
-            answer: null,
+            // 重建当时的选择：学生选错的那一项要靠它才能标红（见文件头）。
+            answer: submittedAnswerFrom(record?.answer),
             // 只读展示也要给回调，但什么都不做（QuestionView 是纯受控组件）。
             onAnswerChanged: (_) {},
             reveal: AnswerReveal.graded,
