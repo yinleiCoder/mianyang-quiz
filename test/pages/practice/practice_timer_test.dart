@@ -209,7 +209,7 @@ Future<PracticeRunner> _pumpTopBar(
         theme: AppTheme.light(),
         home: Scaffold(
           body: PracticeTopBar(
-            index: 7,
+            answered: 7,
             total: 20,
             progress: 0.35,
             runner: runner,

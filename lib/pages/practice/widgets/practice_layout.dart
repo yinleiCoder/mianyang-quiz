@@ -76,7 +76,10 @@ class PracticeLayout extends StatelessWidget {
         final column = Column(
           children: [
             PracticeTopBar(
-              index: runner.index + 1,
+              // 「已做/总数」，**不是当前题号**：学生能从答题卡跳着做，
+              // 显示题号会出现"第 3 题 / 共 20"却又做了 8 道这种自相矛盾的读数
+              //（用户 2026-10-13 反馈）。进度条本来就是按已答数画的，这里对齐它。
+              answered: runner.answeredCount,
               total: runner.total,
               progress: runner.progress,
               runner: runner,

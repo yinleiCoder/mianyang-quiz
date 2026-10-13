@@ -19,6 +19,13 @@ class NavDestination {
   final IconData activeIcon;
 }
 
+/// 底部导航（窄屏）按这个顺序摆**分支下标**，中间那一格留给 docked FAB。
+///
+/// **AI 答疑（分支 2）不在底部导航里**（用户 2026-10-13 要求）：窄屏把它的位置
+/// 让给了正中间那颗「开始练习」的 FAB——4 个 tab 夹一颗 FAB，才是对称的。
+/// 窄屏进 AI 答疑改走首页的快捷入口（home_actions）；宽屏侧栏照旧是全部五项。
+const List<int> kBottomNavBranches = [0, 1, 3, 4];
+
 const List<NavDestination> kNavDestinations = [
   NavDestination(label: '首页', icon: Icons.home_outlined, activeIcon: Icons.home),
   // 题库用「摊开的书」而不是 menu_book：menu_book 在 22px 下是一整块实心黑，

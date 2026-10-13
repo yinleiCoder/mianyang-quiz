@@ -45,6 +45,17 @@ class HomeActions extends StatelessWidget {
         ),
         const SizedBox(height: AppMetrics.gapSm),
         DuoButton(
+          // AI 答疑原来占着底部导航的一格，2026-10-13 那格让给了正中间的练习 FAB
+          //（用户要求：底部导航不要 AI 答疑）——窄屏从这里进，宽屏侧栏仍然有它。
+          label: 'AI 答疑',
+          icon: Icons.auto_awesome_outlined,
+          variant: DuoButtonVariant.outline,
+          // go 而不是 push：AI 答疑是底部导航的一个**分支**，切过去而不是叠一层
+          //（push 会在它上面再压一个同样的页面，返回时要按两次）
+          onPressed: () => context.go(AppRoutes.aiPath),
+        ),
+        const SizedBox(height: AppMetrics.gapSm),
+        DuoButton(
           label: '去错题本看看',
           icon: Icons.history_edu_outlined,
           variant: DuoButtonVariant.outline,

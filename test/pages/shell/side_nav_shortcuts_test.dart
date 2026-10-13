@@ -75,15 +75,18 @@ void main() {
     expect(find.text('参加考试'), findsOneWidget);
   });
 
-  testWidgets('窄屏底部导航里**没有**这两个入口（仍是 5 项）', (tester) async {
+  testWidgets('窄屏底部导航里**没有**这两个入口，且不列 AI 答疑', (tester) async {
     await pumpAt(tester, const Size(430, 900));
 
     expect(find.byType(AppBottomNav), findsOneWidget);
     expect(find.text('开始练习'), findsNothing);
     expect(find.text('参加考试'), findsNothing);
-    // 分支目标一个不少，也一个不多
-    for (final d in kNavDestinations) {
-      expect(find.text(d.label), findsWidgets, reason: '底部导航少了 ${d.label}');
+    // 中间那格让给了 docked FAB，AI 答疑不在底部导航里（用户 2026-10-13）——
+    // 窄屏改从首页快捷入口进（home_actions）
+    expect(find.text('AI 答疑'), findsNothing);
+    for (final branch in kBottomNavBranches) {
+      final label = kNavDestinations[branch].label;
+      expect(find.text(label), findsWidgets, reason: '底部导航少了 $label');
     }
   });
 

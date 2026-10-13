@@ -79,11 +79,21 @@ class AppShell extends StatelessWidget {
                   : AppBottomNav(
                       currentIndex: navigationShell.currentIndex,
                       onSelect: select,
-                      // 中间那颗下沉的练习键：push 组卷页（整页，不切分支），
-                      // 与侧栏「开始练习」是同一个去处
                       onStartPractice: () =>
                           context.push(AppRoutes.composePath),
                     ),
+              // 开始练习：窄屏下是**标准的 docked FAB**（用户 2026-10-13 定的形态），
+              // 坐在底栏中间留出的空位里（见 AppBottomNav 的 _practiceSlot）。
+              // push 整页的组卷页，不是切分支——所以它不进 NavigationBar 的目的地。
+              floatingActionButton: wide
+                  ? null
+                  : FloatingActionButton(
+                      onPressed: () => context.push(AppRoutes.composePath),
+                      tooltip: '开始练习',
+                      child: const Icon(Icons.play_arrow_rounded),
+                    ),
+              floatingActionButtonLocation:
+                  FloatingActionButtonLocation.centerDocked,
             ),
           ),
         );

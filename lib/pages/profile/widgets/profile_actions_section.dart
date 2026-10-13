@@ -12,8 +12,12 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/router/router.dart';
 import 'package:mianyang_quiz/values/values.dart';
 import 'package:mianyang_quiz/widgets/widgets.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:mianyang_quiz/pages/profile/widgets/appearance_sheet.dart';
 import 'package:mianyang_quiz/pages/profile/widgets/profile_entry_tile.dart';
+
+/// 作者主页。只有这一处用，就先放这里（将来有第二处再上提到 values/）。
+const _authorHomeUrl = 'https://yinleilei.cn';
 
 class ProfileActionsSection extends StatelessWidget {
   const ProfileActionsSection({super.key, required this.onSignOut});
@@ -32,6 +36,17 @@ class ProfileActionsSection extends StatelessWidget {
         label: '外观',
         subtitle: '深色模式、主题色',
         onTap: () => showAppearanceSheet(context),
+      ),
+      SizedBox(height: AppMetrics.gapMd.r),
+      // 联系作者：交给系统浏览器打开（站外链接一律外部应用，理由见 ai_page 同款处理）
+      ProfileEntryTile(
+        icon: Icons.language_outlined,
+        label: '联系作者',
+        subtitle: '作者主页：yinleilei.cn',
+        onTap: () => launchUrl(
+          Uri.parse(_authorHomeUrl),
+          mode: LaunchMode.externalApplication,
+        ),
       ),
       SizedBox(height: AppMetrics.gapMd.r),
       ProfileEntryTile(

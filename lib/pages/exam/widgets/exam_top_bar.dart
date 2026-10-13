@@ -16,7 +16,7 @@ import 'package:mianyang_quiz/pages/exam/widgets/exam_timer.dart';
 class ExamTopBar extends StatelessWidget {
   const ExamTopBar({
     super.key,
-    required this.index,
+    required this.answered,
     required this.total,
     required this.progress,
     required this.deadline,
@@ -27,7 +27,8 @@ class ExamTopBar extends StatelessWidget {
   });
 
   /// 当前题号，**从 1 开始**（界面不显示 0/20 这种）。
-  final int index;
+  /// 「已做/总数」里的已做数——不是当前题号（答题卡能跳着做）。
+  final int answered;
   final int total;
 
   /// 0~1，已作答占比（不是"看到第几题"）。
@@ -63,7 +64,7 @@ class ExamTopBar extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppMetrics.gapMd),
           child: Text(
-            '$index/$total',
+            '$answered/$total',
             style: theme.textTheme.labelLarge?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
               fontWeight: FontWeight.w400,

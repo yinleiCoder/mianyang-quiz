@@ -19,7 +19,7 @@ import 'package:mianyang_quiz/pages/practice/widgets/practice_timer.dart';
 class PracticeTopBar extends StatelessWidget {
   const PracticeTopBar({
     super.key,
-    required this.index,
+    required this.answered,
     required this.total,
     required this.progress,
     required this.runner,
@@ -28,7 +28,9 @@ class PracticeTopBar extends StatelessWidget {
   });
 
   /// 当前题号，**从 1 开始**（界面不显示 0/20 这种）。
-  final int index;
+  /// 「已做 / 总数」里的**已做数**——不是当前题号：答题卡能跳着做，
+  /// 显示题号会出现"第 3 题 / 共 20"却已经做了 8 道这种自相矛盾的读数。
+  final int answered;
   final int total;
 
   /// 0~1，已作答占比（不是"看到第几题"——这样进度条只在真正完成时走满）。
@@ -72,7 +74,7 @@ class PracticeTopBar extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppMetrics.gapMd),
           child: Text(
-            '$index/$total',
+            '$answered/$total',
             style: theme.textTheme.labelLarge?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
               fontWeight: FontWeight.w400,

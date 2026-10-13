@@ -141,7 +141,7 @@ class _ExamStageState extends State<ExamStage> {
             final column = Column(
               children: [
                 ExamTopBar(
-                  index: _runner.index + 1,
+                  answered: _runner.answeredCount,
                   total: _runner.total,
                   progress: _runner.progress,
                   deadline: _runner.deadline,
