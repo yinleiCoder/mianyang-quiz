@@ -28,6 +28,7 @@
 
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:mianyang_quiz/router/router.dart';
 import 'package:mianyang_quiz/widgets/widgets.dart';
 import 'package:mianyang_quiz/pages/shell/widgets/app_bottom_nav.dart';
 import 'package:mianyang_quiz/pages/shell/widgets/clipboard_link_listener.dart';
@@ -78,6 +79,10 @@ class AppShell extends StatelessWidget {
                   : AppBottomNav(
                       currentIndex: navigationShell.currentIndex,
                       onSelect: select,
+                      // 中间那颗下沉的练习键：push 组卷页（整页，不切分支），
+                      // 与侧栏「开始练习」是同一个去处
+                      onStartPractice: () =>
+                          context.push(AppRoutes.composePath),
                     ),
             ),
           ),

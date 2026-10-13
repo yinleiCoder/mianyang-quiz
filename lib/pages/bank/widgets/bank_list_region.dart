@@ -13,6 +13,7 @@
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/values/values.dart';
+import 'package:mianyang_quiz/pages/bank/widgets/bank_selection_toggle.dart';
 import 'package:mianyang_quiz/entity/entity.dart';
 import 'package:mianyang_quiz/utils/utils.dart';
 import 'package:mianyang_quiz/apis/apis.dart';
@@ -77,7 +78,7 @@ class BankListRegion extends StatelessWidget {
           children: [
             // 已经在选题模式里就不再给入口——再点一次没有意义
             if (total > 0 && !selecting)
-              _SelectionToggle(onStart: selection.begin),
+              BankSelectionToggle(onStart: selection.begin, total: total),
             SizedBox(height: AppMetrics.gapMd.r),
             Expanded(
               child: BankBody(
@@ -123,25 +124,6 @@ class BankListRegion extends StatelessWidget {
     if (selection.toggle(questionId)) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(BankSelection.limitHint)),
-    );
-  }
-}
-
-/// 未进入选题模式时，列表上方右侧的那个入口。
-class _SelectionToggle extends StatelessWidget {
-  const _SelectionToggle({required this.onStart});
-
-  final VoidCallback onStart;
-
-  @override
-  Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.centerRight,
-      child: TextButton.icon(
-        onPressed: onStart,
-        icon: Icon(Icons.checklist_rounded, size: 18.r),
-        label: const Text('选题讲练'),
-      ),
     );
   }
 }

@@ -43,7 +43,7 @@ class MaterialExternalBody extends StatelessWidget {
                 padding: EdgeInsets.all(AppMetrics.gapLg.r),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(16.r),
+                  borderRadius: BorderRadius.circular(AppMetrics.radiusLarge.r),
                 ),
                 child: Icon(type.icon, size: 40.r, color: theme.colorScheme.primary),
               ),

@@ -18,6 +18,7 @@ class MaterialListTile extends StatelessWidget {
     required this.material,
     required this.nodePath,
     required this.onTap,
+    required this.onSave,
   });
 
   final MaterialBrief material;
@@ -25,6 +26,9 @@ class MaterialListTile extends StatelessWidget {
   /// 学科 / 专业大类的可读路径；没有归属时是空串。
   final String nodePath;
   final VoidCallback onTap;
+
+  /// 右侧下载按钮：保存到本地（实现见 material_save.dart）。
+  final VoidCallback onSave;
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +45,7 @@ class MaterialListTile extends StatelessWidget {
             padding: EdgeInsets.all(AppMetrics.gapSm.r),
             decoration: BoxDecoration(
               color: theme.colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(10.r),
+              borderRadius: BorderRadius.circular(AppMetrics.radiusMedium.r),
             ),
             child: Icon(type.icon, size: 22.r, color: theme.colorScheme.primary),
           ),
@@ -120,14 +124,8 @@ class MaterialListTile extends StatelessWidget {
                         ),
                       ),
                     ),
-                    Icon(
-                      Icons.download_outlined,
-                      size: 12.r,
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                    SizedBox(width: 2.r),
                     Text(
-                      '${material.downloadCount}',
+                      '${material.downloadCount} 次下载',
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -136,6 +134,15 @@ class MaterialListTile extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+          // 右侧的下载按钮：列表页原来只有"点进详情"一条路，用户反馈
+          // "复习资料页面没有下载按钮"（2026-10-12）。图标本身就是那个下载动作，
+          // 次数只作为文字留在下面，避免"一个图标两种含义"。
+          IconButton(
+            onPressed: onSave,
+            tooltip: '保存到本地',
+            icon: Icon(Icons.download_outlined, size: 22.r),
+            color: theme.colorScheme.primary,
           ),
         ],
       ),

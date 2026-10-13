@@ -51,12 +51,15 @@ class _SideNavItemState extends State<SideNavItem> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    // 选中态用 secondaryContainer/onSecondaryContainer：这正是 M3 给
+    // NavigationDrawer 与 NavigationBar 的"当前目的地"规定的角色对
+    //（底部导航那边 AppNavigationBarTheme 用的是同一对，两端必须一致）。
     final color = widget.selected
-        ? scheme.onPrimaryContainer
+        ? scheme.onSecondaryContainer
         : scheme.onSurfaceVariant;
     // 悬停底比选中底淡一档：让人看出"这里可以点"，又不至于误以为已经选中
     final background = widget.selected
-        ? scheme.primaryContainer
+        ? scheme.secondaryContainer
         : (_hovered ? scheme.surfaceContainerHighest : null);
 
     return Padding(

@@ -12,6 +12,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/router/router.dart';
 import 'package:mianyang_quiz/values/values.dart';
 import 'package:mianyang_quiz/widgets/widgets.dart';
+import 'package:mianyang_quiz/pages/profile/widgets/appearance_sheet.dart';
 import 'package:mianyang_quiz/pages/profile/widgets/profile_entry_tile.dart';
 
 class ProfileActionsSection extends StatelessWidget {
@@ -26,6 +27,13 @@ class ProfileActionsSection extends StatelessWidget {
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       const SectionHeader(title: '其他'),
+      ProfileEntryTile(
+        icon: Icons.palette_outlined,
+        label: '外观',
+        subtitle: '深色模式、主题色',
+        onTap: () => showAppearanceSheet(context),
+      ),
+      SizedBox(height: AppMetrics.gapMd.r),
       ProfileEntryTile(
         icon: Icons.chat_bubble_outline_rounded,
         label: '意见反馈',

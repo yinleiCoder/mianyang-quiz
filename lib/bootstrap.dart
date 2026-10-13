@@ -14,6 +14,7 @@ import 'package:http/http.dart' as http;
 import 'package:mianyang_quiz/values/values.dart';
 import 'package:mianyang_quiz/apis/apis.dart';
 import 'package:mianyang_quiz/dependencies.dart';
+import 'package:mianyang_quiz/state/state.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// 设计稿基准尺寸（逻辑像素）。手机竖屏的主流宽度。
@@ -87,7 +88,11 @@ Future<StartupResult> bootstrap() async {
       return refreshed.session?.accessToken ??
           supabase.client.auth.currentSession?.accessToken;
     };
-    final deps = AppDependencies.create(supabase.client);
+    // 外观偏好**先读出来再建 Store**：MaterialApp 若先拿默认值渲染一帧，
+    // 深色模式的用户每次启动都会看到白闪。这里是本地读，与上面的网络初始化比可忽略。
+    final themeStore = ThemeStore();
+    await themeStore.load();
+    final deps = AppDependencies.create(supabase.client, themeStore: themeStore);
     // 会话恢复不 await：要走网络，等它会让首屏白屏。
     // 路由守卫在 isReady 为 false 时挂起，页面自己显示加载态。
     deps.startSession();

@@ -7,12 +7,14 @@
 library values;
 
 export 'accuracy_meta.dart';
+export 'app_field_theme.dart';
 export 'app_metrics.dart';
 export 'app_motion.dart';
 export 'app_navigation_bar_theme.dart';
 export 'app_surfaces.dart';
 export 'app_text_styles.dart';
 export 'app_theme.dart';
+export 'app_typography.dart';
 export 'difficulty_meta.dart';
 export 'env.dart';
 export 'feedback_meta.dart';
@@ -22,3 +24,4 @@ export 'qtype_meta.dart';
 export 'report_meta.dart';
 export 'semantic_colors.dart';
 export 'share_links.dart';
+export 'theme_meta.dart';

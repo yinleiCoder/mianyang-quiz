@@ -27,10 +27,12 @@ class ReviewSummary extends StatelessWidget {
     final accuracy = total == 0 ? 0.0 : correct / total;
 
     final tiles = <Widget>[
+      // **五张卡一律不带 caption**（用户 2026-10-12 反馈"各个高度不一致"）：
+      // 这几张卡是同一行并排的，谁多一行谁就矮/高一截，边缘参差看着像画歪了。
+      // 「共 N 题」的信息在下面「逐题回顾」的标题里已经有了，这里本来也是重复。
       DuoStatTile(
         label: '正确率',
         value: Formatters.percent(accuracy),
-        caption: '共 $total 题',
         icon: Icons.percent_rounded,
       ),
       DuoStatTile(

@@ -40,12 +40,17 @@ class AppDependencies {
       questionPdfService = QuestionPdfService();
 
   /// 由 bootstrap() 在 Supabase.initialize 之后调用。
-  factory AppDependencies.create(SupabaseClient client) {
+  ///
+  /// [themeStore] 由 bootstrap **先 load() 再传进来**（理由见 theme_store.dart 文件头：
+  /// 外观偏好要在第一帧之前就位，否则深色用户会看到一帧白闪）。
+  /// 不传时自建一个默认值，方便测试与其它调用方。
+  factory AppDependencies.create(SupabaseClient client, {ThemeStore? themeStore}) {
     final deps = AppDependencies._(client);
     deps.authStore = AuthStore(deps.authService, deps.userRepository);
     deps.dashboardStore = DashboardStore(deps.statsRepository);
     deps.favoriteStore = FavoriteStore(deps.favoriteRepository);
     deps.practiceDraftStore = PracticeDraftStore();
+    deps.themeStore = themeStore ?? ThemeStore();
     return deps;
   }
 
@@ -82,11 +87,14 @@ class AppDependencies {
   final QuestionPdfService questionPdfService;
   final MaterialDownloadService materialDownloadService;
 
-  /// 四个跨页 Store。赋值在 create() 里完成（它们彼此之间与仓储有依赖顺序）。
+  /// 跨页 Store。赋值在 create() 里完成（它们彼此之间与仓储有依赖顺序）。
   late final AuthStore authStore;
   late final DashboardStore dashboardStore;
   late final FavoriteStore favoriteStore;
   late final PracticeDraftStore practiceDraftStore;
+
+  /// 外观偏好（主题色 + 明暗）。**由 bootstrap 先 load() 再建**，见 create() 的注释。
+  late final ThemeStore themeStore;
 
   /// 启动会话恢复。**不 await**：拉档案要走网络，等它会让首屏白屏；
   /// 路由守卫已经在 isReady 为 false 时挂起，页面自己显示加载态即可。
@@ -101,6 +109,7 @@ class AppDependencies {
     dashboardStore.dispose();
     favoriteStore.dispose();
     practiceDraftStore.dispose();
+    themeStore.dispose();
     sfxService.dispose();
   }
 }

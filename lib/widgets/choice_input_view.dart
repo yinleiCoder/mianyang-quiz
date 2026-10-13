@@ -65,7 +65,6 @@ class ChoiceInputView extends StatelessWidget {
             // 显示字母按**位置**给：第 i 个位置永远是 letterOf(i)，与原始 key 无关。
             letter: letterOf(i),
             label: options[i].label,
-            multiple: multiple,
             state: optionStateOf(
               key: options[i].key,
               selected: selected,

@@ -14,6 +14,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/bootstrap.dart';
 import 'package:mianyang_quiz/router/router.dart';
+import 'package:mianyang_quiz/state/state.dart';
 import 'package:mianyang_quiz/values/values.dart';
 import 'package:provider/provider.dart';
 
@@ -97,13 +98,25 @@ class _MianyangQuizAppState extends State<MianyangQuizApp> {
                 ChangeNotifierProvider.value(value: deps.dashboardStore),
                 ChangeNotifierProvider.value(value: deps.favoriteStore),
                 ChangeNotifierProvider.value(value: deps.practiceDraftStore),
+                // 外观偏好（主题色 + 明暗）：改了要整棵树重画，必然进全局
+                ChangeNotifierProvider.value(value: deps.themeStore),
               ],
-              child: MaterialApp.router(
-                title: _appTitle,
-                theme: AppTheme.light(),
-                darkTheme: AppTheme.dark(),
-                routerConfig: router,
-                debugShowCheckedModeBanner: false,
+              // MaterialApp 必须在这里**用 Provider 之下的 context 构建**：
+              // 外观偏好一变就要换 theme/themeMode 重建主题。拿上面那个 context 直接读
+              // 是读不到的（Provider 还没包上来），所以套一层 Builder。
+              child: Builder(
+                builder: (context) {
+                  final appearance = context.watch<ThemeStore>();
+                  return MaterialApp.router(
+                    title: _appTitle,
+                    theme: AppTheme.light(seed: appearance.seed),
+                    darkTheme: AppTheme.dark(seed: appearance.seed),
+                    // 映射到 Flutter 的 ThemeMode 只在这一处发生（Store 那边是 UI 无关的枚举）
+                    themeMode: appearance.mode.flutter,
+                    routerConfig: router,
+                    debugShowCheckedModeBanner: false,
+                  );
+                },
               ),
             ),
     );

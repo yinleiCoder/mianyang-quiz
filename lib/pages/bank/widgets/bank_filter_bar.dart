@@ -43,12 +43,12 @@ class BankFilterBar extends StatelessWidget {
 
     return Row(
       children: [
+        // **纯文字**（TextButton）：用户 2026-10-12 反馈"不要带边框和内边距"。
+        // 有没有生效不必靠按钮底色说——右边那排条件芯片已经写明了。
         DuoButton(
           label: '筛选',
           icon: Icons.tune_rounded,
-          variant: hasAny
-              ? DuoButtonVariant.primary
-              : DuoButtonVariant.outline,
+          variant: DuoButtonVariant.ghost,
           expand: false,
           compact: true,
           onPressed: onOpenSheet,

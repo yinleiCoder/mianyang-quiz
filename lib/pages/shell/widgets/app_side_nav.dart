@@ -3,7 +3,8 @@
 // 与底部导航是同一份目标列表（nav_destinations.dart），只是形态不同：
 // 宽屏上把主导航竖起来放左侧更符合桌面习惯，也把纵向空间全留给内容。
 //
-// 形态学多邻国 Web 端：左上是品牌区，下面是条目列表；选中项用浅色圆角块突出，
+// 形态按 M3 的 NavigationDrawer：左上是品牌区，下面是条目列表；选中项用
+// secondaryContainer 的圆角块突出（M3 里"当前目的地"用的正是这一对角色），
 // 且图标换成实心版本——不只靠颜色区分选中态（色盲用户也看得出）。
 
 import 'package:go_router/go_router.dart';
@@ -55,7 +56,7 @@ class AppSideNav extends StatelessWidget {
               child: ListView(
                 padding: EdgeInsets.zero,
                 children: [
-                  for (var i = 0; i < kNavDestinations.length; i++)
+                  for (var i = 0; i < kNavDestinations.length; i++) ...[
                     SideNavItem(
                       label: kNavDestinations[i].label,
                       icon: kNavDestinations[i].icon,
@@ -63,25 +64,20 @@ class AppSideNav extends StatelessWidget {
                       selected: i == currentIndex,
                       onTap: () => onSelect(i),
                     ),
-                  if (kNavShortcuts.isNotEmpty) ...[
-                    const SizedBox(height: AppMetrics.gapMd),
-                    Divider(
-                      height: 1,
-                      indent: AppMetrics.gapLg,
-                      endIndent: AppMetrics.gapLg,
-                      color: scheme.outlineVariant,
-                    ),
-                    const SizedBox(height: AppMetrics.gapMd),
-                    // 快捷入口：push 一个整页，不是切分支——
-                    // 所以它们**永远不是选中态**（当前页不在这五项里）。
-                    for (final shortcut in kNavShortcuts)
-                      SideNavItem(
-                        label: shortcut.label,
-                        icon: shortcut.icon,
-                        activeIcon: shortcut.icon,
-                        selected: false,
-                        onTap: () => context.push(shortcut.path),
-                      ),
+                    // 快捷入口（开始练习 / 参加考试）插在**题库下面**（用户 2026-10-12 要求）：
+                    // 「看题 → 开练 / 去考试」本来就是同一串动作，中间夹着 AI 答疑与记录
+                    // 反而把这条线切断了。i == 1 就是题库，挪动 kNavDestinations 的顺序时
+                    // 这个下标要跟着改。
+                    if (i == 1)
+                      // 它们 push 一个整页、不是切分支，所以**永远不是选中态**。
+                      for (final shortcut in kNavShortcuts)
+                        SideNavItem(
+                          label: shortcut.label,
+                          icon: shortcut.icon,
+                          activeIcon: shortcut.icon,
+                          selected: false,
+                          onTap: () => context.push(shortcut.path),
+                        ),
                   ],
                 ],
               ),

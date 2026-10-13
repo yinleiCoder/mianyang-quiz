@@ -3,11 +3,11 @@
 // 这里是**交互规则**的落点（什么时候自动判题、什么时候可以交卷），
 // 但所有状态变更都转发给 PracticeRunner，本组件自己不持有题目状态。
 //
-// 即时模式（学多邻国）：
+// 即时模式：
 //   · 单选/判断**选完立即判题**——这两类作答"选中即完整"，再让用户点一次检查是多余的
 //   · 多选/填空/主观需要显式点「检查」（作答可能还没结束）
-//   · 判完停在原地：标准答案与解析就显示在题目下方。答对 2 秒后自动跳下一题，
-//     答错则等学生自己点「继续」（计时器在 PracticeFeedbackBar 里，不在这）
+//   · 判完停在原地：标准答案与解析就显示在题目下方，**答对答错都要学生自己点「继续」**
+//     （2026-10-12 起不再自动跳题，理由见 PracticeFeedbackBar 文件头）
 // 批量模式：只记草稿，上一题/下一题/答题卡自由切换，交卷时才提交。
 
 import 'dart:async';
@@ -92,7 +92,7 @@ class _PracticeStageState extends State<PracticeStage> {
     try {
       await _runner.check();
       if (!mounted) return;
-      // 音效跟着判定结果走（多邻国式即时反馈）。用 context.read 取一次、不监听：
+      // 音效跟着判定结果走（选完立刻出声，不等交卷）。用 context.read 取一次、不监听：
       // 开关只影响后续播放，不需要它触发重建。
       final verdict = _runner.current.verdict;
       final sfx = context.read<SfxService>();

@@ -8,9 +8,7 @@
 // 什么文案"（科目路径链、标签名）本来就只服务于这块界面，放在一起才读得通。
 // 不持状态、不发请求：筛选条件与两个回调都由页面给。
 
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:mianyang_quiz/values/values.dart';
 import 'package:mianyang_quiz/entity/entity.dart';
 import 'package:mianyang_quiz/utils/utils.dart';
 import 'package:mianyang_quiz/pages/bank/widgets/bank_filter_bar.dart';
@@ -40,8 +38,6 @@ class BankHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -52,19 +48,8 @@ class BankHeader extends StatelessWidget {
           onOpenSheet: onOpenSheet,
           onClear: onClear,
         ),
-        // 0 时不显示计数：空题库还标「共 0 题」很刺眼
-        if (total > 0) ...[
-          SizedBox(height: AppMetrics.gapSm.r),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Text(
-              '共 $total 题',
-              style: AppTextStyles.caption(
-                context,
-              ).copyWith(color: theme.colorScheme.onSurfaceVariant),
-            ),
-          ),
-        ],
+        // 「共 N 题」**不在这里**：它跟在列表上方那一行、与「选题讲练」同一行
+        // （用户 2026-10-12 反馈，两个都是"这一屏有什么"，各占一行太浪费）
       ],
     );
   }

@@ -85,8 +85,9 @@ class _PracticeTimerState extends State<PracticeTimer> {
     final muted = scheme.onSurfaceVariant;
     final paused = widget.runner.isPaused;
 
-    // 暂停态靠三件事一起说清楚：图标变成播放键、多一个「已暂停」标签、整块浮起浅底。
-    // 只把颜色调暗是不够的——原色本来就是次要色（onSurfaceVariant），再暗用户看不出来。
+    // **整块没有任何底色**（用户 2026-10-12 明确要求"纯文本"）：暂停与否只靠
+    // 图标（暂停↔播放）与「已暂停」三个字说清楚，不再浮起一层浅底——
+    // 顶栏里就这一处带底色的话，看着像个按钮而不是一行信息。
     return Tooltip(
       message: paused ? '继续计时' : '暂停计时',
       child: Semantics(
@@ -96,23 +97,13 @@ class _PracticeTimerState extends State<PracticeTimer> {
         child: InkWell(
           onTap: widget.runner.togglePause,
           borderRadius: BorderRadius.circular(AppMetrics.radiusButton.r),
-          child: AnimatedContainer(
-            duration: AppMotion.fast,
-            curve: AppMotion.standard,
+          child: Container(
             // 撑到最小触控目标：顶栏本来就 48 高（旁边那颗退出按钮决定的），
             // 这里不跟着撑起来的话，可点区域只有二十几像素高，"点不中"比"看不清"更糟
             height: AppMetrics.touchTarget.r,
             padding: EdgeInsets.symmetric(
               horizontal: AppMetrics.gapSm.r,
               vertical: AppMetrics.gapXs.r,
-            ),
-            decoration: BoxDecoration(
-              // 未暂停时是完全透明的一层（不是 null）：这样两个状态之间才有过渡，
-              // 而且透明色同样取自主题，不写死。
-              color: paused
-                  ? scheme.surfaceContainerHighest
-                  : scheme.surface.withValues(alpha: 0),
-              borderRadius: BorderRadius.circular(AppMetrics.radiusButton.r),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,

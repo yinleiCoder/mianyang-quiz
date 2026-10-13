@@ -1,4 +1,7 @@
-// 图标徽章：圆角方底 + 一个图标。
+// 图标徽章：**圆形**色调底 + 一个图标。
+//
+// 形状是圆的：M3 里带底的图标容器（列表头像位、IconButton、FAB）一律是圆或全圆角，
+// 旧版那个 size*0.3 的"圆角方"是多邻国的画法。
 //
 // 职责：给图标一个带语气的底，用在统计卡、空状态、列表左侧，让"图标"这件事全站一致。
 // 不负责：点击（它不可点，要可点请在外面包 InkWell 或改用 DuoButton）、
@@ -84,7 +87,7 @@ class DuoIconBadge extends StatelessWidget {
       height: size.r,
       decoration: BoxDecoration(
         color: filled ? container : scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(size.r * 0.3),
+        shape: BoxShape.circle,
       ),
       child: Icon(
         icon,

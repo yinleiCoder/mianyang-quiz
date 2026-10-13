@@ -1,19 +1,17 @@
 // 即时模式的底部反馈条：判定之后从底部升起的作答结果。
 //
-// 学多邻国：整条底色随对错变化（浅绿/浅红），左边一个大图标，
+// 整条底色随对错变化（M3 的成功/错误容器色），左边一个大图标，
 // 中间一句话 + 正误说明，右边一个主按钮。
 //
-// **答对后自动跳下一题，答错必须自己点「继续」**（用户 2026-09-24）：
-// 答对的人基本不用看解析，直接刷下一题更顺；答错的人要看解析，自动跳会把它抢走。
-// 当年是一刀切地取消自动跳（连答错也跳，学生抱怨"看不到解析"），现在只保留答对这条。
+// **一律要学生自己点「继续」，答对也不自动跳**（用户 2026-10-12 反馈，改回手动）：
+// 上一版是"答对 2 秒后自动跳"，理由是答对的人不用看解析；实际用下来并非如此——
+// 答对（尤其蒙对）的人也想核对解析，2 秒既看不完也来不及反应，页面就被抢走了。
+// 所以这次**整条计时路径删掉**，不留开关（2026-09-24 那版还留着"答错不跳"这一半，
+// 现在是两半都不跳）。
 //
-// 计时器挂在这个组件上、不挂在舞台上：它只在"已判定"时挂载，切题那一刻就被换掉，
-// dispose 里取消即可。舞台（practice_stage.dart）已经 180/200 行，再塞计时器会撞
-// 架构守卫的 200 行上限。
+// 组件本身仍需要 State：入场动画要两帧（见 _slide）。
 //
 // 只做展示与回调，不判分、不提交——判定结果由 PracticeRunner 给出。
-
-import 'dart:async';
 
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:material_ui/material_ui.dart';
@@ -51,14 +49,6 @@ class PracticeFeedbackBar extends StatefulWidget {
 }
 
 class _PracticeFeedbackBarState extends State<PracticeFeedbackBar> {
-  /// 答对后停留多久再跳。
-  ///
-  /// 2 秒 = 看清「答对了」+ 瞄一眼解析开头。比当年那版（1.5 秒）长一点，
-  /// 因为解析现在是判完就出现的，抢走的代价比以前大。
-  static const Duration _dwell = Duration(seconds: 2);
-
-  Timer? _auto;
-
   /// 入场：第一帧先落在下方 20%，下一帧回到 0，AnimatedSlide 于是自己升上来。
   ///
   /// 为什么绕这一下：AnimatedSlide 是**隐式**动画，只在"值变化"时播——
@@ -69,34 +59,9 @@ class _PracticeFeedbackBarState extends State<PracticeFeedbackBar> {
   @override
   void initState() {
     super.initState();
-    _schedule();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) setState(() => _slide = 0);
     });
-  }
-
-  @override
-  void didUpdateWidget(covariant PracticeFeedbackBar old) {
-    super.didUpdateWidget(old);
-    // 判定结果可能后到（主观题要学生先自评），条件变了就重排一次
-    if (old.correct != widget.correct || old.isLast != widget.isLast) {
-      _auto?.cancel();
-      _schedule();
-    }
-  }
-
-  void _schedule() {
-    // 答错不跳（要看解析）；末题不跳（「完成」就是交卷，不能替学生按下去）
-    if (!widget.correct || widget.isLast) return;
-    _auto = Timer(_dwell, () {
-      if (mounted) widget.onContinue();
-    });
-  }
-
-  @override
-  void dispose() {
-    _auto?.cancel();
-    super.dispose();
   }
 
   @override
@@ -107,7 +72,6 @@ class _PracticeFeedbackBarState extends State<PracticeFeedbackBar> {
     // M3 没有"成功"角色，用主题的 SemanticColors；错误用 error。
     final background = widget.correct ? semantic.successContainer : scheme.errorContainer;
     final foreground = widget.correct ? semantic.onSuccessContainer : scheme.onErrorContainer;
-    final autoAdvancing = widget.correct && !widget.isLast;
 
     return AnimatedSlide(
       duration: AppMotion.medium,
@@ -117,8 +81,10 @@ class _PracticeFeedbackBarState extends State<PracticeFeedbackBar> {
         width: double.infinity,
         decoration: BoxDecoration(
           color: background,
+          // 顶上两角：M3 给底部弹层的是 extra large（28），但用户看过实机后觉得太空，
+          // 收到 large（16）——比卡片（12）圆一点、又不至于像一块软糖。
           borderRadius: BorderRadius.vertical(
-            top: Radius.circular(AppMetrics.radiusCard.r),
+            top: Radius.circular(AppMetrics.radiusLarge.r),
           ),
         ),
         padding: const EdgeInsets.fromLTRB(
@@ -156,16 +122,6 @@ class _PracticeFeedbackBarState extends State<PracticeFeedbackBar> {
                         Text(
                           widget.summary!,
                           style: theme.textTheme.bodyMedium?.copyWith(color: foreground),
-                        ),
-                      ],
-                      // 说一句"马上要跳"：不说话就切页，学生会以为点错了
-                      if (autoAdvancing) ...[
-                        SizedBox(height: 4.r),
-                        Text(
-                          '2 秒后自动进入下一题',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: foreground.withValues(alpha: 0.75),
-                          ),
                         ),
                       ],
                     ],

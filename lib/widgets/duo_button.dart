@@ -1,10 +1,21 @@
-// 立体按钮：多邻国那种「有厚度、按下会下沉」的按钮。
+// 主按钮：五种语气映射到 Material 3 的按钮变体，形态与交互全部交给 M3。
 //
-// 职责：五种语气共用一个物理隐喻——外层是一条更深的「厚度」，按下时整个面在
-// 厚度里从上滑到底，于是有了按下去的手感。
-// 不负责：导航与业务（onPressed 由页面给）；纯图标按钮请用 IconButton。
+//   primary   → FilledButton        主操作（primary 底 / onPrimary 字）
+//   secondary → FilledButton.tonal  次操作（secondaryContainer 底）
+//   outline   → OutlinedButton      描边
+//   ghost     → TextButton          纯文字
+//   danger    → FilledButton + error 角色（M3 没有"危险"变体，用错误色拼出来）
 //
-// 几何：外层高 = 面高 + 厚度，两者都参与布局，所以按下时不会挤动兄弟节点。
+// **为什么不再画"厚度"**：那是多邻国的物理隐喻（按下时整块面在深色底座里下沉），
+// 不在 M3 的语汇里。M3 用**色阶 + 状态层**表达层级与反馈：按下是涟漪、悬停叠一层
+// 8% 的 onSurface、禁用是同色 12%（底）/38%（字）。自绘底座会把这一整套挡掉
+// ——M3 的按钮状态由 ButtonStyle 统一管，在外面包一层自绘就等于放弃它。
+//
+// 本组件只做 M3 按钮没给的三件事：**loading 转圈**、**expand 撑满宽度**、
+// **loading 时挡重复点击**。其余（尺寸、圆角、字重、禁用态配色）都从主题来。
+//
+// ⚠ 类名仍叫 Duo*：全仓 86 处调用、51 个文件都写着它，而这一步要换的是**形态**。
+// 形态稳定后另起一次纯机械的改名（那时是全局替换，安全得多）。
 
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:material_ui/material_ui.dart';
@@ -13,7 +24,7 @@ import 'package:mianyang_quiz/values/values.dart';
 /// 按钮语气：主操作 / 次操作 / 描边 / 纯文字 / 危险。语义固定，页面不要自己拼颜色。
 enum DuoButtonVariant { primary, secondary, outline, ghost, danger }
 
-class DuoButton extends StatefulWidget {
+class DuoButton extends StatelessWidget {
   const DuoButton({
     super.key,
     required this.label,
@@ -28,7 +39,7 @@ class DuoButton extends StatefulWidget {
   /// 按钮文案，单行，过长省略（不换行，按钮高度才不会抖）。
   final String label;
 
-  /// 为 null 即禁用：灰底灰字、无厚度、不响应点击。
+  /// 为 null 即禁用（M3 的禁用态配色）。
   final VoidCallback? onPressed;
 
   /// 语气。见 DuoButtonVariant。icon 是文案左侧图标；expand=false 按内容收缩；
@@ -41,133 +52,89 @@ class DuoButton extends StatefulWidget {
   final bool compact;
 
   @override
-  State<DuoButton> createState() => _DuoButtonState();
-}
-
-class _DuoButtonState extends State<DuoButton> {
-  static const _duration = Duration(milliseconds: 90);
-
-  bool _pressed = false;
-
-  @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final variant = widget.variant;
-    // 禁用只看 onPressed；loading 只是暂时不响应点击，配色仍按语气走。
-    final disabled = widget.onPressed == null;
-    final enabled = !disabled && !widget.loading;
-    final radius = BorderRadius.circular(AppMetrics.radiusButton.r);
-    final height = widget.compact
+    // loading 期间不接受点击：M3 没有加载态，只能借"禁用"这件事，
+    // 但配色会由 _loadingStyle 按语气钉回去（禁用态的 38% 灰会让转圈糊掉）。
+    final VoidCallback? handlePress = loading ? null : onPressed;
+    final style = _loadingStyle(context) ?? const ButtonStyle();
+    final sized = compact
         ? AppMetrics.buttonHeightCompact.r
         : AppMetrics.buttonHeight.r;
-    final faceHeight = height - AppMetrics.buttonDepth.r;
-    final sink = _pressed && enabled && variant != DuoButtonVariant.ghost;
-    final faceColor = _faceColor(scheme, disabled);
-
-    final face = AnimatedContainer(
-      duration: _duration,
-      // 不写 alignment：Container 的 Align 在有界宽度下会撑满，expand=false 就收缩不了。
-      width: widget.expand ? double.infinity : null,
-      padding: EdgeInsets.symmetric(horizontal: AppMetrics.gapLg.r),
-      decoration: BoxDecoration(
-        color: faceColor,
-        borderRadius: radius,
-        border: variant == DuoButtonVariant.outline
-            ? Border.all(
-                color: scheme.outlineVariant,
-                width: AppMetrics.stroke.r,
-              )
-            : null,
+    final button = switch (variant) {
+      DuoButtonVariant.primary => FilledButton(
+        style: style,
+        onPressed: handlePress,
+        child: _content(context),
       ),
-      child: _content(context, _textColor(scheme, disabled)),
-    );
-
-    return Semantics(
-      button: true,
-      enabled: enabled,
-      label: widget.label,
-      child: MouseRegion(
-        cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTapDown: enabled ? (_) => setState(() => _pressed = true) : null,
-          onTapUp: enabled ? (_) => setState(() => _pressed = false) : null,
-          onTapCancel: enabled ? () => setState(() => _pressed = false) : null,
-          onTap: enabled ? widget.onPressed : null,
-          child: Container(
-            height: height,
-            width: widget.expand ? double.infinity : null,
-            decoration: BoxDecoration(
-              color: _depthColor(scheme, disabled, faceColor),
-              borderRadius: radius,
-            ),
-            // 面在厚度里上下滑动：滑到底 = 厚度被完全盖住 = 按到底了。
-            child: AnimatedAlign(
-              alignment: sink ? Alignment.bottomCenter : Alignment.topCenter,
-              widthFactor: 1,
-              heightFactor: 1,
-              duration: _duration,
-              curve: Curves.easeOut,
-              child: SizedBox(
-                height: faceHeight,
-                width: widget.expand ? double.infinity : null,
-                child: face,
-              ),
-            ),
-          ),
-        ),
+      DuoButtonVariant.secondary => FilledButton.tonal(
+        style: style,
+        onPressed: handlePress,
+        child: _content(context),
       ),
+      DuoButtonVariant.outline => OutlinedButton(
+        style: style,
+        onPressed: handlePress,
+        child: _content(context),
+      ),
+      DuoButtonVariant.ghost => TextButton(
+        style: style,
+        onPressed: handlePress,
+        child: _content(context),
+      ),
+      DuoButtonVariant.danger => FilledButton(
+        style: style.merge(_dangerStyle(context)),
+        onPressed: handlePress,
+        child: _content(context),
+      ),
+    };
+
+    // 高度：M3 的 minimumSize 只管"至少"，这里显式给一个，两种高度才是确定的。
+    // expand 时撑满可用宽度（SizedBox 用 double.infinity 而不是依赖父级对齐）。
+    return SizedBox(
+      width: expand ? double.infinity : null,
+      height: sized,
+      child: button,
     );
   }
 
-  Widget _content(BuildContext context, Color fg) {
+  Widget _content(BuildContext context) {
+    final fg = _foreground(context);
     // loading 时转圈优先，图标让位，避免两个图形挤在一起。
-    final Widget? leading = widget.loading
+    final Widget? leading = loading
         ? SizedBox(
             width: 18.r,
             height: 18.r,
             child: CircularProgressIndicator(strokeWidth: 2.4.r, color: fg),
           )
-        : widget.icon == null
+        : icon == null
         ? null
-        : Icon(widget.icon, size: 20.r, color: fg);
+        : Icon(icon, size: 20.r, color: fg);
+
+    final text = Text(
+      label,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      textAlign: TextAlign.center,
+      style: TextStyle(fontSize: (compact ? 14 : 15).sp),
+    );
+    if (leading == null) return text;
 
     return Row(
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        if (leading != null) ...[leading, SizedBox(width: AppMetrics.gapSm.r)],
+        leading,
+        SizedBox(width: AppMetrics.gapSm.r),
         // Flexible：Row 里非 flex 的孩子拿不到宽度上限，不加它长文案会撑破按钮。
-        Flexible(
-          child: Text(
-            widget.label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: AppTextStyles.label(context)
-                .copyWith(color: fg, fontSize: (widget.compact ? 14 : 15).sp),
-          ),
-        ),
+        Flexible(child: text),
       ],
     );
   }
 
-  Color _faceColor(ColorScheme s, bool disabled) {
-    if (disabled) return s.surfaceContainerHighest;
-    return switch (widget.variant) {
-      DuoButtonVariant.primary => s.primary,
-      DuoButtonVariant.secondary => s.secondaryContainer,
-      DuoButtonVariant.outline => s.surface,
-      // ghost 平时全透明（透明也从主题色派生，不写死），按下时给一层浅底。
-      DuoButtonVariant.ghost =>
-        _pressed ? s.surfaceContainerHighest : s.surface.withValues(alpha: 0),
-      DuoButtonVariant.danger => s.error,
-    };
-  }
-
-  Color _textColor(ColorScheme s, bool disabled) {
-    if (disabled) return s.onSurfaceVariant;
-    return switch (widget.variant) {
+  /// 按钮前景色（转圈用它）。取的是 M3 各变体的 standard 配色。
+  Color _foreground(BuildContext context) {
+    final s = Theme.of(context).colorScheme;
+    return switch (variant) {
       DuoButtonVariant.primary => s.onPrimary,
       DuoButtonVariant.secondary => s.onSecondaryContainer,
       DuoButtonVariant.outline || DuoButtonVariant.ghost => s.primary,
@@ -175,24 +142,31 @@ class _DuoButtonState extends State<DuoButton> {
     };
   }
 
-  /// 厚度色。禁用态与 ghost 直接用面色（等于没有厚度），其余按语气加深。
-  Color _depthColor(ColorScheme s, bool disabled, Color face) {
-    if (disabled || widget.variant == DuoButtonVariant.ghost) return face;
-    final secondary = s.secondaryContainer;
-    return switch (widget.variant) {
-      DuoButtonVariant.primary => _darken(s.primary),
-      DuoButtonVariant.secondary => _darken(secondary),
-      // 面是 surface（暗色下几乎等于背景），只有描边色当厚度才看得见。
-      DuoButtonVariant.outline => s.outlineVariant,
-      DuoButtonVariant.ghost => face, // 已被上面拦下，这里只为穷尽性。
-      DuoButtonVariant.danger => _darken(s.error),
-    };
+  /// 危险语气：M3 没有"危险按钮"变体，用 FilledButton 套错误色角色。
+  ButtonStyle _dangerStyle(BuildContext context) {
+    final s = Theme.of(context).colorScheme;
+    return ButtonStyle(
+      backgroundColor: WidgetStatePropertyAll(s.error),
+      foregroundColor: WidgetStatePropertyAll(s.onError),
+    );
   }
-}
 
-/// 同色系加深：厚度色必须「同色但更深」。用 HSL 降明度而不是混黑——混黑会让浅色发灰，
-/// 而且颜色仍从 colorScheme 派生，没有写死值。
-Color _darken(Color color, [double amount = 0.16]) {
-  final hsl = HSLColor.fromColor(color);
-  return hsl.withLightness((hsl.lightness - amount).clamp(0.0, 1.0)).toColor();
+  /// loading 期间的配色覆盖。**只在"本来能点、只是正在提交"时生效**：
+  /// 真禁用（onPressed 为 null）时返回 null，照 M3 的禁用态画。
+  ButtonStyle? _loadingStyle(BuildContext context) {
+    if (!loading || onPressed == null) return null;
+    final s = Theme.of(context).colorScheme;
+    final fg = _foreground(context);
+    final bg = switch (variant) {
+      DuoButtonVariant.primary => s.primary,
+      DuoButtonVariant.secondary => s.secondaryContainer,
+      DuoButtonVariant.danger => s.error,
+      // 描边与纯文字本来就没有底色，只把字色钉回去
+      DuoButtonVariant.outline || DuoButtonVariant.ghost => null,
+    };
+    return ButtonStyle(
+      foregroundColor: WidgetStatePropertyAll(fg),
+      backgroundColor: bg == null ? null : WidgetStatePropertyAll(bg),
+    );
+  }
 }

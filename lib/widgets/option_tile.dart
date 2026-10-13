@@ -1,12 +1,13 @@
 // 单个选项。刷题、背题、题目详情、复盘四处共用。
 //
-// 四种视觉态：
-//   idle     未选中
-//   selected 已选中，尚未判定
-//   correct  判定为对（或标准答案，在背题/复盘时揭示）
-//   wrong    判定为错
+// 四种视觉态（按 M3 的**色调容器**表达，不是换描边粗细）：
+//   idle     surface + 1dp outlineVariant
+//   selected secondaryContainer（M3 里"被选中"用的就是这一对角色）
+//   correct  successContainer（语义色，见 semantic_colors.dart）
+//   wrong    errorContainer
 //
-// 交互形态学多邻国：圆角粗边、下沿有一条"厚度"，按下时下沉且厚度消失。
+// 按下反馈交给 InkWell 的状态层（涟漪），不再画"厚度 + 下沉"——那是多邻国的物理隐喻，
+// M3 用状态层表达按压。整个组件因此也不需要 State 了。
 //
 // **显示字母由调用方给出**——乱序之后用户看到的 A 可能对应原始 C。
 // 本组件只负责画，不认识原始 key，也不参与作答构造。
@@ -19,13 +20,12 @@ import 'package:mianyang_quiz/widgets/block_list_view.dart';
 
 enum OptionState { idle, selected, correct, wrong }
 
-class OptionTile extends StatefulWidget {
+class OptionTile extends StatelessWidget {
   const OptionTile({
     super.key,
     required this.letter,
     required this.label,
     required this.state,
-    this.multiple = false,
     this.onTap,
     this.enabled = true,
   });
@@ -36,74 +36,64 @@ class OptionTile extends StatefulWidget {
   final List<Block> label;
   final OptionState state;
 
-  /// 多选用方框、单选用圆点——形状本身就在提示可多选。
-  final bool multiple;
-
   final VoidCallback? onTap;
   final bool enabled;
-
-  @override
-  State<OptionTile> createState() => _OptionTileState();
-}
-
-class _OptionTileState extends State<OptionTile> {
-  bool _pressed = false;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final semantic = context.semantic;
-    final (border, background) = switch (widget.state) {
-      OptionState.idle => (scheme.outlineVariant, scheme.surface),
-      OptionState.selected => (scheme.primary, scheme.primaryContainer),
-      OptionState.correct => (semantic.success, semantic.successContainer),
-      OptionState.wrong => (scheme.error, scheme.errorContainer),
+    // (底色, 描边, 正文色)：正文用**同族的 on 色**——M3 的容器色都规定了配套前景，
+    // 拿 onSurface 压在 errorContainer 上在暗色下会糊成一片。
+    final (background, border, foreground) = switch (state) {
+      OptionState.idle => (scheme.surface, scheme.outlineVariant, scheme.onSurface),
+      OptionState.selected => (
+        scheme.secondaryContainer,
+        scheme.secondaryContainer,
+        scheme.onSecondaryContainer,
+      ),
+      OptionState.correct => (
+        semantic.successContainer,
+        semantic.success,
+        semantic.onSuccessContainer,
+      ),
+      OptionState.wrong => (
+        scheme.errorContainer,
+        scheme.error,
+        scheme.onErrorContainer,
+      ),
     };
-    final interactive = widget.enabled && widget.onTap != null;
-    final depth = interactive && !_pressed ? AppMetrics.buttonDepth.r : 0.0;
+    final interactive = enabled && onTap != null;
+    final radius = BorderRadius.circular(AppMetrics.radiusCard.r);
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: AppMetrics.gapMd + AppMetrics.buttonDepth),
-      child: GestureDetector(
-        onTapDown: interactive ? (_) => setState(() => _pressed = true) : null,
-        onTapCancel: interactive ? () => setState(() => _pressed = false) : null,
-        onTapUp: interactive
-            ? (_) {
-                setState(() => _pressed = false);
-                widget.onTap!();
-              }
-            : null,
-        child: Transform.translate(
-          offset: Offset(0, _pressed ? AppMetrics.buttonDepth.r : 0),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 90),
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppMetrics.gapLg,
-              vertical: AppMetrics.gapMd,
-            ),
-            decoration: BoxDecoration(
-              color: background,
-              border: Border.all(color: border, width: AppMetrics.stroke.r),
-              borderRadius: BorderRadius.circular(AppMetrics.radiusButton.r),
-              boxShadow: depth > 0
-                  ? [BoxShadow(color: border, offset: Offset(0, depth), blurRadius: 0)]
-                  : null,
+      padding: EdgeInsets.only(bottom: AppMetrics.gapMd.r),
+      child: Material(
+        color: background,
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
+          borderRadius: radius,
+          // M3 的容器描边一律 1dp；旧版那种 2dp 粗边是多邻国那套的表达
+          side: BorderSide(color: border, width: AppMetrics.hairline.r),
+        ),
+        child: InkWell(
+          onTap: interactive ? onTap : null,
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: AppMetrics.gapLg.r,
+              vertical: AppMetrics.gapMd.r,
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _Marker(
-                  letter: widget.letter,
-                  multiple: widget.multiple,
-                  state: widget.state,
-                ),
-                const SizedBox(width: AppMetrics.gapMd),
+                _Marker(letter: letter, state: state),
+                SizedBox(width: AppMetrics.gapMd.r),
                 Expanded(
                   child: BlockListView(
-                    blocks: widget.label,
+                    blocks: label,
                     compact: true,
-                    textStyle: theme.textTheme.bodyLarge,
+                    textStyle: theme.textTheme.bodyLarge?.copyWith(color: foreground),
                   ),
                 ),
               ],
@@ -115,26 +105,35 @@ class _OptionTileState extends State<OptionTile> {
   }
 }
 
-/// 选项左侧的圆形/方形标记，内含显示字母。
+/// 选项左侧的标记，内含显示字母。
+///
+/// 形状**不区分单选多选**，一律是 M3 的 extra small 圆角方（4）——
+/// 用户 2026-10-12 明确要求两者一致（原本单选画圆、多选画方）。
 class _Marker extends StatelessWidget {
-  const _Marker({required this.letter, required this.multiple, required this.state});
+  const _Marker({required this.letter, required this.state});
 
   final String letter;
-  final bool multiple;
   final OptionState state;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final semantic = context.semantic;
-    final filled = state == OptionState.selected ||
-        state == OptionState.correct ||
-        state == OptionState.wrong;
+    final filled = state != OptionState.idle;
+    // 未选中用 onSurfaceVariant（M3 的 Radio/Checkbox 未选中圈用的就是它，不是 outline）
     final color = switch (state) {
-      OptionState.idle => scheme.outline,
+      OptionState.idle => scheme.onSurfaceVariant,
       OptionState.selected => scheme.primary,
       OptionState.correct => semantic.success,
       OptionState.wrong => scheme.error,
+    };
+    // 填充后的字母要压在**同族**的 on 色上：选中是 primary → onPrimary，
+    // 对错则是各自的容器前景色。
+    final letterColor = switch (state) {
+      OptionState.idle => scheme.onSurfaceVariant,
+      OptionState.selected => scheme.onPrimary,
+      OptionState.correct => semantic.onSuccessContainer,
+      OptionState.wrong => scheme.onErrorContainer,
     };
 
     return Container(
@@ -144,14 +143,14 @@ class _Marker extends StatelessWidget {
       decoration: BoxDecoration(
         color: filled ? color : null,
         border: Border.all(color: color, width: AppMetrics.stroke.r),
-        borderRadius: BorderRadius.circular(multiple ? 6.r : 999),
+        borderRadius: BorderRadius.circular(AppMetrics.radiusExtraSmall.r),
       ),
       child: Text(
         letter,
         style: TextStyle(
           fontSize: 13.sp,
           fontWeight: FontWeight.w700,
-          color: filled ? scheme.onPrimary : scheme.onSurfaceVariant,
+          color: letterColor,
         ),
       ),
     );

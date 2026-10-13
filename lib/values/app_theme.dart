@@ -5,52 +5,36 @@
 // 不负责：具体组件的形态——立体按钮、统计卡、粗进度条在 widgets/design 里自己画，
 // 它们只从 colorScheme 取色，不依赖这里的按钮主题。
 //
-// 配色是 M3 从 deepPurple 派生的方案。要「绿」「红」请走 semantic_colors.dart，
-// 不要用 tertiary 顶替（它是色相旋转出来的粉色），也不要自己写死颜色——否则暗色会失配。
+// 配色由**种子色**派生（见 theme_seed.dart，用户在设置里可换）。
+// 要「绿」「红」请走 semantic_colors.dart，不要用 tertiary 顶替（它是色相旋转出来的粉色），
+// 也不要自己写死颜色——否则暗色会失配。
 
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:mianyang_quiz/values/app_field_theme.dart';
 import 'package:mianyang_quiz/values/app_metrics.dart';
 import 'package:mianyang_quiz/values/app_navigation_bar_theme.dart';
+import 'package:mianyang_quiz/values/app_typography.dart';
 import 'package:mianyang_quiz/values/semantic_colors.dart';
+import 'package:mianyang_quiz/values/theme_meta.dart';
 
 abstract final class AppTheme {
-  /// 品牌种子色：全站颜色都由它派生，换这里等于换肤。
-  static const Color _seed = Colors.deepPurple;
+  /// 字体回退栈与字重都在 app_typography.dart（那个文件还留着放 M3 字阶）。
+  /// 这两个别名保留旧入口——全仓几十处写着 AppTheme.bold。
+  static const FontWeight regular = AppTypography.regular;
+  static const FontWeight bold = AppTypography.bold;
 
-  /// 中文字体回退栈（按平台常见字体依次尝试，找不到就跳到下一个）。
-  ///
-  /// **刻意不设 `fontFamily`**：拉丁字形交给平台默认（Windows 是 Segoe UI、
-  /// Android 是 Roboto），中文由这里的栈兜底。若把 `fontFamily` 写死成某个
-  /// Windows 字体，Android 上会整体退化——比现在更乱。
-  static const List<String> _cjkFallback = [
-    'Microsoft YaHei UI', // Windows 中文界面字体
-    'Microsoft YaHei',
-    'Noto Sans CJK SC', // Android / Linux 的系统中文字体
-    'Noto Sans SC',
-    'Source Han Sans SC',
-    'PingFang SC', // macOS / iOS
-  ];
-
-  /// 允许使用的字重。**只有这两档。**
-  ///
-  /// 中文字体（雅黑、Noto Sans CJK、苹方等）普遍只提供 Regular(400) 与 Bold(700)；
-  /// 写 w500/w600/w800 会让引擎**合成伪粗体**，而合成结果在不同字号、不同字形上
-  /// 并不一致——表现就是"有些标题很粗、有些该粗的却发虚"。
-  ///
-  /// 这条约束由 tool/check_architecture.dart 强制，不要绕过。
-  static const FontWeight regular = FontWeight.w400;
-  static const FontWeight bold = FontWeight.w700;
-
-  /// 亮色主题（默认）。
-  static ThemeData light() => _build(Brightness.light);
+  /// 亮色主题。[seed] 是主题色，默认品牌紫（不传就是改造前那套配色）。
+  static ThemeData light({ThemeSeed seed = ThemeSeed.purple}) =>
+      _build(Brightness.light, seed);
 
   /// 暗色主题。
-  static ThemeData dark() => _build(Brightness.dark);
+  static ThemeData dark({ThemeSeed seed = ThemeSeed.purple}) =>
+      _build(Brightness.dark, seed);
 
-  static ThemeData _build(Brightness brightness) {
+  static ThemeData _build(Brightness brightness, ThemeSeed seed) {
     final scheme = ColorScheme.fromSeed(
-      seedColor: _seed,
+      seedColor: seed.color,
       brightness: brightness,
     ).copyWith(
       // 亮色下把 surface 定成**纯白**（学生反馈"背景应该是白的"）：fromSeed 从
@@ -59,15 +43,19 @@ abstract final class AppTheme {
       // 卡片仍走 surfaceContainerLow，白底上照样分得出层次。
       surface: brightness == Brightness.light ? Colors.white : null,
     );
+    // 按钮圆角：M3 的形状比例尺里给 common buttons 的默认档是 **full（胶囊）**，
+    // 但**比例尺本身就是让你挑的**（4 / 8 / 12 / 16 / 28 / full），选哪一档是主题级决定。
+    // 用户 2026-10-12 看过实机后明确嫌"全圆角太空太软"，于是收回到 **medium（12）**：
+    // 与卡片同一档，整屏才是同一种圆角语言。（Material 3 Expressive 自己也在往收的方向调。）
     final buttonShape = RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(AppMetrics.radiusButton.r),
     );
 
-    return ThemeData(
+    final base = ThemeData(
       useMaterial3: true,
       brightness: brightness,
       colorScheme: scheme,
-      fontFamilyFallback: _cjkFallback,
+      fontFamilyFallback: AppTypography.cjkFallback,
       // 语义色：M3 的 ColorScheme 没有「成功」「警告」，见 semantic_colors.dart
       extensions: [
         brightness == Brightness.dark ? SemanticColors.dark : SemanticColors.light,
@@ -94,6 +82,7 @@ abstract final class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: _buttonStyle(
+          scheme: scheme,
           foreground: scheme.onPrimary,
           background: scheme.primary,
           shape: buttonShape,
@@ -101,6 +90,7 @@ abstract final class AppTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: _buttonStyle(
+          scheme: scheme,
           foreground: scheme.onPrimary,
           background: scheme.primary,
           shape: buttonShape,
@@ -108,52 +98,32 @@ abstract final class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style:
+            // 底色不设：M3 的描边按钮是**透明**容器。写死 surface 的话，
+            // 它在卡片（surfaceContainerLow）上也铺一层 surface，看着像贴了块补丁。
             _buttonStyle(
+              scheme: scheme,
               foreground: scheme.primary,
-              background: scheme.surface,
               shape: buttonShape,
             ).copyWith(
+              // M3：描边按钮的边是 **1dp 的 outline**（不是 2dp 的 outlineVariant）
               side: WidgetStatePropertyAll(
                 BorderSide(
-                  color: scheme.outlineVariant,
-                  width: AppMetrics.stroke.r,
+                  color: scheme.outline,
+                  width: AppMetrics.hairline.r,
                 ),
               ),
             ),
       ),
       textButtonTheme: TextButtonThemeData(
-        style: _buttonStyle(foreground: scheme.primary, shape: buttonShape),
-      ),
-      inputDecorationTheme: InputDecorationThemeData(
-        filled: true,
-        fillColor: scheme.surfaceContainerHighest,
-        contentPadding: EdgeInsets.symmetric(
-          horizontal: AppMetrics.gapLg.r,
-          vertical: AppMetrics.gapMd.r,
-        ),
-        border: _inputBorder(scheme.outlineVariant, AppMetrics.hairline),
-        enabledBorder: _inputBorder(scheme.outlineVariant, AppMetrics.hairline),
-        focusedBorder: _inputBorder(scheme.primary, AppMetrics.stroke),
-        errorBorder: _inputBorder(scheme.error, AppMetrics.hairline),
-        focusedErrorBorder: _inputBorder(scheme.error, AppMetrics.stroke),
-        hintStyle: TextStyle(color: scheme.onSurfaceVariant, fontSize: 15.sp),
-      ),
-      chipTheme: ChipThemeData(
-        backgroundColor: scheme.surfaceContainerHighest,
-        side: BorderSide.none,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppMetrics.radiusChip.r),
-        ),
-        labelStyle: TextStyle(
-          color: scheme.onSurfaceVariant,
-          fontSize: 13.sp,
-          fontWeight: FontWeight.w400,
-        ),
-        padding: EdgeInsets.symmetric(
-          horizontal: AppMetrics.gapSm.r,
-          vertical: AppMetrics.gapXs.r,
+        style: _buttonStyle(
+          scheme: scheme,
+          foreground: scheme.primary,
+          shape: buttonShape,
         ),
       ),
+      // 输入框与标签的外形在 app_field_theme.dart（理由比配置长，拆开了）
+      inputDecorationTheme: AppFieldTheme.inputDecoration(scheme),
+      chipTheme: AppFieldTheme.chip(scheme),
       // 底部导航的定制在 app_navigation_bar_theme.dart（理由比配置长，拆开了）
       navigationBarTheme: AppNavigationBarTheme.build(scheme),
       progressIndicatorTheme: ProgressIndicatorThemeData(
@@ -169,17 +139,49 @@ abstract final class AppTheme {
         space: AppMetrics.hairline.r,
       ),
     );
+    // 字阶里 M3 的 w500 档要收敛掉，见 _cjkWeights。
+    // 用 copyWith 而不是在构造函数里传 textTheme：这样拿到的是**平台默认那一套**
+    //（字体回退栈已经在 base 里应用过），只在字重上做减法。
+    return base.copyWith(textTheme: _cjkWeights(base.textTheme));
   }
 
-  /// Material 系按钮的统一外形：高度不低于触控目标、16 圆角、无阴影、加粗文字。
+  /// 把字阶里 M3 的 w500 档收敛到本仓允许的 w400/w700。
+  ///
+  /// **为什么必须在主题这一层做**：AGENTS.md 二·五禁止 w500（中文字体没有这一档，
+  /// 引擎会合成伪粗体，且合成结果在不同字号上不一致）。`tool/check_architecture.dart`
+  /// 只能盯**代码里写死的字面量**，盯不到从主题继承来的字重——而全仓 137 处
+  /// `theme.textTheme.xxx` 里，titleMedium/titleSmall/label* 这五档全都是 M3 的 w500。
+  ///
+  /// 收敛方向一律 **w700**：M3 用 500 表达"标题 / 标签"的中等强调，只剩两档时该走强的一侧
+  ///（正文系列本来就是 400，不动）。
+  static TextTheme _cjkWeights(TextTheme t) => t.copyWith(
+    titleMedium: t.titleMedium?.copyWith(fontWeight: bold),
+    titleSmall: t.titleSmall?.copyWith(fontWeight: bold),
+    labelLarge: t.labelLarge?.copyWith(fontWeight: bold),
+    labelMedium: t.labelMedium?.copyWith(fontWeight: bold),
+    labelSmall: t.labelSmall?.copyWith(fontWeight: bold),
+  );
+
+  /// Material 系按钮的统一外形：高度不低于触控目标、胶囊形、无阴影、加粗文字。
   /// 立体按压只有 DuoButton 有，这里**不**模仿——Material 的按钮不该被改造成另一种物理隐喻。
+  ///
+  /// **禁用态必须单独给**（M3 规范：底 = onSurface 12%、字 = onSurface 38%）：
+  /// 用 `WidgetStatePropertyAll` 一把梭的话，禁用时字还是主题色，灰底上顶着一行
+  /// 高饱和的紫字，看起来像"能点但坏了"。背景返回 null 即交回组件自己的默认禁用色。
   static ButtonStyle _buttonStyle({
+    required ColorScheme scheme,
     required Color foreground,
     Color? background,
     required OutlinedBorder shape,
   }) => ButtonStyle(
-    backgroundColor: background == null ? null : WidgetStatePropertyAll(background),
-    foregroundColor: WidgetStatePropertyAll(foreground),
+    backgroundColor: WidgetStateProperty.resolveWith(
+      (states) => states.contains(WidgetState.disabled) ? null : background,
+    ),
+    foregroundColor: WidgetStateProperty.resolveWith(
+      (states) => states.contains(WidgetState.disabled)
+          ? scheme.onSurface.withValues(alpha: 0.38)
+          : foreground,
+    ),
     elevation: const WidgetStatePropertyAll(0),
     minimumSize: WidgetStatePropertyAll(Size(64, AppMetrics.touchTarget.r)),
     padding: WidgetStatePropertyAll(
@@ -190,10 +192,4 @@ abstract final class AppTheme {
     ),
     shape: WidgetStatePropertyAll(shape),
   );
-
-  static OutlineInputBorder _inputBorder(Color color, double width) =>
-      OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppMetrics.radiusButton.r),
-        borderSide: BorderSide(color: color, width: width.r),
-      );
 }

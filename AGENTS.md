@@ -70,6 +70,12 @@ router/   ← 路由表与路径常量
 
 由 `tool/check_architecture.dart` 强制：`FontWeight` 只允许 `w400` / `w700`。
 
+⚠ **守卫只盯得到代码里写死的字面量，盯不到从主题继承来的字重。** M3 默认字阶里
+`titleMedium` / `titleSmall` / `labelLarge` / `labelMedium` / `labelSmall` 五档**都是 w500**，
+而全仓一百多处 `theme.textTheme.xxx` 内联用法吃的就是它们——等于绕过了这条约束（2026-10-12
+才发现）。所以 `AppTheme._cjkWeights()` 在主题这一层把这五档统一收敛成 **w700**，
+`test/values/app_text_styles_test.dart` 钉住"亮暗两套的每一档都只能是 400/700"。
+
 ### 「对/错」必须用语义色，不能用 tertiary
 
 M3 的 `ColorScheme` **没有「成功」这个角色**。拿 `tertiary` 顶替是个很隐蔽的坑：
@@ -153,6 +159,35 @@ export 'duo_card.dart';
 包括 `assets/art/` 目录、`floating_art.dart`、`AppMotion.loop`/`loopCurve`。
 空状态一律用 `EmptyState` 的中性图标徽章（每个页面各自挑一个贴切的图标）。
 **不要加回插画或吉祥物**；确需重做，先确认那不是又一次"用户明确否掉的东西"。
+
+---
+
+## 二·八、UI 一律 Material 3（2026-10-12 起）
+
+用户 2026-10-12 拍板：**整个客户端按 m3.material.io 重做，不要多邻国那套**。
+落地方式是**换组件内部实现、不动调用方**——多邻国味集中在 `lib/widgets/` 的六个
+`Duo*` 组件里（DuoButton 86 处 / DuoChip 45 / DuoCard 39 / DuoStatTile 12 /
+DuoIconBadge 10 / DuoProgressBar 6，横跨约 60 个文件），改它们＝全站观感一起变。
+
+已经改掉的（**别再写回来**）：
+
+| 旧（多邻国） | 新（M3） |
+|---|---|
+| 按钮有"厚度"、按下整块面下沉 | M3 四种按钮变体 + 状态层涟漪，**胶囊形** |
+| 卡片带柔光阴影、强调卡 2dp 粗边 | outlined card（**无阴影**）、强调卡 primaryContainer |
+| 标签圆角 999（胶囊） | **8dp** |
+| 图标徽章 size×0.3 的圆角方 | **圆形** |
+| 进度条 14dp 粗条 | M3 的 **4dp** 细轨 |
+| 选项行 2dp 粗边 + 下沉 | 色调容器 + **1dp** 边 + InkWell |
+| 输入框"填充底 + 描边"混血 | M3 **outlined**（透明底 / 1dp / **4dp 圆角**） |
+| 导航选中态 primaryContainer | M3 的 **secondaryContainer** |
+
+配套：`AppMetrics` 里是 M3 的形状比例尺（extraSmall 4 / small 8 / medium 12 / large 16 /
+full 999），`AppTextStyles` 的六个角色对着 M3 字阶取值（24/16/16/12/28/14，见
+`test/values/app_text_styles_test.dart`）。**改样式先看这两处，别在页面里写数字。**
+
+组件名还叫 `Duo*`（历史包袱，注释里写明了）——要改名就单独一次全局替换，
+别混在形态调整里。
 
 ---
 

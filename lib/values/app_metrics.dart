@@ -23,28 +23,38 @@ abstract final class AppMetrics {
   /// 页面左右安全边距。
   static const double pagePadding = 20;
 
-  /// 卡片圆角。18 → 12：18 在宽屏上接近"药丸"观感，卡片一多整页显得软塌塌；
-  /// 12 仍明显是圆角，但更接近工具类应用的克制感。
-  static const double radiusCard = 12;
+  /// 圆角按 **M3 的形状比例尺**（m3.material.io/foundations/shape）取，不要各页自己写数字。
+  /// 下面五个名字就是规范里的五档，语义化的 radiusXxx 一律从它们派生。
+  static const double radiusExtraSmall = 4; // 小控件
+  static const double radiusSmall = 8; // 标签、小容器
+  static const double radiusMedium = 12; // 卡片、对话框、菜单
+  static const double radiusLarge = 16; // 大容器
+  static const double radiusExtraLarge = 28; // 底部弹层、对话框的顶角
+  static const double radiusFull = 999; // 胶囊（按钮、筛选条）
 
-  /// 按钮圆角。跟着卡片一起收 —— 卡片 12 而按钮仍是 16 的话，
-  /// 同一屏里两种圆角会显得没对齐。
-  static const double radiusButton = 12;
+  /// 卡片圆角 = M3 的 medium。2026-10-12 起直接跟着规范走，不再单独调数值。
+  static const double radiusCard = radiusMedium;
 
-  /// 标签圆角（999 = 胶囊形）。
-  static const double radiusChip = 999;
+  /// **自绘控件**的圆角（输入框、自绘的方块按钮等）。
+  ///
+  /// ⚠ 名字里的「按钮」是历史包袱：真正的按钮（FilledButton 家族）已按 M3 改成
+  /// **全圆角胶囊**（见 app_theme 的 buttonShape），不再读这个值。
+  static const double radiusButton = radiusMedium;
 
-  /// 立体按钮底部的「厚度」：按下时按钮下沉这么多，厚度随之消失。
-  static const double buttonDepth = 4;
+  /// 标签圆角 = M3 的 small。**原来是 999（胶囊）**——那是多邻国那套的取法，
+  /// M3 的 chip 明确是 8。
+  static const double radiusChip = radiusSmall;
 
-  /// 标准按钮总高（含厚度）。
+  /// 标准按钮高度。M3 的按钮档位里 56 属于 large，触控与桌面端都合适。
+  /// （旧版这个高度里还含 4 的「厚度」，现在按钮没有厚度了。）
   static const double buttonHeight = 56;
 
-  /// 紧凑按钮总高（含厚度），仍不小于触控目标。
+  /// 紧凑按钮高度（仍不小于触控目标）。
   static const double buttonHeightCompact = 48;
 
-  /// 顶部粗进度条的高度。
-  static const double progressHeight = 14;
+  /// 进度条高度 = **M3 的 4dp 轨道**。原来是 14（多邻国那种"粗条"），
+  /// 换成细轨是这次改版里最明显的一处观感变化，需要粗条的地方显式传 height。
+  static const double progressHeight = 4;
 
   /// 细描边：卡片、分隔线。
   static const double hairline = 1;

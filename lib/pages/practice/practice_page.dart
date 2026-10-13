@@ -4,7 +4,7 @@
 // **不含任何判分、提交、切题逻辑**——那些都在 PracticeRunner 里。
 // 上一版客户端的练习页涨到 1379 行，正是因为状态机与渲染挤在同一个文件里。
 //
-// 单屏单题（学多邻国）：一屏一道题，底部固定操作区，题干过长时只在题干区滚动。
+// 单屏单题：一屏一道题，底部固定操作区，题干过长时只在题干区滚动。
 
 import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/utils/utils.dart';

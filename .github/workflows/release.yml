@@ -448,6 +448,22 @@ jobs:
           files: assets/*
           fail_on_unmatched_files: true
 
+      - name: 镜像到阿里云 OSS（国内下载线路）
+        # 网页端 /download 优先给 OSS 链接：GitHub 在国内**取不到字节**（2026-10-12 实测
+        # 20 秒 0 字节），安装包挂 GitHub 上学生根本下不动。理由详见 tool/upload_to_oss.mjs 文件头。
+        #
+        # 没配密钥**跳过而不是失败**：这条是"更快"，不是"能不能发"。
+        # 密钥用一个只有该 bucket 写权限的子账号（与网页端直传共用同一对）。
+        env:
+          OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
+          OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+        run: |
+          if [ -z "$OSS_ACCESS_KEY_ID" ] || [ -z "$OSS_ACCESS_KEY_SECRET" ]; then
+            echo "::warning::未配置 OSS_ACCESS_KEY_ID / OSS_ACCESS_KEY_SECRET，跳过 OSS 镜像——国内用户将只能走 GitHub（很慢）"
+            exit 0
+          fi
+          node tool/upload_to_oss.mjs --dir assets --tag "${{ github.ref_name }}"
+
       # **放在 Release 之后**：Sentry 挂了一次不该让这一版发不出去。
       - name: 上传符号到 Sentry（混淆后的堆栈才读得懂）
         # 本仓两个平台都是 `--obfuscate --split-debug-info` 构建的。

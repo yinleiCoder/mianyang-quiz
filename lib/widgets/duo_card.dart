@@ -1,10 +1,14 @@
-// 大圆角卡片：页面里「一块内容」的容器。
+// 卡片：页面里「一块内容」的容器，按 M3 的 **outlined card** 画。
 //
-// 职责：统一圆角、底色、极淡描边与内边距，并可选地让整块可点。
+// 职责：统一圆角、底色、1dp 描边与内边距，并可选地让整块可点。
 // 不负责：列表的滚动与分页（那是页面的骨架），也不负责卡片内部的排版。
 //
-// 底色用 surfaceContainerLow 而不是纯 surface：亮色下它比背景略深、暗色下略浅，
-// 两种模式都让「卡片浮在背景上」成立，因此不需要堆阴影。
+// **没有阴影**：M3 的 outlined / filled 卡片都是平的，层级由**表面色阶**表达
+// （surfaceContainerLow 比背景深一点 / 暗色下浅一点），不靠投影。旧版那圈
+// 0.04 的柔光正是"多邻国味"的一部分——它让每张卡都像贴纸，一屏十几张就发脏。
+//
+// emphasized 用 primaryContainer：M3 里表达"这一块被选中/被强调"的正是**色调容器**，
+// 而不是加粗描边（旧版是 2dp 的主题色边，规范里没有这种画法）。
 //
 // 例外：题库列表、题目详情、记录页那几处**显式要白卡**（传 color: scheme.surface），
 // 见各调用点的注释——那几页学生看的是"内容"，白卡让文字最清楚，代价是只剩描边分界。
@@ -32,7 +36,7 @@ class DuoCard extends StatelessWidget {
   /// 内边距，默认 gapLg。
   final EdgeInsetsGeometry? padding;
 
-  /// 强调卡：换 primaryContainer 底色与更重的描边，一屏最多一张。
+  /// 强调卡：换 primaryContainer 底色，一屏最多一张。
   final bool emphasized;
 
   /// 覆盖底色。为 null 时走默认的 surfaceContainerLow。
@@ -55,20 +59,15 @@ class DuoCard extends StatelessWidget {
         color: color ??
             (emphasized ? scheme.primaryContainer : scheme.surfaceContainerLow),
         borderRadius: radius,
-        border: Border.all(
-          color: emphasized ? scheme.primary : scheme.outlineVariant,
-          width: emphasized ? AppMetrics.stroke.r : AppMetrics.hairline.r,
-        ),
-        boxShadow: [
-          BoxShadow(
-            // 只做一点点浮起暗示；阴影色也取自主题，暗色下自然变淡。
-            color: scheme.shadow.withValues(alpha: emphasized ? 0.08 : 0.04),
-            offset: Offset(0, 2.r),
-            blurRadius: 8.r,
-          ),
-        ],
+        // 强调卡是色调容器，不再描边（色调本身就是分界）
+        border: emphasized
+            ? null
+            : Border.all(
+                color: scheme.outlineVariant,
+                width: AppMetrics.hairline.r,
+              ),
       ),
-      // 可点时才引入 Material/InkWell：水波纹提供反馈，也顺带补上无障碍语义。
+      // 可点时才引入 Material/InkWell：状态层提供反馈，也顺带补上无障碍语义。
       child: onTap == null
           ? content
           : ClipRRect(

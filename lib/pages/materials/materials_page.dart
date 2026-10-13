@@ -21,6 +21,7 @@ import 'package:mianyang_quiz/widgets/widgets.dart';
 import 'package:mianyang_quiz/pages/materials/widgets/material_filter_bar.dart';
 import 'package:mianyang_quiz/pages/materials/widgets/material_filter_sheet.dart';
 import 'package:mianyang_quiz/pages/materials/widgets/material_list_tile.dart';
+import 'package:mianyang_quiz/pages/materials/widgets/material_save.dart';
 import 'package:provider/provider.dart';
 
 class MaterialsPage extends StatefulWidget {
@@ -90,6 +91,8 @@ class _MaterialsPageState extends State<MaterialsPage>
         ? ''
         : buildNodeIndex(_nodes)(row.courseNodeId),
     onTap: () => context.push(AppRoutes.materialViewOf(row.id), extra: row),
+    // 列表里直接就能存——不必先进详情页再找右上角那个没写字的图标
+    onSave: () => saveMaterialToDevice(context, row),
   );
 
   Future<void> _openSheet() async {

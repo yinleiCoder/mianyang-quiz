@@ -184,7 +184,7 @@ class _WeakNodes extends StatelessWidget {
               LinearProgressIndicator(
                 value: n.accuracy,
                 minHeight: 6.r,
-                borderRadius: BorderRadius.circular(999),
+                borderRadius: BorderRadius.circular(AppMetrics.radiusFull.r),
                 backgroundColor: theme.colorScheme.surfaceContainerHighest,
               ),
             ],
