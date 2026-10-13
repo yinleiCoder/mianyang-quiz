@@ -22,7 +22,7 @@ class BankFilterSections extends StatelessWidget {
     required this.onPickNode,
     required this.qtypes,
     required this.onToggleQtype,
-    required this.difficulty,
+    required this.difficulties,
     required this.onToggleDifficulty,
     required this.tags,
     required this.tagId,
@@ -48,7 +48,7 @@ class BankFilterSections extends StatelessWidget {
   final Set<QuestionType> qtypes;
   final ValueChanged<QuestionType> onToggleQtype;
 
-  final int? difficulty;
+  final Set<int> difficulties;
   final ValueChanged<int> onToggleDifficulty;
 
   /// 可选的标签（**调用方已按当前科目收口**，见 bank_filter_sheet）。
@@ -95,11 +95,11 @@ class BankFilterSections extends StatelessWidget {
       ),
       _section(
         context,
-        '难度',
+        '难度（可多选）',
         FilterChipGroup<int>(
           items: kDifficultyValues,
           labelOf: difficultyLabel,
-          selectedOf: (value) => difficulty == value,
+          selectedOf: difficulties.contains,
           onToggle: onToggleDifficulty,
         ),
       ),

@@ -57,7 +57,7 @@ class _BankFilterSheetState extends State<BankFilterSheet> {
     text: widget.initial.keyword,
   );
   late Set<QuestionType> _qtypes = {...widget.initial.qtypes};
-  late int? _difficulty = widget.initial.difficulty;
+  late Set<int> _difficulties = {...widget.initial.difficulties};
   late String? _nodeId = widget.initial.nodeId;
   late String? _tagId = widget.initial.tagId;
 
@@ -73,7 +73,7 @@ class _BankFilterSheetState extends State<BankFilterSheet> {
   void _reset() => setState(() {
     _keyword.clear();
     _qtypes = {};
-    _difficulty = null;
+    _difficulties = {};
     _nodeId = null;
     _tagId = null;
   });
@@ -83,7 +83,7 @@ class _BankFilterSheetState extends State<BankFilterSheet> {
       keyword: _keyword.text.trim(),
       nodeId: _nodeId,
       qtypes: _qtypes,
-      difficulty: _difficulty,
+      difficulties: _difficulties,
       tagId: _tagId,
     ),
   );
@@ -135,10 +135,10 @@ class _BankFilterSheetState extends State<BankFilterSheet> {
                       onToggleQtype: (type) => setState(() {
                         if (!_qtypes.remove(type)) _qtypes.add(type);
                       }),
-                      difficulty: _difficulty,
-                      onToggleDifficulty: (value) => setState(
-                        () => _difficulty = _difficulty == value ? null : value,
-                      ),
+                      difficulties: _difficulties,
+                      onToggleDifficulty: (value) => setState(() {
+                        if (!_difficulties.remove(value)) _difficulties.add(value);
+                      }),
                       // 知识点按当前科目收口，并带上层级路径（见 utils/tag_tree.dart）
                       tags: tagsInScope(widget.tags, _nodeId, widget.nodes),
                       tagPathOf: TagIndex(widget.tags).ancestorPathOf,

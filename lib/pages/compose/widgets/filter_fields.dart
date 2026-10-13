@@ -93,12 +93,18 @@ class _FilterFieldsState extends State<FilterFields> {
           ),
           const SizedBox(height: AppMetrics.gapLg),
           const _Label('难度'),
-          _DifficultyChips(
-            selected: value.difficulty,
-            // 再点一次即取消（回到不限），不必额外给"清除"按钮
-            onSelected: (level) => widget.onChanged(
-              value.copyWith(difficulty: value.difficulty == level ? null : level),
-            ),
+          // 多选，与上面的题型同一个控件（题库筛选面板里也是它）：
+          // 单选时想练"易 + 中"只能开两场，而题型一直是多选，两处口径不该不一样。
+          FilterChipGroup<int>(
+            items: kDifficultyValues,
+            labelOf: difficultyLabel,
+            selectedOf: value.difficulties.contains,
+            // 再点一次即取消；一个都不选 = 不限，所以不需要额外的"清除"按钮
+            onToggle: (level) {
+              final next = Set<int>.of(value.difficulties);
+              if (!next.remove(level)) next.add(level);
+              widget.onChanged(value.copyWith(difficulties: next));
+            },
           ),
           const SizedBox(height: AppMetrics.gapLg),
           switch (_reference) {
@@ -144,28 +150,9 @@ class _QtypeChips extends StatelessWidget {
   );
 }
 
-class _DifficultyChips extends StatelessWidget {
-  const _DifficultyChips({required this.selected, required this.onSelected});
-
-  final int? selected;
-  final ValueChanged<int> onSelected;
-
-  @override
-  Widget build(BuildContext context) => Wrap(
-    spacing: AppMetrics.gapSm,
-    children: [
-      for (final level in kDifficultyValues)
-        ChoiceChip(
-          label: Text(difficultyLabel(level)),
-          selected: selected == level,
-          onSelected: (_) => onSelected(level),
-        ),
-    ],
-  );
-}
-
-/// 字段标题。留在本文件：它只服务这两个就地可算的控件，
+/// 字段标题。留在本文件：它只服务 `_QtypeChips` 这一个就地可算的控件，
 /// 与迁出去的 NodeTagFields 里的同名标签是各自独立的排版细节。
+/// （难度改用共用的 FilterChipGroup，标题仍走这里。）
 class _Label extends StatelessWidget {
   const _Label(this.text);
 

@@ -103,8 +103,11 @@ class BankFilterBar extends StatelessWidget {
           '题型：${filter.qtypes.map((type) => type.label).join('、')}',
           Icons.category_outlined,
         ),
-      if (filter.difficulty != null)
-        _chip('难度：${difficultyLabel(filter.difficulty)}', Icons.speed_rounded),
+      if (filter.difficulties.isNotEmpty)
+        _chip(
+          '难度：${filter.difficulties.map(difficultyLabel).join('、')}',
+          Icons.speed_rounded,
+        ),
       if (tagName.isNotEmpty) _chip('标签：$tagName', Icons.sell_outlined),
     ];
   }

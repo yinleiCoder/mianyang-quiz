@@ -18,8 +18,8 @@ mixin _$QuestionFilter {
 /// 关键词，按题干全文检索（服务端会对 % _ \ 做转义）。
  String get keyword;/// 科目节点。选中父节点时服务端会包含其全部后代课程。
  String? get nodeId;/// 题型多选。空集合表示不限。
- Set<QuestionType> get qtypes;/// 难度 1 易 / 2 中 / 3 难。null 表示不限（注意与"值为 0"不同）。
- int? get difficulty; String? get tagId;
+ Set<QuestionType> get qtypes;/// 难度多选：1 易 / 2 中 / 3 难。空集合表示不限（与题型同一条口径）。
+ Set<int> get difficulties; String? get tagId;
 /// Create a copy of QuestionFilter
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -31,20 +31,20 @@ $QuestionFilterCopyWith<QuestionFilter> get copyWith => _$QuestionFilterCopyWith
 @override
 bool operator ==(Object other) {
   final _this = this as QuestionFilter;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is QuestionFilter&&(identical(other.keyword, _this.keyword) || other.keyword == _this.keyword)&&(identical(other.nodeId, _this.nodeId) || other.nodeId == _this.nodeId)&&const DeepCollectionEquality().equals(other.qtypes, _this.qtypes)&&(identical(other.difficulty, _this.difficulty) || other.difficulty == _this.difficulty)&&(identical(other.tagId, _this.tagId) || other.tagId == _this.tagId));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is QuestionFilter&&(identical(other.keyword, _this.keyword) || other.keyword == _this.keyword)&&(identical(other.nodeId, _this.nodeId) || other.nodeId == _this.nodeId)&&const DeepCollectionEquality().equals(other.qtypes, _this.qtypes)&&const DeepCollectionEquality().equals(other.difficulties, _this.difficulties)&&(identical(other.tagId, _this.tagId) || other.tagId == _this.tagId));
 }
 
 
 @override
 int get hashCode {
   final _this = this as QuestionFilter;
-  return Object.hash(runtimeType,_this.keyword,_this.nodeId,const DeepCollectionEquality().hash(_this.qtypes),_this.difficulty,_this.tagId);
+  return Object.hash(runtimeType,_this.keyword,_this.nodeId,const DeepCollectionEquality().hash(_this.qtypes),const DeepCollectionEquality().hash(_this.difficulties),_this.tagId);
 }
 
 @override
 String toString() {
   final _this = this as QuestionFilter;
-  return 'QuestionFilter(keyword: ${_this.keyword}, nodeId: ${_this.nodeId}, qtypes: ${_this.qtypes}, difficulty: ${_this.difficulty}, tagId: ${_this.tagId})';
+  return 'QuestionFilter(keyword: ${_this.keyword}, nodeId: ${_this.nodeId}, qtypes: ${_this.qtypes}, difficulties: ${_this.difficulties}, tagId: ${_this.tagId})';
 }
 
 
@@ -55,7 +55,7 @@ abstract mixin class $QuestionFilterCopyWith<$Res>  {
   factory $QuestionFilterCopyWith(QuestionFilter value, $Res Function(QuestionFilter) _then) = _$QuestionFilterCopyWithImpl;
 @useResult
 $Res call({
- String keyword, String? nodeId, Set<QuestionType> qtypes, int? difficulty, String? tagId
+ String keyword, String? nodeId, Set<QuestionType> qtypes, Set<int> difficulties, String? tagId
 });
 
 
@@ -72,13 +72,13 @@ class _$QuestionFilterCopyWithImpl<$Res>
 
 /// Create a copy of QuestionFilter
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? keyword = null,Object? nodeId = freezed,Object? qtypes = null,Object? difficulty = freezed,Object? tagId = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? keyword = null,Object? nodeId = freezed,Object? qtypes = null,Object? difficulties = null,Object? tagId = freezed,}) {
   return _then(QuestionFilter(
 keyword: null == keyword ? _self.keyword : keyword // ignore: cast_nullable_to_non_nullable
 as String,nodeId: freezed == nodeId ? _self.nodeId : nodeId // ignore: cast_nullable_to_non_nullable
 as String?,qtypes: null == qtypes ? _self.qtypes : qtypes // ignore: cast_nullable_to_non_nullable
-as Set<QuestionType>,difficulty: freezed == difficulty ? _self.difficulty : difficulty // ignore: cast_nullable_to_non_nullable
-as int?,tagId: freezed == tagId ? _self.tagId : tagId // ignore: cast_nullable_to_non_nullable
+as Set<QuestionType>,difficulties: null == difficulties ? _self.difficulties : difficulties // ignore: cast_nullable_to_non_nullable
+as Set<int>,tagId: freezed == tagId ? _self.tagId : tagId // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }
@@ -164,10 +164,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String keyword,  String? nodeId,  Set<QuestionType> qtypes,  int? difficulty,  String? tagId)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String keyword,  String? nodeId,  Set<QuestionType> qtypes,  Set<int> difficulties,  String? tagId)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _QuestionFilter() when $default != null:
-return $default(_that.keyword,_that.nodeId,_that.qtypes,_that.difficulty,_that.tagId);case _:
+return $default(_that.keyword,_that.nodeId,_that.qtypes,_that.difficulties,_that.tagId);case _:
   return orElse();
 
 }
@@ -185,10 +185,10 @@ return $default(_that.keyword,_that.nodeId,_that.qtypes,_that.difficulty,_that.t
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String keyword,  String? nodeId,  Set<QuestionType> qtypes,  int? difficulty,  String? tagId)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String keyword,  String? nodeId,  Set<QuestionType> qtypes,  Set<int> difficulties,  String? tagId)  $default,) {final _that = this;
 switch (_that) {
 case _QuestionFilter():
-return $default(_that.keyword,_that.nodeId,_that.qtypes,_that.difficulty,_that.tagId);case _:
+return $default(_that.keyword,_that.nodeId,_that.qtypes,_that.difficulties,_that.tagId);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -205,10 +205,10 @@ return $default(_that.keyword,_that.nodeId,_that.qtypes,_that.difficulty,_that.t
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String keyword,  String? nodeId,  Set<QuestionType> qtypes,  int? difficulty,  String? tagId)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String keyword,  String? nodeId,  Set<QuestionType> qtypes,  Set<int> difficulties,  String? tagId)?  $default,) {final _that = this;
 switch (_that) {
 case _QuestionFilter() when $default != null:
-return $default(_that.keyword,_that.nodeId,_that.qtypes,_that.difficulty,_that.tagId);case _:
+return $default(_that.keyword,_that.nodeId,_that.qtypes,_that.difficulties,_that.tagId);case _:
   return null;
 
 }
@@ -220,7 +220,7 @@ return $default(_that.keyword,_that.nodeId,_that.qtypes,_that.difficulty,_that.t
 
 
 class _QuestionFilter implements QuestionFilter {
-  const _QuestionFilter({this.keyword = '', this.nodeId,  Set<QuestionType> qtypes = const <QuestionType>{}, this.difficulty, this.tagId}): _qtypes = qtypes;
+  const _QuestionFilter({this.keyword = '', this.nodeId,  Set<QuestionType> qtypes = const <QuestionType>{},  Set<int> difficulties = const <int>{}, this.tagId}): _qtypes = qtypes,_difficulties = difficulties;
   
 
 /// 关键词，按题干全文检索（服务端会对 % _ \ 做转义）。
@@ -236,8 +236,15 @@ class _QuestionFilter implements QuestionFilter {
   return EqualUnmodifiableSetView(_qtypes);
 }
 
-/// 难度 1 易 / 2 中 / 3 难。null 表示不限（注意与"值为 0"不同）。
-@override final  int? difficulty;
+/// 难度多选：1 易 / 2 中 / 3 难。空集合表示不限（与题型同一条口径）。
+ final  Set<int> _difficulties;
+/// 难度多选：1 易 / 2 中 / 3 难。空集合表示不限（与题型同一条口径）。
+@override@JsonKey() Set<int> get difficulties {
+  if (_difficulties is EqualUnmodifiableSetView) return _difficulties;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableSetView(_difficulties);
+}
+
 @override final  String? tagId;
 
 /// Create a copy of QuestionFilter
@@ -250,18 +257,18 @@ _$QuestionFilterCopyWith<_QuestionFilter> get copyWith => __$QuestionFilterCopyW
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _QuestionFilter&&(identical(other.keyword, keyword) || other.keyword == keyword)&&(identical(other.nodeId, nodeId) || other.nodeId == nodeId)&&const DeepCollectionEquality().equals(other.qtypes, _qtypes)&&(identical(other.difficulty, difficulty) || other.difficulty == difficulty)&&(identical(other.tagId, tagId) || other.tagId == tagId));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _QuestionFilter&&(identical(other.keyword, keyword) || other.keyword == keyword)&&(identical(other.nodeId, nodeId) || other.nodeId == nodeId)&&const DeepCollectionEquality().equals(other.qtypes, _qtypes)&&const DeepCollectionEquality().equals(other.difficulties, _difficulties)&&(identical(other.tagId, tagId) || other.tagId == tagId));
 }
 
 
 @override
 int get hashCode {
-    return Object.hash(runtimeType,keyword,nodeId,const DeepCollectionEquality().hash(_qtypes),difficulty,tagId);
+    return Object.hash(runtimeType,keyword,nodeId,const DeepCollectionEquality().hash(_qtypes),const DeepCollectionEquality().hash(_difficulties),tagId);
 }
 
 @override
 String toString() {
-    return 'QuestionFilter(keyword: $keyword, nodeId: $nodeId, qtypes: $qtypes, difficulty: $difficulty, tagId: $tagId)';
+    return 'QuestionFilter(keyword: $keyword, nodeId: $nodeId, qtypes: $qtypes, difficulties: $difficulties, tagId: $tagId)';
 }
 
 
@@ -272,7 +279,7 @@ abstract mixin class _$QuestionFilterCopyWith<$Res> implements $QuestionFilterCo
   factory _$QuestionFilterCopyWith(_QuestionFilter value, $Res Function(_QuestionFilter) _then) = __$QuestionFilterCopyWithImpl;
 @override @useResult
 $Res call({
- String keyword, String? nodeId, Set<QuestionType> qtypes, int? difficulty, String? tagId
+ String keyword, String? nodeId, Set<QuestionType> qtypes, Set<int> difficulties, String? tagId
 });
 
 
@@ -289,13 +296,13 @@ class __$QuestionFilterCopyWithImpl<$Res>
 
 /// Create a copy of QuestionFilter
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? keyword = null,Object? nodeId = freezed,Object? qtypes = null,Object? difficulty = freezed,Object? tagId = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? keyword = null,Object? nodeId = freezed,Object? qtypes = null,Object? difficulties = null,Object? tagId = freezed,}) {
   return _then(_QuestionFilter(
 keyword: null == keyword ? _self.keyword : keyword // ignore: cast_nullable_to_non_nullable
 as String,nodeId: freezed == nodeId ? _self.nodeId : nodeId // ignore: cast_nullable_to_non_nullable
 as String?,qtypes: null == qtypes ? _self._qtypes : qtypes // ignore: cast_nullable_to_non_nullable
-as Set<QuestionType>,difficulty: freezed == difficulty ? _self.difficulty : difficulty // ignore: cast_nullable_to_non_nullable
-as int?,tagId: freezed == tagId ? _self.tagId : tagId // ignore: cast_nullable_to_non_nullable
+as Set<QuestionType>,difficulties: null == difficulties ? _self._difficulties : difficulties // ignore: cast_nullable_to_non_nullable
+as Set<int>,tagId: freezed == tagId ? _self.tagId : tagId // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }

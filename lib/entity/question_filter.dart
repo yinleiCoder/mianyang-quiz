@@ -21,8 +21,8 @@ abstract class QuestionFilter with _$QuestionFilter {
     /// 题型多选。空集合表示不限。
     @Default(<QuestionType>{}) Set<QuestionType> qtypes,
 
-    /// 难度 1 易 / 2 中 / 3 难。null 表示不限（注意与"值为 0"不同）。
-    int? difficulty,
+    /// 难度多选：1 易 / 2 中 / 3 难。空集合表示不限（与题型同一条口径）。
+    @Default(<int>{}) Set<int> difficulties,
 
     String? tagId,
   }) = _QuestionFilter;
@@ -34,19 +34,21 @@ extension QuestionFilterX on QuestionFilter {
       keyword.trim().isNotEmpty ||
       nodeId != null ||
       qtypes.isNotEmpty ||
-      difficulty != null ||
+      difficulties.isNotEmpty ||
       tagId != null;
 
   /// 传给 start_practice_session 的参数。
   ///
   /// 要点：
   ///   · 题型传**线格式字符串**（single_choice…），不是枚举名
-  ///   · 未设置的条件传 null，让 RPC 用它的默认值语义（"不限"）
+  ///   · 未设置的条件传 null，让 RPC 用它的默认值语义（"不限"）。
+  ///     难度这里**尤其**不能传空数组：`difficulty = any('{}')` 恒为假，
+  ///     服务端会一道题都挑不出来（0098 的候选池就是 `= any(...)`）
   ///   · 关键词两端去空白；空串同样传 null，避免服务端把它当成 "" 去匹配
   Map<String, dynamic> toRpcParams() => {
     'p_node_id': nodeId,
     'p_qtypes': qtypes.isEmpty ? null : qtypes.map((t) => t.wire).toList(),
-    'p_difficulty': difficulty,
+    'p_difficulties': difficulties.isEmpty ? null : difficulties.toList(),
     'p_tag_id': tagId,
     'p_keyword': keyword.trim().isEmpty ? null : keyword.trim(),
   };

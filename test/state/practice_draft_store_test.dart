@@ -141,7 +141,7 @@ void main() {
         ..setLimit(20);
       store.startFrom(
         source: PracticeSource.all,
-        filter: const QuestionFilter(keyword: 'excel', difficulty: 2),
+        filter: const QuestionFilter(keyword: 'excel', difficulties: {2}),
       );
 
       store.setPickedQuestions(['q1', 'q2', 'q3']);

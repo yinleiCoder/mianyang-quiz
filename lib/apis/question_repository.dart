@@ -81,8 +81,10 @@ class QuestionRepository {
       if (filter.qtypes.isNotEmpty) {
         query = query.inFilter('qtype', filter.qtypes.map((t) => t.wire).toList());
       }
-      if (filter.difficulty != null) {
-        query = query.eq('difficulty', filter.difficulty!);
+      // 难度多选：`in` 而不是 `eq`（0098）。这个 if 同时挡掉了空集合——
+      // `in ()` 在 PostgREST 里是语法错误，不能照搬"值一定是单个、不会为空"的老写法
+      if (filter.difficulties.isNotEmpty) {
+        query = query.inFilter('difficulty', filter.difficulties.toList());
       }
       final keyword = filter.keyword.trim();
       if (keyword.isNotEmpty) {

@@ -32,7 +32,9 @@ class PracticeRepository {
   ///
   /// [filter] 与 [questionIds] 只在 [source] 为 all 时生效——错题/收藏两条分支由服务端
   /// 自己定题，不看筛选条件。参数名与类型统一由 QuestionFilter.toRpcParams() 给出
-  /// （题型传的是线格式字符串，不是枚举名）。
+  /// （题型传的是线格式字符串，不是枚举名；难度传的是**数组** p_difficulties，0098）。
+  /// ⚠ 难度那个参数**依赖服务端已经落过 0098**：旧服务端不认识 p_difficulties，
+  /// PostgREST 会直接拒（PGRST202），表现是「开始练习」点了就报错。先落库再发版。
   /// [offset] 只对顺序练习有意义：这一轮从题库顺序的第几道开始（0 起，见 0095）。
   /// 轮大小就是 [limit]，第 N 轮 = offset (N-1)*limit；服务端返回 total_available 供算轮次。
   Future<StartPracticeOutcome> startSession({
