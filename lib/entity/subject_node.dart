@@ -1,11 +1,12 @@
 // 科目树节点（subject_nodes 表）。
 //
 // 两棵树（scope）：
-//   common      公共科目：discipline（公共学科，直接挂题）→ course（课程，挂题）
-//   vocational  专业目录：category（专业大类）→ major（专业）→ course（课程，挂题）
+//   common      公共科目：discipline（公共学科）→ course（课程）
+//   vocational  专业目录：category（专业大类）→ major（专业）→ course（课程）
 //
-// **可挂题的只有 discipline 与 course**，这是题库筛选与组卷树选择器的关键约束：
-// 选中一个不可挂题节点时，实际含义是"它下面所有课程"（子树筛选）。
+// **四层都能直接挂题**（2026-09-24 起，服务端 0075）：想按「计算机类」这种
+// 专业大类组织题库的人，不该被逼着先建一门不存在的课程。
+// 所以筛选时选中任一节点，含义都是"它连同它下面的全部"（子树展开）。
 
 import 'package:freezed_annotation/freezed_annotation.dart';
 

@@ -250,6 +250,20 @@ full 999），`AppTextStyles` 的六个角色对着 M3 字阶取值（24/16/16/1
 - 挑题走 `start_sequential_practice`（**没动** `start_practice_session` —— 那是全站智能练习的主链路）：
   按题库列表顺序（`published_at desc`）连排，不过滤"今天已练"，不随机、不按遗忘曲线。
 
+### 科目树：题目能挂在**任意层级**（2026-09-24 起，服务端 0075）
+
+公共学科 / 专业大类 / 专业 / 课程**四层都能直接挂题**（网页端 `lib/subject-nodes.js`
+的 `isAttachable` 同口径）。所以**任何"只列末端（学科与课程）"的筛选控件都是旧口径残留**：
+挂在「汽修」这种专业节点下、下面还没有课程的题，会因此彻底选不到 —— 2026-10-14
+组卷页就是这么漏的（`node_tag_fields.dart` 当时写死了 kind 白名单）。
+
+- 组卷页是**三级级联下拉**（大类 → 专业 → 课程，`widgets/subject_cascade_field.dart`）；
+  题库页是树形弹层（`widgets/subject_tree_sheet.dart`）。外观不同，**筛选值只有一个**：
+  交回"最深的那个已选节点"，服务端按子树展开（`start_practice_session` 里的 recursive CTE）。
+  于是"选了大类不选专业"= 整个大类（**不是** null）。
+- 各级的选中态由 `utils/subject_tree.dart` 的 `ancestorChain` 从 nodeId 反推，
+  **不要再另存三个状态**——两个真源迟早会漂移（"清除筛选"只清一个）。
+
 ### 选项乱序
 乱序后用户看到的 "A" 可能是原始 "C"。**提交只认原始 key**。
 乱序结果在生成单题运行时**算一次并物化**，不能在 `build()` 里算（否则每次 rebuild 重排、点击位置跳动）。

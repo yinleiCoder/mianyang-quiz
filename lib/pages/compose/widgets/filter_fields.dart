@@ -4,9 +4,9 @@
 // （"为什么这里能按标签筛、组卷不能？"）。共用的值对象是 QuestionFilter，
 // 参数映射由它的 toRpcParams() 负责，本组件只管收集。
 //
-// 科目用带完整路径的下拉而不是树形弹层：树形选择器在 features/bank 下，
-// 跨 feature 引用被架构守卫禁止；而"专业目录 / 装备制造类 / 汽车运用"这样的
-// 路径文本在下拉里本来就看得很清楚。
+// 科目在这里是**三级级联下拉**（大类 → 专业 → 课程），题库那边是树形弹层：
+// 两个控件的筛选语义完全一致（都交回一个节点 id，服务端按子树展开），
+// 只是组卷页是一张紧凑的表单卡片，逐级下拉比弹一整棵树更顺手。
 
 import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/values/values.dart';

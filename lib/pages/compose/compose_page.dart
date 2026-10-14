@@ -132,7 +132,9 @@ class _ComposePageState extends State<ComposePage> {
                         const SizedBox(height: AppMetrics.gapXl),
                         const SectionHeader(
                           title: '筛选条件',
-                          subtitle: '选了父级科目会包含它下面的全部课程',
+                          // 「不限」不是"没有条件"而是"这一级不往下收窄"：选了大类不选专业
+                          // 就是整个大类（题目可以直接挂在任意层级上）。
+                          subtitle: '选中一个科目标签就包含它下面的全部；不选哪一级，那一级就是全部',
                         ),
                         FilterFields(
                           value: draft.filter,

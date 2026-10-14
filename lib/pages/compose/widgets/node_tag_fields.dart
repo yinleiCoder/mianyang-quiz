@@ -1,17 +1,18 @@
-// 科目与知识点标签两个下拉。
+// 科目与知识点标签两组字段。
 //
 // 从 filter_fields.dart 拆出来：它们的选项来自同一批参考数据（科目树 + 标签），
 // 与"关键词/题型/难度"那三个就地可算的控件不是一类东西——
-// 这两个依赖外部加载，前者不依赖。
+// 这两组依赖外部加载，前者不依赖。
 //
-// 科目用带完整路径的下拉而不是树形弹层：树形选择器在 features/bank 下，
-// 跨 feature 引用被架构守卫禁止；而「专业目录 / 装备制造类 / 汽车运用」
-// 这样的路径文本在下拉里本来就看得很清楚。
+// 科目是**三级级联**（专业大类 → 专业 → 课程），见 subject_cascade_field.dart。
+// 这里此前是一个"只列公共学科与课程"的下拉（旧口径：只有末端能挂题），
+// 挂在专业节点（如「汽修」）下的题因此在组卷页选不到。
 
 import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/values/values.dart';
 import 'package:mianyang_quiz/entity/entity.dart';
 import 'package:mianyang_quiz/utils/utils.dart';
+import 'package:mianyang_quiz/pages/compose/widgets/subject_cascade_field.dart';
 
 class NodeTagFields extends StatelessWidget {
   const NodeTagFields({
@@ -33,12 +34,6 @@ class NodeTagFields extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pathOf = buildNodeIndex(nodes);
-    // 只列可挂题的节点（学科与课程）。冻结的节点**仍然列出**——
-    // 它只是不能再挂新题，已有题目还在线，不列会让人以为题目消失了。
-    final selectable = nodes.where(
-      (n) => n.kind == SubjectKind.discipline.wire || n.kind == SubjectKind.course.wire,
-    );
     // 知识点跟着**已选科目**收口（0096）：选了「办公应用」就不该挑到别学科的知识点。
     // 没选科目时不过滤——那时连属于哪个学科都还没定。
     final scopedTags = tagsInScope(tags, selectedNodeId, nodes);
@@ -55,26 +50,9 @@ class NodeTagFields extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _FieldLabel('科目'),
-        DropdownButtonFormField<String?>(
-          // 注意参数名是 initialValue 不是 value（后者已废弃），
-          // 且它是 FormField——挂载后只读一次初值，选中值必须由调用方 State 持有
-          initialValue: selectedNodeId,
-          isExpanded: true,
-          decoration: const InputDecoration(border: OutlineInputBorder()),
-          hint: const Text('不限'),
-          items: [
-            const DropdownMenuItem(value: null, child: Text('不限')),
-            for (final node in selectable)
-              DropdownMenuItem(
-                value: node.id,
-                child: Text(
-                  pathOf(node.id),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-          ],
+        SubjectCascadeField(
+          nodes: nodes,
+          selectedNodeId: selectedNodeId,
           onChanged: onNodeChanged,
         ),
         const SizedBox(height: AppMetrics.gapLg),

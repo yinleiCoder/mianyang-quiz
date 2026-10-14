@@ -1,14 +1,52 @@
-// 科目树纯函数：子树展开与路径合成。
+// 科目树纯函数：子树展开、逐级取子节点与路径合成。
 //
-// 两个用途：
-//   1. **筛选**：选中一个父节点，实际含义是"它及其全部后代"（题库挂在学科/课程上）。
+// 三个用途：
+//   1. **筛选**：选中一个父节点，实际含义是"它及其全部后代"。
 //      服务端的 start_practice_session 内部也这么做，客户端做同样的事是为了
 //      题库列表与组卷的语义一致。
 //   2. **展示**：节点 id → "专业目录 / 装备制造类 / 汽车运用" 这样的名称链。
+//   3. **级联选择**：逐级取直接子节点（组卷页的「科目 → 专业 → 课程」三级下拉）。
 //
 // 纯函数，无 Flutter 依赖，可独立单测。
 
 import 'package:mianyang_quiz/entity/entity.dart';
+
+/// 树深度上限：防御脏数据成环。正常科目树不超过 4 层。
+const _maxDepth = 10;
+
+/// 同级排序：sort_order 优先，再按名称（与网页端 lib/subject-nodes.js 同口径）。
+int _compareNodes(SubjectNode a, SubjectNode b) {
+  final byOrder = a.sortOrder.compareTo(b.sortOrder);
+  return byOrder != 0 ? byOrder : a.name.compareTo(b.name);
+}
+
+/// 某个父节点下的**直接子节点**（已排序）。`parentId` 传 null 即根节点。
+///
+/// 级联选择器逐级取选项用它。**只认直接父子，不做子树展开**——
+/// 展开是 [subtreeIds] 的事，两者别混（选「汽修」专业要的是它自己那道题，
+/// 不是把它下面的课程也算进来 —— 那是服务端按子树展开时的事）。
+List<SubjectNode> childNodes(List<SubjectNode> nodes, String? parentId) =>
+    nodes.where((node) => node.parentId == parentId).toList()..sort(_compareNodes);
+
+/// 从根到自身的 id 链：`[根, …, 自身]`。
+///
+/// 级联选择器靠它把"当前选中的节点"还原成各级的选中态（而不是另存三个状态，
+/// 那个状态迟早会和筛选项里的 nodeId 漂移）。节点不存在时返回空列表；
+/// 数据成环时按 [_maxDepth] 截断，绝不无限循环。
+List<String> ancestorChain(List<SubjectNode> nodes, String? nodeId) {
+  if (nodeId == null || nodeId.isEmpty) return const [];
+  final byId = {for (final node in nodes) node.id: node};
+
+  final chain = <String>[];
+  SubjectNode? current = byId[nodeId];
+  var depth = 0;
+  while (current != null && depth++ < _maxDepth) {
+    chain.insert(0, current.id);
+    final parentId = current.parentId;
+    current = parentId == null ? null : byId[parentId];
+  }
+  return chain;
+}
 
 /// 节点 id → 其自身与全部后代的 id。
 ///
@@ -43,9 +81,8 @@ List<String> subtreeIds(List<SubjectNode> nodes, String rootId) {
 /// 返回函数而不是 Map：调用点通常是"逐行取路径"，函数内部带缓存，
 /// 同一个节点不会被回溯两次。
 ///
-/// 深度上限用于防御脏数据成环——正常科目树深度不超过 4。
+/// 深度上限用于防御脏数据成环——见 [_maxDepth]。
 String Function(String? nodeId) buildNodeIndex(List<SubjectNode> nodes) {
-  const maxDepth = 10;
   final byId = {for (final node in nodes) node.id: node};
   final cache = <String, String>{};
 
@@ -57,7 +94,7 @@ String Function(String? nodeId) buildNodeIndex(List<SubjectNode> nodes) {
     final parts = <String>[];
     SubjectNode? current = byId[nodeId];
     var depth = 0;
-    while (current != null && depth++ < maxDepth) {
+    while (current != null && depth++ < _maxDepth) {
       parts.insert(0, current.name);
       final parentId = current.parentId;
       current = parentId == null ? null : byId[parentId];
@@ -79,10 +116,7 @@ Map<String, List<TreeEntry>> buildTrees(List<SubjectNode> nodes) {
     childrenOf.putIfAbsent(node.parentId, () => []).add(node);
   }
   for (final list in childrenOf.values) {
-    list.sort((a, b) {
-      final byOrder = a.sortOrder.compareTo(b.sortOrder);
-      return byOrder != 0 ? byOrder : a.name.compareTo(b.name);
-    });
+    list.sort(_compareNodes);
   }
 
   List<TreeEntry> walk(String? parentId) => [
