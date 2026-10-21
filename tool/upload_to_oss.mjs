@@ -11,10 +11,11 @@
 //     node tool/upload_to_oss.mjs --dir build/oss-upload --tag v2.7.5 \
 //     --public-base https://download.myquiz.cn/client
 //
-// **--public-base 必须是绑定到桶的自定义域名**：阿里云禁止 .apk 从默认域名
-// （*.aliyuncs.com）对外分发（实测回 400 ApkDownloadForbidden，正文让我们用 CNAME）。
-// 不传时仍会上传（Windows 可以直接下），但 APK 的清单 url 会写成 null，
-// 网页端据此显示“Android 下载暂不可用”，而不是给一个点了报错的链接。
+// **--public-base 可选**：阿里云禁止 .apk 从默认域名（*.aliyuncs.com）对外分发
+// （实测回 400 ApkDownloadForbidden，正文让我们用 CNAME）。不传时仍会照常上传，
+// 但 APK 的清单 url 写成 null；网页端与客户端会据此改走 gh-proxy
+// （网页 NEXT_PUBLIC_GH_PROXY / 客户端 Env.ghProxy，默认 https://gh-proxy.com/）。
+// 若将来给桶绑了自定义域名，用 --public-base 指向它即可让清单里的 url 优先走 OSS。
 //
 // 资产名**不带版本号**——网页端与客户端写死的就是这几个名字，版本号只写进
 // client/latest.json（tag）与每个资产 url 的 ?v= 查询串（绕开 CDN 旧缓存）。
@@ -110,8 +111,8 @@ if (files.length === 0) {
 const hasApk = files.some((f) => f.name.toLowerCase().endsWith('.apk'));
 if (hasApk && isDefaultAliyun) {
   console.warn(
-    '⚠ 当前 --public-base 是阿里云默认域名：APK 仍会上传，但阿里云禁止从该域名下载 .apk，' +
-      '清单里会把它写成 url:null。请先给桶绑定自定义域名，再用 --public-base 指向它。',
+    '⚠ 当前 --public-base 是阿里云默认域名：APK 仍会上传，但阿里云禁止从该域名下载 .apk；' +
+      '清单里会把它写成 url:null，网页/客户端会改走 gh-proxy。',
   );
 }
 
@@ -160,5 +161,5 @@ await putObject(
 console.log(`\n完成：${manifest.assets.length} 个资产 + latest.json 已上传到 ${BUCKET}/${PREFIX}`);
 console.log(`版本 ${tag}；公共地址 ${publicBase}`);
 if (hasApk && isDefaultAliyun) {
-  console.log('⚠ APK 的下载 url 为 null：绑定自定义域名后，用 --public-base 重跑本脚本即可。');
+  console.log('⚠ APK 的下载 url 为 null：网页/客户端会改走 gh-proxy；若以后绑了自定义域名，用 --public-base 重跑即可。');
 }
