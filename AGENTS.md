@@ -612,11 +612,20 @@ Release 目录里没有就装 Microsoft Visual C++ Redistributable，或把这�
 git tag v1.0.1 && git push origin v1.0.1
 ```
 
-跑完在 GitHub Releases 上得到几个资产，**名字固定不带版本号**（这样
-`/releases/latest/download/<名字>` 永远指向最新版，产品页与客户端都能写死链接）：
+跑完在 GitHub Releases 上得到几个资产，**名字固定不带版本号**；同时流水线会把它们推到
+阿里云 OSS `client/` 并写 `client/latest.json`（**国内下载与客户端检查更新读这份清单**）。
+Windows 的 exe/zip 直接从 OSS 下；网页端与客户端都写死资产名：
 
 - `mianyang_quiz-android.apk` —— Android 直接装（**必须已配正式签名**，见下）
 - `mianyang_quiz-windows-x64.zip` —— 整个目录解压后运行
+
+⚠ **APK 走 gh-proxy 加速**：阿里云禁止 `.apk` 从 OSS 默认域名（`*.aliyuncs.com`）分发，
+而绑定自定义域名要求大陆 ICP 备案。清单里 APK 的 `url` 通常为 null；网页端与客户端用
+清单的 `tag` + 固定资产名拼
+`${GH_PROXY}https://github.com/yinleiCoder/mianyang-quiz/releases/download/<tag>/<name>`。
+`GH_PROXY` 默认 `https://gh-proxy.com/`，网页端用 `NEXT_PUBLIC_GH_PROXY`，客户端用
+`Env.ghProxy` 覆盖。若将来给桶绑了自定义域名并设置 `CLIENT_OSS_PUBLIC_BASE`，清单里的
+OSS `url` 会优先，APK 自动改走 OSS。
 
 ### Android 按 ABI 拆包（2026-09-28 起）
 
@@ -753,10 +762,14 @@ kotlin.incremental=false
 符号文件（`app.*.symbols` + `obfuscation-map.json`）只作为 Actions artifact 上传，**不进 Release**：
 它们能反解混淆，公开挂出去等于白混淆。
 
-**检查更新**（`lib/pages/shell/widgets/update_checker.dart`）读的就是上面那个 Release 的
-`tag_name`，与本机 `Env.appVersion` 比大小（比较逻辑在 `lib/utils/app_version.dart`，纯函数可单测）。
-所以 `APP_VERSION` 由流水线按 tag 注入 —— 两边同源才不会误报。调试构建（`kDebugMode`）与
-`APP_VERSION` 带 `-` 的包不检查；同一个版本「稍后再说」过就不再弹。
+**检查更新**（`lib/pages/shell/widgets/update_checker.dart`）读的是 OSS 上的
+`client/latest.json`（与网页端 `/download` 同一份清单），拿它的 `tag` 与本机
+`Env.appVersion` 比大小（比较逻辑在 `lib/utils/app_version.dart`，纯函数可单测）。
+不再读 GitHub API：国内那条线路取不到响应，版本检查会静默失败。
+清单里的资产 `url` 为空时（典型是 APK）用 `Env.ghProxy` + `tag` + 资产名拼 gh-proxy 地址；
+Windows 直接用清单里的 OSS 直链。
+`APP_VERSION` 由流水线按 tag 注入 —— 两边同源才不会误报；个人资料页会显示当前版本。
+调试构建（`kDebugMode`）与 `APP_VERSION` 带 `-` 的包不检查；同一个版本「稍后再说」过就不再弹。
 
 ### 应用图标
 

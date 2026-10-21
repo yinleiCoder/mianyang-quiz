@@ -64,6 +64,8 @@ jobs:
             OSS_PUBLIC_HOST   = "mianyang-question-bank.oss-cn-chengdu.aliyuncs.com"
             API_BASE_URL      = "https://myquiz.cn"
             SHARE_BASE_URL    = "https://myquiz.cn"
+            # APK 走 gh-proxy（阿里云默认域名不允许分发 .apk）；换节点只改这一行
+            GH_PROXY          = "https://gh-proxy.com/"
             APP_VERSION       = "${{ github.ref_type == 'tag' && github.ref_name || 'dev' }}"
             # 崩溃上报的 DSN。留空（没配这个 secret）= 整个上报链路关掉，
             # 见 lib/apis/crash_reporter.dart。它同样不是机密（客户端里就有），
@@ -241,6 +243,7 @@ jobs:
             "OSS_PUBLIC_HOST": "mianyang-question-bank.oss-cn-chengdu.aliyuncs.com",
             "API_BASE_URL": "https://myquiz.cn",
             "SHARE_BASE_URL": "https://myquiz.cn",
+            "GH_PROXY": "https://gh-proxy.com/",
             "APP_VERSION": "${{ github.ref_type == 'tag' && github.ref_name || 'dev' }}",
             "SENTRY_DSN": "${{ secrets.SENTRY_DSN }}"
           }
@@ -433,9 +436,12 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
-          # 客户端内的"检查更新"读的就是这个 Release 的 tag_name，正文顺带写清楚装法
+          # 客户端检查更新读的是 OSS 的 client/latest.json（tag 与这里同源）；
+          # 本节只是 GitHub 侧的发布记录，国内用户请走官方下载页。
           body: |
             绵阳市中职共建题库客户端 ${{ github.ref_name }}
+
+            **官方下载页（Windows 走阿里云 OSS，Android 走 gh-proxy 加速）：https://myquiz.cn/download**
 
             - **Android**：下载 `mianyang_quiz-android.apk` 直接安装（首次需允许「安装未知来源应用」）
               - 这份是 **arm64-v8a**，近几年的手机都是它。装不上、提示「应用未安装」的，
@@ -448,21 +454,31 @@ jobs:
           files: assets/*
           fail_on_unmatched_files: true
 
-      - name: 镜像到阿里云 OSS（国内下载线路）
-        # 网页端 /download 优先给 OSS 链接：GitHub 在国内**取不到字节**（2026-10-12 实测
-        # 20 秒 0 字节），安装包挂 GitHub 上学生根本下不动。理由详见 tool/upload_to_oss.mjs 文件头。
+      - name: 上传到阿里云 OSS（版本清单 + Windows 下载）
+        # **必须在 GitHub Release 之后**：APK 走 gh-proxy，代理的上游就是这次 Release
+        # 的资产；Release 没建好之前，网页/客户端拿到的 APK 地址会是 404。
         #
-        # 没配密钥**跳过而不是失败**：这条是"更快"，不是"能不能发"。
-        # 密钥用一个只有该 bucket 写权限的子账号（与网页端直传共用同一对）。
+        # 网页端 /download 与客户端检查更新都只读 OSS 上的 client/latest.json。
+        # 缺少 OSS 密钥直接失败：否则 GitHub 发了新版本、下载页却还停在旧 tag，
+        # 正是 2.8.1 发布后清单仍是 2.8.0 的原因。
+        #
+        # CLIENT_OSS_PUBLIC_BASE 可选：将来若给桶绑了自定义域名，APK 会改走 OSS；
+        # 现在不配，清单里 APK url 为 null，网页与客户端自动拼 gh-proxy 地址。
         env:
           OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
           OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+          CLIENT_OSS_PUBLIC_BASE: ${{ vars.CLIENT_OSS_PUBLIC_BASE }}
         run: |
           if [ -z "$OSS_ACCESS_KEY_ID" ] || [ -z "$OSS_ACCESS_KEY_SECRET" ]; then
-            echo "::warning::未配置 OSS_ACCESS_KEY_ID / OSS_ACCESS_KEY_SECRET，跳过 OSS 镜像——国内用户将只能走 GitHub（很慢）"
-            exit 0
+            echo "::error::发布必须配置 OSS_ACCESS_KEY_ID / OSS_ACCESS_KEY_SECRET：版本清单与 Windows 下载只从 OSS 读取"
+            exit 1
           fi
-          node tool/upload_to_oss.mjs --dir assets --tag "${{ github.ref_name }}"
+          if [ -z "$CLIENT_OSS_PUBLIC_BASE" ]; then
+            echo "::notice::未配置 CLIENT_OSS_PUBLIC_BASE，APK 将走 gh-proxy（清单 url 为 null）"
+            node tool/upload_to_oss.mjs --dir assets --tag "${{ github.ref_name }}"
+          else
+            node tool/upload_to_oss.mjs --dir assets --tag "${{ github.ref_name }}" --public-base "$CLIENT_OSS_PUBLIC_BASE"
+          fi
 
       # **放在 Release 之后**：Sentry 挂了一次不该让这一版发不出去。
       - name: 上传符号到 Sentry（混淆后的堆栈才读得懂）

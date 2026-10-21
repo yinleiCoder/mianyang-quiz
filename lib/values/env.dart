@@ -32,18 +32,21 @@ abstract final class Env {
     defaultValue: apiBaseUrl,
   );
 
-  /// 检查更新用的 GitHub 仓库（owner/repo）。发布流水线把安装包挂在它的 Releases 上，
-  /// tag 就是版本号 —— 客户端拿它和 [appVersion] 比。留空则关闭检查更新。
-  static const String updateRepo = String.fromEnvironment(
-    'UPDATE_REPO',
-    defaultValue: 'yinleiCoder/mianyang-quiz',
-  );
-
   /// 客户端版本号，可选。只在意见反馈上报时随行带给管理员，
   /// 便于判断「这个问题出在哪个包」；缺失就是空串（不上报），不影响任何功能。
+  ///
+  /// 发布流水线按 tag 注入（如 `v2.8.1`），与 OSS 清单的 tag、网页端下载页显示的
+  /// 版本号同源。个人资料页会把「当前版本」印出来，便于用户与客服核对。
   static const String appVersion = String.fromEnvironment(
     'APP_VERSION',
     defaultValue: '',
+  );
+
+  /// gh-proxy 加速前缀（末尾带 /）。APK 不能从 OSS 默认域名下载（阿里云限制），
+  /// 客户端检查更新时用它拼 GitHub Release 的 APK 地址。换节点只改这个配置。
+  static const String ghProxy = String.fromEnvironment(
+    'GH_PROXY',
+    defaultValue: 'https://gh-proxy.com/',
   );
 
   /// Sentry 的上报地址（DSN）。**留空则整个上报链路关掉**：不初始化 SDK、

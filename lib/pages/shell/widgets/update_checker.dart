@@ -44,7 +44,8 @@ class _UpdateCheckerState extends State<UpdateChecker> {
 
   bool get _shouldCheck =>
       !kDebugMode &&
-      Env.updateRepo.isNotEmpty &&
+      // 版本清单与网页端下载页同源（OSS client/latest.json）
+      Env.ossPublicHost.isNotEmpty &&
       !Env.appVersion.contains('-') && // dev 后缀（0.1.0-dev）不检查
       Env.appVersion.isNotEmpty;
 
