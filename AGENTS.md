@@ -612,6 +612,10 @@ Release 目录里没有就装 Microsoft Visual C++ Redistributable，或把这�
 git tag v1.0.1 && git push origin v1.0.1
 ```
 
+> `release` job 的第一步必须是 `actions/checkout@v4`：它要执行 `tool/upload_to_oss.mjs`。
+> 只下载 artifact 的 job 里没有这个文件——2026-10-21 v2.8.3 就是因此报
+> `MODULE_NOT_FOUND`，而旧流程缺 OSS secrets 时跳过这一步，所以一直没暴露。
+
 跑完在 GitHub Releases 上得到几个资产，**名字固定不带版本号**；同时流水线会把它们推到
 阿里云 OSS `client/` 并写 `client/latest.json`（**国内下载与客户端检查更新读这份清单**）。
 Windows 的 exe/zip 直接从 OSS 下；网页端与客户端都写死资产名：

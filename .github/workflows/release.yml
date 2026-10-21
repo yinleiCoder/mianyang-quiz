@@ -405,6 +405,11 @@ jobs:
     if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
     steps:
+      # **必须 checkout**：下面的 OSS 上传要执行 tool/upload_to_oss.mjs。
+      # 这个 job 只下载 artifact 时，脚本根本不在工作区；旧流程缺 OSS secrets 会跳过
+      # 那一步，所以一直没暴露（2026-10-21 v2.8.3 配好 secrets 后才炸出 MODULE_NOT_FOUND）。
+      - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v4
         with:
           path: dist
