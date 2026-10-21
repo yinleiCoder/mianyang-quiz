@@ -1,7 +1,7 @@
 // 外观偏好：默认值、持久化、认不出的值回落。
 //
 // 为什么值得测：这两个值决定**每次启动的第一帧**长什么样。存不下只表现为"下次忘了"（静默），
-// 但**读错**会让用户看到一帧刺眼的白（深色用户）或整套配色变回紫色（选了别的主题色的人）——
+// 但**读错**会让用户看到一帧刺眼的白（深色用户）或整套配色变回默认色（选了别的主题色的人）——
 // 而这两种都只在真机上、只在启动那一瞬间看得出来。
 
 import 'package:flutter_test/flutter_test.dart';
@@ -15,9 +15,9 @@ void main() {
 
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
-  test('默认：品牌紫 + 跟随系统', () {
+  test('默认：靛蓝 + 跟随系统', () {
     final store = ThemeStore();
-    expect(store.seed, ThemeSeed.purple);
+    expect(store.seed, ThemeSeed.indigo);
     expect(store.mode, AppThemeMode.system);
   });
 
@@ -42,7 +42,7 @@ void main() {
     store.addListener(() => notified++);
 
     await store.setMode(AppThemeMode.system);
-    await store.setSeed(ThemeSeed.purple);
+    await store.setSeed(ThemeSeed.indigo);
     expect(notified, 0);
   });
 
@@ -53,7 +53,7 @@ void main() {
     });
     final store = ThemeStore();
     await store.load();
-    expect(store.seed, ThemeSeed.purple);
+    expect(store.seed, ThemeSeed.indigo);
     expect(store.mode, AppThemeMode.system);
   });
 

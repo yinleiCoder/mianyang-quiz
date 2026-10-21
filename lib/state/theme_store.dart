@@ -19,7 +19,7 @@ class ThemeStore extends ChangeNotifier {
   /// 可选的初值只给测试用（正常路径是 AppDependencies 建空的、再由 load() 填）。
   /// 用位置参数是为了写成 initializing formal——私有字段没法做成命名参数
   /// （`this._seed` 只允许位置参数），命名参数形式会被 prefer_initializing_formals 一直报。
-  ThemeStore([this._seed = ThemeSeed.purple, this._mode = AppThemeMode.system]);
+  ThemeStore([this._seed = ThemeSeed.indigo, this._mode = AppThemeMode.system]);
 
   static const _seedKey = 'theme.seed';
   static const _modeKey = 'theme.mode';

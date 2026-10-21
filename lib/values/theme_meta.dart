@@ -15,9 +15,10 @@
 import 'package:material_ui/material_ui.dart';
 
 enum ThemeSeed {
-  /// 品牌紫（默认）：就是 Colors.deepPurple。
-  /// **不要改这个值**：改造前全站用的就是它，改了等于所有老用户第二天打开发现换了色。
+  /// 品牌紫（历史默认色）。**不要改这个颜色值或 wire 名**：
+  /// 它已经写进老用户的本地偏好，改了等于让他们的选择失效。
   purple('purple', '紫', Color(0xFF673AB7)),
+  /// 靛蓝（2026-10-21 起的默认色）。
   indigo('indigo', '靛蓝', Color(0xFF3F51B5)),
   blue('blue', '蓝', Color(0xFF1565C0)),
   teal('teal', '青', Color(0xFF00796B)),
@@ -37,12 +38,13 @@ enum ThemeSeed {
   final Color color;
 }
 
-/// wire 名 → 枚举。认不出的一律回落默认（我们改过名、或用户从更新的版本降级回来）。
+/// wire 名 → 枚举。认不出的一律回落**当前默认色**（2026-10-21 起为靛蓝；
+/// 老用户已存过的 purple 等值不受影响）。
 ThemeSeed themeSeedFrom(String? wire) {
   for (final seed in ThemeSeed.values) {
     if (seed.wire == wire) return seed;
   }
-  return ThemeSeed.purple;
+  return ThemeSeed.indigo;
 }
 
 /// 明暗模式的三个选项。**顺序即选择器上的顺序**，也是用户最可能选的顺序。

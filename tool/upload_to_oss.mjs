@@ -55,6 +55,12 @@ if (!id || !secret) {
   process.exit(1);
 }
 
+// GitHub Actions 里不能让一次失败只留下一个 exit code：把未捕获异常明确打出来。
+process.on('unhandledRejection', (err) => {
+  console.error('上传失败：', err?.stack ?? err);
+  process.exit(1);
+});
+
 /** 规范化公共地址：去掉末尾斜杠；非法地址直接报错，别把坏 url 写进清单。 */
 function normalizeBase(raw) {
   const u = new URL(raw);
@@ -67,6 +73,8 @@ const publicBase = normalizeBase(arg('public-base', defaultBase));
 const publicHost = new URL(publicBase).host;
 // 阿里云默认域名不能分发 .apk；这个判断只影响清单里的 url，不影响上传本身。
 const isDefaultAliyun = /\.aliyuncs\.com$/i.test(publicHost);
+// 启动日志：CI 失败时先看这一行有没有出现（没有就是脚本还没跑到上传）。
+console.log(`upload_to_oss: dir=${dir} tag=${tag} publicBase=${publicBase}`);
 
 /** 一次 PUT。key 是相对 key（不含前导斜杠）。 */
 async function putObject(key, body, contentType, cacheControl) {
@@ -107,6 +115,7 @@ if (files.length === 0) {
   console.error(`${dir} 里没有可取的文件`);
   process.exit(1);
 }
+console.log(`upload_to_oss: files=${files.map((f) => f.name).join(', ')}`);
 
 const hasApk = files.some((f) => f.name.toLowerCase().endsWith('.apk'));
 if (hasApk && isDefaultAliyun) {

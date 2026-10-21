@@ -469,6 +469,9 @@ jobs:
           OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
           CLIENT_OSS_PUBLIC_BASE: ${{ vars.CLIENT_OSS_PUBLIC_BASE }}
         run: |
+          # 诊断用：只打印长度，不打印值。本地正常值是 id=24、secret=30；
+          # 多出 1~2 个字符通常是粘贴时带了换行/空格，会直接导致 SignatureDoesNotMatch。
+          echo "OSS key id length=${#OSS_ACCESS_KEY_ID}; secret length=${#OSS_ACCESS_KEY_SECRET}"
           if [ -z "$OSS_ACCESS_KEY_ID" ] || [ -z "$OSS_ACCESS_KEY_SECRET" ]; then
             echo "::error::发布必须配置 OSS_ACCESS_KEY_ID / OSS_ACCESS_KEY_SECRET：版本清单与 Windows 下载只从 OSS 读取"
             exit 1

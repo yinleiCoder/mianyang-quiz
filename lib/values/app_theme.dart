@@ -24,12 +24,12 @@ abstract final class AppTheme {
   static const FontWeight regular = AppTypography.regular;
   static const FontWeight bold = AppTypography.bold;
 
-  /// 亮色主题。[seed] 是主题色，默认品牌紫（不传就是改造前那套配色）。
-  static ThemeData light({ThemeSeed seed = ThemeSeed.purple}) =>
+  /// 亮色主题。[seed] 是主题色，默认靛蓝（2026-10-21 起）。
+  static ThemeData light({ThemeSeed seed = ThemeSeed.indigo}) =>
       _build(Brightness.light, seed);
 
   /// 暗色主题。
-  static ThemeData dark({ThemeSeed seed = ThemeSeed.purple}) =>
+  static ThemeData dark({ThemeSeed seed = ThemeSeed.indigo}) =>
       _build(Brightness.dark, seed);
 
   static ThemeData _build(Brightness brightness, ThemeSeed seed) {
