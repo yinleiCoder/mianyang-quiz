@@ -107,10 +107,6 @@ class _ExamStageState extends State<ExamStage> {
     if (_runner.submitting) return;
     try {
       await _runner.submit();
-      if (!mounted) return;
-      unawaited(context.read<SfxService>().finish());
-      // pushReplacement：交完卷还留在答题页按返回就回到了已结束的考试。
-      context.pushReplacement(AppRoutes.examResultOf(_runner.attempt.id));
     } catch (error) {
       if (!mounted) return;
       final retry = await showExamConfirmSheet(
@@ -122,6 +118,23 @@ class _ExamStageState extends State<ExamStage> {
         danger: true,
       );
       if (retry && mounted) await _submit(auto: auto);
+      return;
+    }
+
+    // 走到这里说明服务端已经收卷了。**后面任何失败都不能再说"交卷失败"**——
+    // 否则学生以为没交上、反复重交，而卷子其实已经在阅卷队列里。
+    if (!mounted) return;
+    unawaited(context.read<SfxService>().finish());
+    try {
+      // pushReplacement：交完卷还留在答题页按返回就回到了已结束的考试。
+      context.pushReplacement(AppRoutes.examResultOf(_runner.attempt.id));
+    } catch (error, stack) {
+      debugPrint('交卷成功但打开成绩单失败：$error\n$stack');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('已交卷，请到「我的考试」查看成绩')),
+      );
+      context.go(AppRoutes.examsOf(AppRoutes.examsTabMine));
     }
   }
 

@@ -8,6 +8,7 @@
 // 卷面只能从 start_exam_attempt / get_my_exam_attempt 拿：服务端在那个关口把
 // content.answer 剥掉了（考试中），客户端不许、也读不到 paper_items。
 
+import 'package:flutter/foundation.dart';
 import 'package:mianyang_quiz/utils/utils.dart';
 import 'package:mianyang_quiz/entity/entity.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -118,7 +119,7 @@ class PaperRepository {
     int? durationMs,
   }) async {
     try {
-      final data = await _client.rpc<Map<String, dynamic>>(
+      final data = await _client.rpc<dynamic>(
         'submit_exam_attempt',
         params: {
           'p_attempt_id': attemptId,
@@ -132,7 +133,19 @@ class PaperRepository {
           'p_duration_ms': durationMs,
         },
       );
-      return ExamSubmitSummary.fromJson(data);
+      // 200 只代表服务端已经收卷。返回体解析失败不能让 UI 报"交卷失败"——
+      // 学生应该去看成绩单，而不是反复重交。解析失败按空摘要处理，
+      // 成绩单页会从 get_my_exam_attempt 读到真实分数。
+      try {
+        if (data is Map<String, dynamic>) return ExamSubmitSummary.fromJson(data);
+        if (data is Map) {
+          return ExamSubmitSummary.fromJson(Map<String, dynamic>.from(data));
+        }
+        return const ExamSubmitSummary();
+      } catch (error) {
+        debugPrint('交卷返回体解析失败（已按交卷成功处理）：$error');
+        return const ExamSubmitSummary();
+      }
     } catch (error) {
       throw mapError(error);
     }
