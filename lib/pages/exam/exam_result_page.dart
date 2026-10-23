@@ -112,7 +112,13 @@ class _Body extends StatelessWidget {
   Widget build(BuildContext context) {
     final attempt = snapshot.attempt;
     final paper = snapshot.paper;
-    final revealed = attempt.statusValue.isFinal;
+    final finalScore = attempt.statusValue.isFinal;
+    // 交卷后服务端就下发客观题答案（0106），顶层简答题仍等阅卷；
+    // 所以"是否显示答案"不再等于"是否已出分"。
+    final revealed =
+        finalScore ||
+        attempt.statusValue == ExamStatus.submitted ||
+        attempt.statusValue == ExamStatus.grading;
     final answers = snapshot.answersByItem;
     final items = paper.items;
 
@@ -143,7 +149,7 @@ class _Body extends StatelessWidget {
               SizedBox(height: AppMetrics.gapSm.r),
               // 试题分析：每题全班答得怎么样（选项分布 + 谁选了什么）。
               // **只在已出分时给入口**——没出分时服务端会拒（选项分布 + 标准答案 = 答案本身）。
-              if (revealed)
+              if (finalScore)
                 DuoButton(
                   label: '试题分析',
                   variant: DuoButtonVariant.outline,
@@ -155,14 +161,16 @@ class _Body extends StatelessWidget {
                 ),
               SizedBox(height: AppMetrics.gapXl.r),
               Text(
-                revealed ? '逐题得分' : '逐题作答',
+                finalScore ? '逐题得分' : (revealed ? '逐题复盘' : '逐题作答'),
                 style: AppTextStyles.sectionTitle(context),
               ),
               SizedBox(height: AppMetrics.gapXs.r),
               Text(
-                revealed
+                finalScore
                     ? '已经出分，题目下方给出标准答案'
-                    : '老师判完卷后，这里会显示每一题的得分与标准答案',
+                    : revealed
+                      ? '客观题标准答案已给出；简答题等老师阅卷后显示'
+                      : '老师判完卷后，这里会显示每一题的得分与标准答案',
                 style: AppTextStyles.caption(context).copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),

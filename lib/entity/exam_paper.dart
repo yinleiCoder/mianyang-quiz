@@ -44,12 +44,9 @@ abstract class ExamItem with _$ExamItem {
 extension ExamItemX on ExamItem {
   QuestionType get type => questionTypeFrom(qtype);
 
-  /// 这题要不要教师判：主观题，以及**含主观子题**的复合题。
-  /// 口径与 0051 的 grade_exam_units 一致（复合题遇到一个简答子题就整题转人工）。
-  bool get needsManualGrading =>
-      type.isSelfAssessed ||
-      (type.isComposite &&
-          content.sub.any((sub) => questionTypeFrom(sub.type).isSelfAssessed));
+  /// 这题要不要教师判：只有顶层的简答题。
+  /// 复合题里的简答子题现在也按参考答案自动判分（0105），不再整题转人工。
+  bool get needsManualGrading => type.isSelfAssessed;
 }
 
 @freezed
