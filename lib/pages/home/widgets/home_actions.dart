@@ -1,4 +1,4 @@
-// 工作台的三个入口：开始练习 / 参加考试 / 去错题本。
+// 工作台入口：开始练习 / 参加考试 / 复习资料 / AI 答疑 / 错题本 / 我的处境。
 //
 // 顺序有两处讲究，都不是排版口味：
 //   · 排在统计卡**之前**：新用户首页三项统计全是 0、趋势图也是空的，
@@ -22,7 +22,7 @@ class HomeActions extends StatelessWidget {
         DuoButton(
           label: '开始一次练习',
           icon: Icons.play_arrow,
-          onPressed: () => context.push(AppRoutes.composePath),
+          onPressed: () => safePush(context, AppRoutes.composePath),
         ),
         const SizedBox(height: AppMetrics.gapSm),
         DuoButton(
@@ -31,7 +31,8 @@ class HomeActions extends StatelessWidget {
           label: '参加考试',
           icon: Icons.assignment_outlined,
           variant: DuoButtonVariant.outline,
-          onPressed: () => context.push(AppRoutes.examsPath),
+          // safePush：避开导航分支切换中的 400ms，修"导航间快速点击偶发闪退"
+          onPressed: () => safePush(context, AppRoutes.examsPath),
         ),
         const SizedBox(height: AppMetrics.gapSm),
         DuoButton(
@@ -41,7 +42,7 @@ class HomeActions extends StatelessWidget {
           label: '复习资料',
           icon: Icons.folder_open_outlined,
           variant: DuoButtonVariant.outline,
-          onPressed: () => context.push(AppRoutes.materialsPath),
+          onPressed: () => safePush(context, AppRoutes.materialsPath),
         ),
         const SizedBox(height: AppMetrics.gapSm),
         DuoButton(
@@ -71,7 +72,7 @@ class HomeActions extends StatelessWidget {
           label: '我的处境',
           icon: Icons.leaderboard_outlined,
           variant: DuoButtonVariant.outline,
-          onPressed: () => context.push(AppRoutes.myStandingPath),
+          onPressed: () => safePush(context, AppRoutes.myStandingPath),
         ),
       ],
     );

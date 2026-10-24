@@ -11,7 +11,6 @@
 
 import 'dart:io';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:material_ui/material_ui.dart';
@@ -118,7 +117,7 @@ class _AvatarPickerFieldState extends State<AvatarPickerField> {
           )
         : url.isEmpty
         ? fallback
-        : CachedNetworkImage(
+        : AppNetworkImage(
             imageUrl: url,
             fit: BoxFit.cover,
             placeholder: (context, _) => fallback,

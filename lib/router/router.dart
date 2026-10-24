@@ -7,5 +7,6 @@
 library router;
 
 export 'app_router.dart';
+export 'navigation.dart';
 export 'route_observer.dart';
 export 'routes.dart';

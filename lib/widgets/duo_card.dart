@@ -6,12 +6,15 @@
 // **没有阴影**：M3 的 outlined / filled 卡片都是平的，层级由**表面色阶**表达
 // （surfaceContainerLow 比背景深一点 / 暗色下浅一点），不靠投影。旧版那圈
 // 0.04 的柔光正是"多邻国味"的一部分——它让每张卡都像贴纸，一屏十几张就发脏。
+// 底色再由 AppSurfaces.card 叠一层很薄的 primary：M3 的 surface 系列彩度过低，
+// 不叠的话换主题色时卡片几乎看不出变化（用户 2026-10-23 反馈"仍是淡紫色"）。
 //
 // emphasized 用 primaryContainer：M3 里表达"这一块被选中/被强调"的正是**色调容器**，
 // 而不是加粗描边（旧版是 2dp 的主题色边，规范里没有这种画法）。
 //
-// 例外：题库列表、题目详情、记录页那几处**显式要白卡**（传 color: scheme.surface），
-// 见各调用点的注释——那几页学生看的是"内容"，白卡让文字最清楚，代价是只剩描边分界。
+// 例外：题库列表、题目详情、记录页那几处**显式要白卡**，现在传
+// `AppSurfaces.contentCard(scheme)`（纯白 + 6% primary 轻染），不再直接传
+// `scheme.surface` —— 后者在换主题色时完全不变，正是用户两次反馈的"固定色"。
 
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:material_ui/material_ui.dart';
@@ -39,7 +42,7 @@ class DuoCard extends StatelessWidget {
   /// 强调卡：换 primaryContainer 底色，一屏最多一张。
   final bool emphasized;
 
-  /// 覆盖底色。为 null 时走默认的 surfaceContainerLow。
+  /// 覆盖底色。为 null 时走 AppSurfaces.card（surfaceContainerLow + 主题色轻染）。
   ///
   /// **只接受主题色**（调用点传 `Theme.of(context).colorScheme.surface`），
   /// 不要在调用点写死 Colors.white —— 暗色模式下会变成白底黑字的瞎眼卡片。
@@ -57,7 +60,7 @@ class DuoCard extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: color ??
-            (emphasized ? scheme.primaryContainer : scheme.surfaceContainerLow),
+            (emphasized ? scheme.primaryContainer : AppSurfaces.card(scheme)),
         borderRadius: radius,
         // 强调卡是色调容器，不再描边（色调本身就是分界）
         border: emphasized

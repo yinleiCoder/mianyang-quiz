@@ -8,16 +8,14 @@
 //   · 同一个新版本只弹一次（记在本地偏好里，"稍后"之后不再烦）；
 //   · 接口失败静默跳过（没发过版、限流、断网都算），绝不弹错误框。
 //
-// 与 pub.dev 上那几个升级包的分工：upgrader / new_version_plus 面向应用商店，
-// in_app_update 是 Play Core 的原生内更新（只对 Play 分发的包有效）。
-// 本应用走 GitHub Releases 分发，直接问 GitHub 的 latest tag 最省事也最准；
-// 哪天上了应用商店，把这里换成 in_app_update 即可（弹窗与下载动作一起换）。
+// 版本清单读 OSS 上的 `client/latest.json`（与网页端下载页同源），
+// 具体取数在 AppUpdateRepository；本组件只负责"启动时查一次、有新版本弹一次"。
+// 查询结果同时进 UpdateStore，供「我的 → 版本更新」显示红点与手动检查。
 
 import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:mianyang_quiz/state/state.dart';
 import 'package:mianyang_quiz/values/values.dart';
-import 'package:mianyang_quiz/apis/apis.dart';
-import 'package:mianyang_quiz/utils/utils.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -51,23 +49,15 @@ class _UpdateCheckerState extends State<UpdateChecker> {
 
   Future<void> _check() async {
     if (!_shouldCheck) return;
-    // 仓储**用的时候才从 context 取**（AGENTS.md：页面不在 widget 里 new 仓储）：
+    // Store **用的时候才从 context 取**（AGENTS.md：页面不在 widget 里 new 仓储）：
     // 放在 build 里取会让外壳硬依赖这个 provider —— widget 测试跑在 debug 下、
     // 本来就跳过检查，却会因为在装配里少注册一个 provider 而整片红。
     try {
-      final repository = context.read<AppUpdateRepository>();
-      final platform = defaultTargetPlatform == TargetPlatform.android
-          ? 'android'
-          : defaultTargetPlatform == TargetPlatform.windows
-          ? 'windows'
-          : null;
-      if (platform == null) return;
-
-      final release = await repository.fetchLatest(platform: platform);
-      if (!mounted || release == null) return;
-      if (!hasNewerVersion(latest: release.tag, current: Env.appVersion)) {
-        return;
-      }
+      final store = context.read<UpdateStore>();
+      await store.check();
+      if (!mounted) return;
+      final release = store.release;
+      if (release == null || !store.hasUpdate) return;
 
       final prefs = await SharedPreferences.getInstance();
       if (prefs.getString(_skipKey) == release.tag) return;

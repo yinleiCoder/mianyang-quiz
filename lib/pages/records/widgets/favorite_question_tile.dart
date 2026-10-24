@@ -41,7 +41,7 @@ class FavoriteQuestionTile extends StatelessWidget {
     return DuoCard(
       onTap: available ? onTap : null,
       // 白卡（记录页三张列表统一改白；复盘页不动）
-      color: Theme.of(context).colorScheme.surface,
+      color: AppSurfaces.contentCard(Theme.of(context).colorScheme),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

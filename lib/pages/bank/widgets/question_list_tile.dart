@@ -65,7 +65,7 @@ class QuestionListTile extends StatelessWidget {
       // 选题模式下选中的行换成 primaryContainer：一屏扫过去能直接数出选了哪几道。
       color: selected == true
           ? theme.colorScheme.primaryContainer
-          : theme.colorScheme.surface,
+          : AppSurfaces.contentCard(theme.colorScheme),
       padding: EdgeInsets.all(AppMetrics.gapLg.r),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

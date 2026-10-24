@@ -40,6 +40,9 @@ dependencies:
   json_annotation: ^4.12.0
 
   cached_network_image: ^4.0.0
+  # 直接用它的 CacheManager 配置磁盘缓存（cached_network_image 的传递依赖；
+  # 用到了就要写进 pubspec，理由同下面 path_provider 那条注释）。
+  flutter_cache_manager: ^3.4.5
   image_picker: ^1.2.3
   intl: ^0.20.3
   shared_preferences: ^2.5.5
@@ -64,7 +67,6 @@ dependencies:
   audioplayers: ^6.8.1
   pdf: ^3.13.0
   printing: ^5.15.0
-  contribution_heatmap: ^0.6.0
 
   # 复习资料区的 PDF 阅读。**为什么不用已经装了的 flutter_inappwebview 看 PDF**：
   # Android 的系统 WebView 根本没有内置 PDF 阅读器（Chrome 有，WebView 没有），

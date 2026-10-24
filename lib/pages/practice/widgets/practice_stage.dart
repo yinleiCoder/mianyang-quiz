@@ -1,13 +1,10 @@
 // 练习舞台：顶栏 + 当前题 + 底部操作区。
 //
-// 这里是**交互规则**的落点（什么时候自动判题、什么时候可以交卷），
-// 但所有状态变更都转发给 PracticeRunner，本组件自己不持有题目状态。
+// 这里是**交互规则**的落点（什么时候自动判题、什么时候可以交卷）。
 //
 // 即时模式：
-//   · 单选/判断**选完立即判题**——这两类作答"选中即完整"，再让用户点一次检查是多余的
-//   · 多选/填空/主观需要显式点「检查」（作答可能还没结束）
-//   · 判完停在原地：标准答案与解析就显示在题目下方，**答对答错都要学生自己点「继续」**
-//     （2026-10-12 起不再自动跳题，理由见 PracticeFeedbackBar 文件头）
+//   · 单选/判断选完立即判题；多选/填空/主观点「检查」
+//   · **答对停 1 秒自动进下一题**（AutoAdvanceController）；答错停在原地等用户点「继续」
 // 批量模式：只记草稿，上一题/下一题/答题卡自由切换，交卷时才提交。
 
 import 'dart:async';
@@ -19,6 +16,7 @@ import 'package:mianyang_quiz/utils/utils.dart';
 import 'package:mianyang_quiz/router/router.dart';
 import 'package:mianyang_quiz/apis/apis.dart';
 import 'package:mianyang_quiz/state/state.dart';
+import 'package:mianyang_quiz/pages/practice/state/auto_advance.dart';
 import 'package:mianyang_quiz/pages/practice/state/practice_runner.dart';
 import 'package:mianyang_quiz/pages/practice/widgets/practice_ended_view.dart';
 import 'package:mianyang_quiz/pages/practice/widgets/practice_layout.dart';
@@ -37,12 +35,27 @@ class PracticeStage extends StatefulWidget {
 class _PracticeStageState extends State<PracticeStage> {
   bool _checking = false;
 
+  /// 答对后 1 秒自动下一题（规则与生命周期见 state/auto_advance.dart）。
+  late final AutoAdvanceController _autoAdvance;
+
   /// 交卷在途。交卷**必须防重入**：服务端一次只结算一次，重复的那次报
   /// 「本次练习已交卷或已作废」，于是屏幕上会同时出现"交卷成功"（导航去了结果页）
   /// 和"交卷失败"（重发的那次弹的提示）。实测有用户 350ms 内发出 22 次交卷请求。
   bool _finishing = false;
 
   PracticeRunner get _runner => widget.runner;
+
+  @override
+  void initState() {
+    super.initState();
+    _autoAdvance = AutoAdvanceController(_runner);
+  }
+
+  @override
+  void dispose() {
+    _autoAdvance.dispose();
+    super.dispose();
+  }
 
   /// 单选与判断题选中即完整，可以立刻判。
   bool _isCompleteSubmission(SubmittedAnswer answer) => switch (answer) {
@@ -63,15 +76,9 @@ class _PracticeStageState extends State<PracticeStage> {
         _isCompleteSubmission(answer) &&
         !_runner.current.isGraded;
 
-    // 点选项给一记轻响 —— **只在紧接着不会响判定音的时候放**。
-    //
-    // 单选/判断在即时模式下是选中即判的：「答对」「答错」紧接着就会响，
-    // 再叠一记「选择一个选项」两段音频糊成一团，听感很乱（用户反馈过）。
-    // 这两种题型本来就立刻有反馈音，不需要再补一记。
-    //
-    // 注意判据不是「题型是不是多选」：**批量模式与考试同样不判题**，
-    // 那里的单选若也静音，点选项就成了哑巴 —— 那记轻响是唯一反馈。
-    // 填空/主观题是逐键上抛的，每敲一个字响一下会变成噪音，一并排除。
+    // 点选项的轻响只在**不会紧接着响判定音**时放：
+    // 单选/判断在即时模式会立刻响「答对/答错」，再叠一记就糊了；
+    // 批量模式与考试不判题（单选若静音就成了哑巴），所以照常响。
     if (!willGradeNow && (answer is ChoiceAnswer || answer is TrueFalseAnswer)) {
       unawaited(context.read<SfxService>().selectOption());
     }
@@ -88,6 +95,7 @@ class _PracticeStageState extends State<PracticeStage> {
 
   Future<void> _check() async {
     if (_checking) return;
+    final answeredIndex = _runner.index;
     setState(() => _checking = true);
     try {
       await _runner.check();
@@ -98,6 +106,8 @@ class _PracticeStageState extends State<PracticeStage> {
       final sfx = context.read<SfxService>();
       if (verdict == true) {
         unawaited(sfx.correct());
+        // 答对才自动跳；答错/主观题/顺序练习都停在原地等用户。
+        if (_runner.index == answeredIndex) _autoAdvance.schedule(answeredIndex);
       } else if (verdict == false) {
         unawaited(sfx.wrong());
       }
@@ -118,6 +128,8 @@ class _PracticeStageState extends State<PracticeStage> {
   }
 
   void _continue() {
+    // 手动继续优先：把还没触发的自动跳题取消掉，避免"点了继续又跳一次"
+    _autoAdvance.cancel();
     if (_runner.isLast) {
       unawaited(_finish());
     } else {
@@ -126,6 +138,7 @@ class _PracticeStageState extends State<PracticeStage> {
   }
 
   Future<void> _finish() async {
+    _autoAdvance.cancel();
     if (_finishing) return;
     setState(() => _finishing = true);
     try {
@@ -172,7 +185,10 @@ class _PracticeStageState extends State<PracticeStage> {
           checking: _checking,
           finishing: _finishing,
           onAnswerChanged: _onAnswerChanged,
-          onExit: () => confirmQuitPractice(context, _runner),
+          onExit: () {
+            _autoAdvance.cancel();
+            confirmQuitPractice(context, _runner);
+          },
           onCheck: _check,
           onContinue: _continue,
           onFinish: _finish,

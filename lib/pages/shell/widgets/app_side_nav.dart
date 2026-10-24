@@ -7,8 +7,8 @@
 // secondaryContainer 的圆角块突出（M3 里"当前目的地"用的正是这一对角色），
 // 且图标换成实心版本——不只靠颜色区分选中态（色盲用户也看得出）。
 
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:mianyang_quiz/router/router.dart';
 import 'package:mianyang_quiz/values/values.dart';
 import 'package:mianyang_quiz/widgets/widgets.dart';
 import 'package:mianyang_quiz/pages/shell/widgets/nav_destinations.dart';
@@ -76,7 +76,9 @@ class AppSideNav extends StatelessWidget {
                           icon: shortcut.icon,
                           activeIcon: shortcut.icon,
                           selected: false,
-                          onTap: () => context.push(shortcut.path),
+                          // 走 safePush：避开分支切换中那 400ms，
+                          // 用户反馈在导航间快速点击「参加考试」偶发闪退。
+                          onTap: () => safePush(context, shortcut.path),
                         ),
                   ],
                 ],

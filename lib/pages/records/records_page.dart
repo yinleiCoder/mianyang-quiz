@@ -1,11 +1,11 @@
-// 记录页：练习记录 / 错题本 / 收藏三个 Tab。
+// 错题本页：错题本 / 练习记录 / 收藏三个 Tab（导航名也改成了「错题本」）。
 //
 // 职责：装配标题、分段控件与三个 Tab；三者的数据各自在 Tab 内部加载与分页。
 // 不负责：任何取数（Tab 自己与仓储打交道）。
 //
-// 错题本与收藏**不是独立页面**，就是这里的第 2、3 个 Tab：
+// 错题本与收藏**不是独立页面**，就是这里的第 1、3 个 Tab：
 // 练习结果页想直接跳「查看错题」时走 /records?tab=wrong（AppRoutes.recordsOf），
-// 由路由把 query 读成 [initialTab] 传进来（取值见 AppRoutes.recordsTab*，未知值落到第一个）。
+// 由路由把 query 读成 [initialTab] 传进来（取值见 AppRoutes.recordsTab*，未知值落到错题本）。
 
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:material_ui/material_ui.dart';
@@ -22,18 +22,19 @@ class RecordsPage extends StatelessWidget {
   /// 枚举化只会多一层「字符串→枚举→下标」的转换，而且未知值还得再兜一次底。
   final String? initialTab;
 
-  /// Tab 顺序。用路由的常量而不是字符串字面量：路由那边也是同一批常量，
+  /// Tab 顺序（用户 2026-10-24 定）：错题本 → 练习记录 → 收藏。
+  /// 用路由的常量而不是字符串字面量：路由那边也是同一批常量，
   /// 两边各写一遍迟早会出现「跳错题本却落到了收藏」。
   static const _tabs = [
-    AppRoutes.recordsTabRecords,
     AppRoutes.recordsTabWrong,
+    AppRoutes.recordsTabRecords,
     AppRoutes.recordsTabFavorites,
   ];
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final index = _tabs.indexOf(initialTab ?? AppRoutes.recordsTabRecords);
+    final index = _tabs.indexOf(initialTab ?? AppRoutes.recordsTabWrong);
 
     return DefaultTabController(
       length: _tabs.length,
@@ -65,8 +66,8 @@ class RecordsPage extends StatelessWidget {
                       dividerColor: scheme.outlineVariant,
                       indicatorSize: TabBarIndicatorSize.tab,
                       tabs: const [
-                        Tab(text: '练习记录'),
                         Tab(text: '错题本'),
+                        Tab(text: '练习记录'),
                         Tab(text: '收藏'),
                       ],
                     ),
@@ -76,8 +77,8 @@ class RecordsPage extends StatelessWidget {
               const Expanded(
                 child: TabBarView(
                   children: [
-                    PracticeHistoryTab(),
                     WrongQuestionsTab(),
+                    PracticeHistoryTab(),
                     FavoritesTab(),
                   ],
                 ),

@@ -21,14 +21,24 @@ class ListRepository {
 
   /// 错题本：最近一次作答为错的题，按作答时间倒序。
   /// 题目下线/删除后仍是列表成员（available=false 的占位行）。
+  /// [sort] 只能是服务端白名单里的值（见迁移 0111）：
+  /// `recent_desc`（默认）/ `recent_asc` / `wrong_desc` / `wrong_asc`。
+  /// [keyword] 按题目检索文本模糊匹配（服务端已转义 %/_/\）。
   Future<List<WrongQuestion>> fetchWrongQuestions({
     int limit = 20,
     int offset = 0,
+    String sort = 'recent_desc',
+    String? keyword,
   }) async {
     try {
       final rows = await _client.rpc<List<dynamic>>(
-        'list_my_wrong_questions',
-        params: {'p_limit': limit, 'p_offset': offset},
+        'list_my_wrong_questions_v2',
+        params: {
+          'p_limit': limit,
+          'p_offset': offset,
+          'p_sort': sort,
+          'p_keyword': keyword,
+        },
       );
       return rows.map((row) => WrongQuestion.fromJson(_asMap(row))).toList();
     } catch (error) {

@@ -14,6 +14,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/values/app_field_theme.dart';
 import 'package:mianyang_quiz/values/app_metrics.dart';
 import 'package:mianyang_quiz/values/app_navigation_bar_theme.dart';
+import 'package:mianyang_quiz/values/app_surfaces.dart';
 import 'package:mianyang_quiz/values/app_typography.dart';
 import 'package:mianyang_quiz/values/semantic_colors.dart';
 import 'package:mianyang_quiz/values/theme_meta.dart';
@@ -73,7 +74,7 @@ abstract final class AppTheme {
         scrolledUnderElevation: 0,
       ),
       cardTheme: CardThemeData(
-        color: scheme.surfaceContainerLow,
+        color: AppSurfaces.card(scheme),
         elevation: 0,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(

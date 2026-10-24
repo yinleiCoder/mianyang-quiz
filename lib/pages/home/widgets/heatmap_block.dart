@@ -41,19 +41,24 @@ class HeatmapBlock extends StatelessWidget {
     );
   }
 
-  /// 「近 20 周 · 已练 12 天，共 268 题」。深浅是相对的，具体数字才让人心里有数。
+  /// 「近 12 周 · 已练 12 天，共 268 题」。深浅是相对的，具体数字才让人心里有数。
+  ///
+  /// 只统计**图上真正画出来的窗口**（最近 12 周），不是服务端给的 20 周：
+  /// 否则说明里说 268 题、图上却少了一半，看起来像数字错了。
   static String _caption(PracticeDashboard dashboard) {
-    final active = dashboard.heatmapDaily.where((day) => day.count > 0);
+    final rawTo = DateTime.tryParse(dashboard.heatmapTo ?? '') ?? DateTime.now();
+    final to = DateTime(rawTo.year, rawTo.month, rawTo.day);
+    // 与 PracticeHeatmap 的窗口对齐：周一开头，往前数 maxWeeks-1 周
+    final monday = to.subtract(Duration(days: to.weekday - 1));
+    final windowStart = monday.subtract(
+      const Duration(days: (PracticeHeatmap.maxWeeks - 1) * 7),
+    );
+    final active = dashboard.heatmapDaily.where((day) {
+      final date = DateTime.tryParse(day.date);
+      return day.count > 0 && date != null && !date.isBefore(windowStart);
+    });
     final total = active.fold<int>(0, (sum, day) => sum + day.count);
-    return '近 ${_windowWeeks(dashboard)} 周 · 已练 ${active.length} 天，共 $total 题';
-  }
-
-  /// 窗口几周。用起止日期算，别写死 20——服务端改窗口时这里要跟着对。
-  static int _windowWeeks(PracticeDashboard dashboard) {
-    final from = DateTime.tryParse(dashboard.heatmapFrom ?? '');
-    final to = DateTime.tryParse(dashboard.heatmapTo ?? '');
-    if (from == null || to == null) return 20;
-    return (to.difference(from).inDays / 7).round().clamp(1, 999);
+    return '近 ${PracticeHeatmap.maxWeeks} 周 · 已练 ${active.length} 天，共 $total 题';
   }
 }
 

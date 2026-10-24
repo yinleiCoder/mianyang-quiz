@@ -31,7 +31,7 @@ class WrongQuestionTile extends StatelessWidget {
     return DuoCard(
       onTap: available ? onTap : null,
       // 白卡（记录页三张列表统一改白；复盘页不动）
-      color: scheme.surface,
+      color: AppSurfaces.contentCard(scheme),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

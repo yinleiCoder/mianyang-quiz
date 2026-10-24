@@ -87,6 +87,7 @@ class _MianyangQuizAppState extends State<MianyangQuizApp> {
                 Provider.value(value: deps.analyticsRepository),
                 Provider.value(value: deps.materialRepository),
                 Provider.value(value: deps.materialDownloadService),
+                Provider.value(value: deps.checkinRepository),
                 Provider.value(value: deps.appUpdateRepository),
                 Provider.value(value: deps.ossUploadService),
                 Provider.value(value: deps.questionPdfService),
@@ -98,6 +99,9 @@ class _MianyangQuizAppState extends State<MianyangQuizApp> {
                 ChangeNotifierProvider.value(value: deps.dashboardStore),
                 ChangeNotifierProvider.value(value: deps.favoriteStore),
                 ChangeNotifierProvider.value(value: deps.practiceDraftStore),
+                // 打卡（首页打卡区）与版本更新（启动弹窗 / 我的页红点）
+                ChangeNotifierProvider.value(value: deps.checkinStore),
+                ChangeNotifierProvider.value(value: deps.updateStore),
                 // 外观偏好（主题色 + 明暗）：改了要整棵树重画，必然进全局
                 ChangeNotifierProvider.value(value: deps.themeStore),
               ],

@@ -1,10 +1,12 @@
 // 练习热力图的测试。
 //
-// 老师/学生要的是"答得越多颜色越深"，所以这里盯的**不是"画出来了"，而是颜色与格子尺寸对不对**：
-// 空格子必须是空槽色、答 1 题要看得见、答得越多越深、**格子要正好填满自己的框**、脏数据不崩。
-// 这一层靠肉眼很难验——深浅差一点点、格子少填 10px，屏幕上根本分不出来。
+// 用户 2026-10-24 的明确口径：**按周分行、周一到周日从左到右**（原来的
+// GitHub 式"一列一周、从上往下"被否掉了）。所以这里首先盯方向，其次盯配色分档：
+// 方向错了整张图就不可读，深浅分不出来则失去了"答得越多越深"的意义。
+//
+// 格子尺寸不再按可用宽度拉伸（固定 26），所以旧的"铺满宽度"断言换成
+// "12 周 × 7 列共 84 格、不溢出"。
 
-import 'package:contribution_heatmap/contribution_heatmap.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -13,122 +15,81 @@ import 'package:mianyang_quiz/entity/entity.dart';
 import 'package:mianyang_quiz/pages/home/widgets/practice_heatmap.dart';
 
 void main() {
-  testWidgets('按窗口起止铺格子，并把有作答的日子交给热力图', (tester) async {
-    await _pump(
-      tester,
-      from: '2026-06-08',
-      to: '2026-09-17',
-      days: const [
-        DailyStat(date: '2026-09-17', count: 14),
-        DailyStat(date: '2026-07-01', count: 3),
-      ],
-    );
-
-    final heatmap = _heatmapOf(tester);
-    expect(heatmap.minDate, DateTime(2026, 6, 8));
-    expect(heatmap.maxDate, DateTime(2026, 9, 17));
-    expect(heatmap.entries.length, 2);
-    expect(heatmap.entries.first.count, 14);
-  });
-
-  testWidgets('格子尺寸填满可用宽度（20 周在宽框里就该铺满）', (tester) async {
+  testWidgets('按周分行：12 周 × 7 列 = 84 个格子', (tester) async {
     await _pump(
       tester,
       from: '2026-05-01',
       to: '2026-09-17',
       days: const [],
-      width: 640,
     );
 
-    final heatmap = _heatmapOf(tester);
-    // 2026-05-01(周五) 到 2026-09-17(周四) 对齐到周后是 21 列
-    const weeks = 21;
-    final grid = heatmap.cellSize * weeks + heatmap.cellSpacing * (weeks - 1);
-    // 网格 + 左边的星期标签才是整块占的宽度，必须装得进给定的框
-    // （标签约占 30px；装不下就会画到右边那一栏上，老师反馈的"遮挡"）
-    expect(grid, lessThan(640), reason: '要把星期标签的地方留出来');
-    expect(
-      grid + _labelWidth,
-      closeTo(640, 1.0),
-      reason: '标签 + 网格应当正好等于可用宽度',
+    final cells = find.descendant(
+      of: find.byType(PracticeHeatmap),
+      matching: find.byType(Container),
     );
-    expect(heatmap.cellSize, greaterThan(20), reason: '宽框里格子要够大才像 GitHub');
+    expect(cells, findsNWidgets(PracticeHeatmap.maxWeeks * 7));
+    expect(tester.takeException(), isNull);
   });
 
-  testWidgets('窄屏（手机）不横向溢出：格子自动缩小', (tester) async {
+  testWidgets('周一到周日从左到右（x 递增、y 相同）', (tester) async {
     await _pump(
       tester,
-      from: '2026-05-01',
+      from: '2026-09-01',
       to: '2026-09-17',
       days: const [],
-      width: 320,
     );
 
-    final heatmap = _heatmapOf(tester);
-    expect(heatmap.cellSize, lessThan(16), reason: '窄屏上要缩到放得下 21 列');
-    expect(heatmap.cellSize, greaterThan(4));
-    expect(tester.takeException(), isNull, reason: '不该溢出');
-  });
+    // 2026-09-14 是周一；14→17 在同一行
+    final monday = tester.getTopLeft(find.byTooltip('2026-09-14 · 0 题'));
+    final tuesday = tester.getTopLeft(find.byTooltip('2026-09-15 · 0 题'));
+    final thursday = tester.getTopLeft(find.byTooltip('2026-09-17 · 0 题'));
 
-  testWidgets('超宽屏上格子不再放大（否则一格能到 100px）', (tester) async {
-    await _pump(
-      tester,
-      from: '2026-05-01',
-      to: '2026-09-17',
-      days: const [],
-      width: 3000,
-    );
-
-    expect(_heatmapOf(tester).cellSize, lessThanOrEqualTo(34));
+    expect(tuesday.dx, greaterThan(monday.dx));
+    expect(thursday.dx, greaterThan(tuesday.dx));
+    expect(tuesday.dy, closeTo(monday.dy, 0.5));
+    expect(thursday.dy, closeTo(monday.dy, 0.5));
   });
 
   testWidgets('颜色：没作答是空槽，作答越多越深', (tester) async {
     await _pump(tester, from: '2026-09-01', to: '2026-09-17', days: const []);
-    final scale = _heatmapOf(tester).customColorScale!;
 
-    final scheme = Theme.of(_context(tester)).colorScheme;
-    // 0 题 = GitHub 那套里最浅的灰（不是主题的 surfaceContainerHighest —— 配色是
-    // 刻意钉死 GitHub 的 primer 值，见 practice_heatmap.dart 里 _githubLight 的注释）
-    expect(scale(0), const Color(0xFFEBEDF0), reason: '没作答的日子是空槽色');
-
-    // 亮度必须单调下降 = 颜色越来越深
-    final luminances = [1, 3, 8, 20].map((n) => scale(n).computeLuminance()).toList();
+    expect(
+      PracticeHeatmap.shadeOf(Brightness.light, 0),
+      const Color(0xFFEBEDF0),
+    );
+    final luminances = [1, 3, 8, 20]
+        .map((n) => PracticeHeatmap.shadeOf(Brightness.light, n).computeLuminance())
+        .toList();
     for (var i = 1; i < luminances.length; i++) {
-      expect(
-        luminances[i],
-        lessThan(luminances[i - 1]),
-        reason: '第 ${[1, 3, 8, 20][i]} 题应当比上一档更深',
-      );
+      expect(luminances[i], lessThan(luminances[i - 1]));
     }
-    expect(scale(1), isNot(scheme.surfaceContainerHighest), reason: '答过题就要看得出来');
+    expect(
+      PracticeHeatmap.shadeOf(Brightness.light, 999),
+      const Color(0xFF216E39),
+    );
+    // 暗色是另一套值（最深档反而更亮）
+    expect(
+      PracticeHeatmap.shadeOf(Brightness.dark, 0),
+      const Color(0xFF161B22),
+    );
+    expect(
+      PracticeHeatmap.shadeOf(Brightness.dark, 999),
+      const Color(0xFF39D353),
+    );
   });
 
-  testWidgets('配色是 GitHub 那套绿（primer 五个值），不走主题语义色', (tester) async {
-    await _pump(tester, from: '2026-09-01', to: '2026-09-17', days: const []);
-    final scale = _heatmapOf(tester).customColorScale!;
-
-    // 需求原话是"要 GitHub 那个绿"（见 _githubLight 的注释），所以这里钉死 primer 的值：
-    // 换配色要先改这条断言，而不是让热力图慢慢跟主题漂移。
-    expect(scale(0), const Color(0xFFEBEDF0), reason: '最浅档 = calendar-graph-day-bg');
-    expect(scale(999), const Color(0xFF216E39), reason: '最深档 = calendar-graph-day-L4-bg');
+  testWidgets('窄屏（320）不横向溢出', (tester) async {
+    await _pump(
+      tester,
+      from: '2026-09-01',
+      to: '2026-09-17',
+      days: const [],
+      width: 320,
+    );
+    expect(tester.takeException(), isNull);
   });
 
-  testWidgets('窗口缺失或格式不对时整块不画（宁可不显示，也不显示错位的图）', (tester) async {
-    await _pump(tester, from: null, to: '2026-09-17', days: const []);
-    expect(find.byType(ContributionHeatmap), findsNothing);
-
-    await _pump(tester, from: '2026-09-17', to: null, days: const []);
-    expect(find.byType(ContributionHeatmap), findsNothing);
-
-    await _pump(tester, from: '不是日期', to: '2026-09-17', days: const []);
-    expect(find.byType(ContributionHeatmap), findsNothing);
-
-    // 起止颠倒（服务端不该给，但给了也不能画）
-    await _pump(tester, from: '2026-09-17', to: '2026-06-01', days: const []);
-    expect(find.byType(ContributionHeatmap), findsNothing);
-  });
-
-  testWidgets('脏数据（日期形状不对）被丢掉，不影响其余日子', (tester) async {
+  testWidgets('脏数据被忽略，不影响其余日子', (tester) async {
     await _pump(
       tester,
       from: '2026-09-01',
@@ -139,32 +100,16 @@ void main() {
       ],
     );
 
-    expect(_heatmapOf(tester).entries.length, 1);
+    expect(find.byTooltip('2026-09-17 · 7 题'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('窗口缺失时不崩（回落到今天）', (tester) async {
+    await _pump(tester, from: null, to: null, days: const []);
+    expect(tester.takeException(), isNull);
+    expect(find.byType(PracticeHeatmap), findsOneWidget);
+  });
 }
-
-/// 星期标签占的宽（Mon/Wed/Fri 里最宽的一个 + 包自己留的 8px 间隙）。
-/// 与 PracticeHeatmap 内部量的是同一套，这里重算一遍是为了让测试独立于实现。
-final _labelWidth = _measureLabelWidth();
-
-double _measureLabelWidth() {
-  var widest = 0.0;
-  for (final label in const ['Mon', 'Wed', 'Fri']) {
-    final painter = TextPainter(
-      text: TextSpan(text: label, style: const TextStyle(fontSize: 10)),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    if (painter.width > widest) widest = painter.width;
-  }
-  return widest + 8;
-}
-
-ContributionHeatmap _heatmapOf(WidgetTester tester) =>
-    tester.widget<ContributionHeatmap>(find.byType(ContributionHeatmap));
-
-BuildContext _context(WidgetTester tester) =>
-    tester.element(find.byType(PracticeHeatmap));
 
 Future<void> _pump(
   WidgetTester tester, {
@@ -185,7 +130,9 @@ Future<void> _pump(
       builder: (context, _) => MaterialApp(
         theme: AppTheme.light(),
         home: Scaffold(
-          body: PracticeHeatmap(days: days, from: from, to: to),
+          body: SingleChildScrollView(
+            child: PracticeHeatmap(days: days, from: from, to: to),
+          ),
         ),
       ),
     ),

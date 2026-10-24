@@ -32,6 +32,7 @@ import 'package:mianyang_quiz/router/router.dart';
 import 'package:mianyang_quiz/widgets/widgets.dart';
 import 'package:mianyang_quiz/pages/shell/widgets/app_bottom_nav.dart';
 import 'package:mianyang_quiz/pages/shell/widgets/clipboard_link_listener.dart';
+import 'package:mianyang_quiz/pages/shell/widgets/daily_checkin_tracker.dart';
 import 'package:mianyang_quiz/pages/shell/widgets/update_checker.dart';
 import 'package:mianyang_quiz/pages/shell/widgets/app_side_nav.dart';
 
@@ -49,51 +50,58 @@ class AppShell extends StatelessWidget {
 
         // initialLocation: true 让"再次点击当前项"回到该分支的根，
         // 这是移动端的通用预期（相当于"回到首页"）
-        void select(int index) => navigationShell.goBranch(
-          index,
-          initialLocation: index == navigationShell.currentIndex,
-        );
+        void select(int index) {
+          NavGuard.markBranchSwitch();
+          navigationShell.goBranch(
+            index,
+            initialLocation: index == navigationShell.currentIndex,
+          );
+        }
 
-        // 两件与页面无关的"全局监听"都挂在外壳上（登录后的所有页面都在它们下面）：
+        // 三件与页面无关的"全局动作"都挂在外壳上（登录后的所有页面都在它们下面）：
+        //   · 进入软件即打卡（云端，迁移 0107）；
         //   · 剪贴板识别：回到前台时读一次，认出题目分享链接就问要不要打开；
-        //   · 检查更新：冷启动后查一次 GitHub 的 latest，有新版本弹一次。
-        return UpdateChecker(
-          child: ClipboardLinkListener(
-            child: Scaffold(
-              body: Row(
-                children: [
-                  // 导航槽：始终占据 index 0。两种形态的元素个数一致，
-                  // 所以 index 1 的 navigationShell 不会因切换而重建。
-                  if (wide)
-                    AppSideNav(
-                      currentIndex: navigationShell.currentIndex,
-                      onSelect: select,
-                    )
-                  else
-                    const SizedBox.shrink(),
-                  Expanded(child: navigationShell),
-                ],
+        //   · 检查更新：冷启动后查一次 OSS 的版本清单，有新版本弹一次。
+        return DailyCheckinTracker(
+          child: UpdateChecker(
+            child: ClipboardLinkListener(
+              child: Scaffold(
+                body: Row(
+                  children: [
+                    // 导航槽：始终占据 index 0。两种形态的元素个数一致，
+                    // 所以 index 1 的 navigationShell 不会因切换而重建。
+                    if (wide)
+                      AppSideNav(
+                        currentIndex: navigationShell.currentIndex,
+                        onSelect: select,
+                      )
+                    else
+                      const SizedBox.shrink(),
+                    Expanded(child: navigationShell),
+                  ],
+                ),
+                bottomNavigationBar: wide
+                    ? null
+                    : AppBottomNav(
+                        currentIndex: navigationShell.currentIndex,
+                        onSelect: select,
+                        onStartPractice: () =>
+                            safePush(context, AppRoutes.composePath),
+                      ),
+                // 开始练习：窄屏下是**标准的 docked FAB**（用户 2026-10-13 定的形态），
+                // 坐在底栏中间留出的空位里（见 AppBottomNav 的 _practiceSlot）。
+                // push 整页的组卷页，不是切分支——所以它不进 NavigationBar 的目的地。
+                floatingActionButton: wide
+                    ? null
+                    : FloatingActionButton(
+                        onPressed: () =>
+                            safePush(context, AppRoutes.composePath),
+                        tooltip: '开始练习',
+                        child: const Icon(Icons.play_arrow_rounded),
+                      ),
+                floatingActionButtonLocation:
+                    FloatingActionButtonLocation.centerDocked,
               ),
-              bottomNavigationBar: wide
-                  ? null
-                  : AppBottomNav(
-                      currentIndex: navigationShell.currentIndex,
-                      onSelect: select,
-                      onStartPractice: () =>
-                          context.push(AppRoutes.composePath),
-                    ),
-              // 开始练习：窄屏下是**标准的 docked FAB**（用户 2026-10-13 定的形态），
-              // 坐在底栏中间留出的空位里（见 AppBottomNav 的 _practiceSlot）。
-              // push 整页的组卷页，不是切分支——所以它不进 NavigationBar 的目的地。
-              floatingActionButton: wide
-                  ? null
-                  : FloatingActionButton(
-                      onPressed: () => context.push(AppRoutes.composePath),
-                      tooltip: '开始练习',
-                      child: const Icon(Icons.play_arrow_rounded),
-                    ),
-              floatingActionButtonLocation:
-                  FloatingActionButtonLocation.centerDocked,
             ),
           ),
         );

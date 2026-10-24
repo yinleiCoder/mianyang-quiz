@@ -7,6 +7,7 @@
 library entity;
 
 export 'block.dart';
+export 'checkin_status.dart';
 export 'forgetting_curve.dart';
 export 'exam_answer.dart';
 export 'exam_attempt.dart';
@@ -21,6 +22,7 @@ export 'oss_sign_result.dart';
 export 'paper_brief.dart';
 export 'paper_leaderboard.dart';
 export 'paper_question_stats.dart';
+export 'platform_stats.dart';
 export 'practice_dashboard.dart';
 export 'practice_results.dart';
 export 'practice_session.dart';

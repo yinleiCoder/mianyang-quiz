@@ -125,18 +125,17 @@ class _Body extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(AppMetrics.pagePadding),
       children: [
+        // 考试复盘限宽 1000：640 在桌面上太窄（用户 2026-10-24）。
         MaxWidthBox(
+          maxWidth: 1000,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // 交卷后的一次性落位：成绩卡先到，逐题卡片随后依次出现。**只做入场**——
-              // 分数是拿来读的，不做数字滚动或撒花。
+              // 只做入场（分数是拿来读的，不做数字滚动或撒花）
               FadeSlideIn(
                 child: ExamResultSummary(attempt: attempt, title: paper.title),
               ),
               SizedBox(height: AppMetrics.gapMd.r),
-              // 成绩榜入口就放在成绩旁边：看完分数最想知道的就是"我这分在班里算什么水平"。
-              // 卷名随 extra 带过去，榜页标题不用等一次加载。
               DuoButton(
                 label: '查看成绩排行',
                 variant: DuoButtonVariant.outline,
@@ -147,8 +146,7 @@ class _Body extends StatelessWidget {
                 ),
               ),
               SizedBox(height: AppMetrics.gapSm.r),
-              // 试题分析：每题全班答得怎么样（选项分布 + 谁选了什么）。
-              // **只在已出分时给入口**——没出分时服务端会拒（选项分布 + 标准答案 = 答案本身）。
+              // 只在已出分时给入口（否则服务端拒：选项分布 + 答案 = 答案本身）
               if (finalScore)
                 DuoButton(
                   label: '试题分析',

@@ -30,6 +30,7 @@ class AppDependencies {
       paperRepository = PaperRepository(client),
       analyticsRepository = AnalyticsRepository(client),
       materialRepository = MaterialRepository(client),
+      checkinRepository = CheckinRepository(client),
       appUpdateRepository = AppUpdateRepository(Dio()),
       ossUploadService = OssUploadService(client),
       // 下载用独立的 Dio：与 appUpdateRepository 一样是"拿别人的东西"，
@@ -50,6 +51,8 @@ class AppDependencies {
     deps.dashboardStore = DashboardStore(deps.statsRepository);
     deps.favoriteStore = FavoriteStore(deps.favoriteRepository);
     deps.practiceDraftStore = PracticeDraftStore();
+    deps.checkinStore = CheckinStore(deps.checkinRepository);
+    deps.updateStore = UpdateStore(deps.appUpdateRepository);
     deps.themeStore = themeStore ?? ThemeStore();
     return deps;
   }
@@ -77,6 +80,9 @@ class AppDependencies {
   /// 成绩榜（试卷维度的聚合读，与作答写路径分开，理由见仓储文件头）。
   final AnalyticsRepository analyticsRepository;
   final MaterialRepository materialRepository;
+
+  /// 每日打卡与今日目标（云端）。
+  final CheckinRepository checkinRepository;
   final AppUpdateRepository appUpdateRepository;
   final OssUploadService ossUploadService;
   final SfxService sfxService;
@@ -92,6 +98,10 @@ class AppDependencies {
   late final DashboardStore dashboardStore;
   late final FavoriteStore favoriteStore;
   late final PracticeDraftStore practiceDraftStore;
+
+  /// 每日打卡（首页打卡区、今日目标）与版本更新（启动弹窗、我的页红点）。
+  late final CheckinStore checkinStore;
+  late final UpdateStore updateStore;
 
   /// 外观偏好（主题色 + 明暗）。**由 bootstrap 先 load() 再建**，见 create() 的注释。
   late final ThemeStore themeStore;
@@ -109,6 +119,8 @@ class AppDependencies {
     dashboardStore.dispose();
     favoriteStore.dispose();
     practiceDraftStore.dispose();
+    checkinStore.dispose();
+    updateStore.dispose();
     themeStore.dispose();
     sfxService.dispose();
   }

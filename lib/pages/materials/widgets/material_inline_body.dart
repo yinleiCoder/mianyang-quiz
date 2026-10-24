@@ -7,7 +7,6 @@
 // 图片走 cached_network_image：按 URL 做磁盘缓存，第二次打开不再走流量；
 // 外面套 InteractiveViewer 让它能捏合放大（复习资料常是讲义截图，看不清要点一下就放大）。
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/values/values.dart';
@@ -74,17 +73,17 @@ class MaterialInlineBody extends StatelessWidget {
   }
 
   Widget _buildImage() {
-    return Center(
-      child: MaxWidthBox(
-        child: InteractiveViewer(
-          maxScale: 5,
-          child: CachedNetworkImage(
-            // 预览走图片处理档，不是原件（见 MaterialBrief.previewUrl）
-            imageUrl: material.previewUrl,
-            fit: BoxFit.contain,
-            placeholder: (_, _) => const Center(child: CircularProgressIndicator()),
-            errorWidget: (_, _, _) => const Center(child: Text('图片加载失败')),
-          ),
+    // **不再套 MaxWidthBox**：讲义截图经常是整页表格，640 的上限让字小到看不清
+    // （用户 2026-10-24：图片区域太小）。现在铺满阅读区，靠 InteractiveViewer 放大。
+    return InteractiveViewer(
+      maxScale: 6,
+      child: SizedBox.expand(
+        child: AppNetworkImage(
+          // 预览走图片处理档，不是原件（见 MaterialBrief.previewUrl）
+          imageUrl: material.previewUrl,
+          fit: BoxFit.contain,
+          placeholder: (_, _) => const Center(child: CircularProgressIndicator()),
+          errorWidget: (_, _, _) => const Center(child: Text('图片加载失败')),
         ),
       ),
     );

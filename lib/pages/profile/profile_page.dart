@@ -22,6 +22,7 @@ import 'package:mianyang_quiz/pages/profile/widgets/confirm_dialog.dart';
 import 'package:mianyang_quiz/pages/profile/widgets/profile_actions_section.dart';
 import 'package:mianyang_quiz/pages/profile/widgets/profile_entry_tile.dart';
 import 'package:mianyang_quiz/pages/profile/widgets/profile_header.dart';
+import 'package:mianyang_quiz/pages/profile/widgets/study_plan_section.dart';
 import 'package:provider/provider.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -103,6 +104,10 @@ class _ProfilePageState extends State<ProfilePage> {
     try {
       await context.read<AuthStore>().signOut();
       if (!mounted) return;
+      // 打卡数据是**按账号**的：不清的话，下一个人当天登录会直接看到上一个人的
+      // 连续天数（recordToday 还会因为"今天已记过"而跳过请求）。看板同理。
+      context.read<CheckinStore>().clear();
+      context.read<DashboardStore>().clear();
       context.go(AppRoutes.loginPath);
     } on AppException catch (error) {
       if (!mounted) return;
@@ -178,7 +183,10 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         ],
         SizedBox(height: AppMetrics.gapXl.r),
-        // 「其他」区（反馈 / 改密 / 退出登录）拆到 widgets/ 里 —— 本文件已到 200 行上限
+        // 学习计划（今日目标 + 抽题/遗忘曲线原理）：独立组件，避免本文件顶到 200 行
+        const StudyPlanSection(),
+        SizedBox(height: AppMetrics.gapXl.r),
+        // 「其他」区（版本/外观/反馈/改密/退出登录）拆到 widgets/ 里 —— 本文件已到 200 行上限
         ProfileActionsSection(onSignOut: _signOut),
       ],
     );

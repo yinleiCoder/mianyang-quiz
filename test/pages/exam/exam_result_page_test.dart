@@ -5,8 +5,8 @@
 // "我才考了 34 分"，而这卷子根本还没判完。所以未出分时分母换成客观题满分，
 // 并且明说"还有 N 道题等老师阅卷"。这两种状态在数据上都"有分数"，不测就分不出来。
 //
-// 另一半是答案的可见性：标准答案**只有出分后才由服务端下发**（0056），
-// 客户端只是"有就显示"。待阅卷那一场里不该出现「正确答案」。
+// 另一半是答案的可见性：0106 起**交卷后客观题答案就下发**（主观题仍等阅卷），
+// 所以待阅卷那一场里能看到客观题的「正确答案」，但不该看到主观题的「参考答案」。
 
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -18,7 +18,7 @@ import 'package:mianyang_quiz/pages/pages.dart';
 import 'package:provider/provider.dart';
 
 void main() {
-  testWidgets('待阅卷：显示客观题得分与待阅卷题数，且不下发标准答案', (tester) async {
+  testWidgets('待阅卷：显示客观题得分，客观题答案可见、主观题答案不下发', (tester) async {
     await _pump(tester, _pending);
 
     expect(find.text('待阅卷'), findsWidgets);
@@ -28,8 +28,9 @@ void main() {
     expect(find.textContaining('还有 1 道题等老师阅卷'), findsOneWidget);
     // 逐题：主观题那一格是「待阅卷」，客观题那一格给出得分
     expect(find.textContaining('得 4 / 4 分'), findsOneWidget);
-    // 服务端这时不给答案，页面上就不该有「正确答案」
-    expect(find.text('正确答案：'), findsNothing);
+    // 客观题：交卷即下发答案（0106）；主观题：仍等老师阅卷，没有「参考答案」
+    expect(find.text('正确答案：'), findsOneWidget);
+    expect(find.text('参考答案：'), findsNothing);
   });
 
   testWidgets('出分后：显示总分与标准答案，待阅卷字样消失', (tester) async {

@@ -1,9 +1,9 @@
-// 工作台（首页）：学情总览 + 继续练习入口 + 最近动态。
+// 工作台（首页）：学情总览 + 继续练习入口 + 平台规模 + 遗忘曲线。
 //
 // 数据全部来自 practice_dashboard 一次 RPC（DashboardStore 持有一份，练习与收藏会让它刷新）。
 // 本页**不自己取数**，只读 Store —— 这样交卷后回到首页，数字已经是新的。
 //
-// 游戏化只做有数据支撑的部分：连续天数、今日进度、累计正确率、近 14 天趋势。
+// 游戏化只做有数据支撑的部分：连续打卡、今日进度、累计正确率、近 12 周热力图。
 // 不编造经验值/等级/体力——后端没有这些数据，编出来的数字不可信也不可比。
 
 import 'package:material_ui/material_ui.dart';
@@ -15,7 +15,7 @@ import 'package:mianyang_quiz/widgets/widgets.dart';
 import 'package:mianyang_quiz/pages/home/widgets/active_session_card.dart';
 import 'package:mianyang_quiz/pages/home/widgets/forgetting_curve_card.dart';
 import 'package:mianyang_quiz/pages/home/widgets/home_actions.dart';
-import 'package:mianyang_quiz/pages/home/widgets/recent_answers_section.dart';
+import 'package:mianyang_quiz/pages/home/widgets/platform_scale_section.dart';
 import 'package:mianyang_quiz/pages/home/widgets/streak_header.dart';
 import 'package:provider/provider.dart';
 
@@ -32,7 +32,11 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     // 进页面刷新一次；不阻塞首帧（Store 里有旧数据就先显示旧的）
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) context.read<DashboardStore>().refresh(silent: true);
+      if (!mounted) return;
+      context.read<DashboardStore>().refresh(silent: true);
+      // 外壳的 DailyCheckinTracker 已经记过一次；这里再试一次是兜底：
+      // 冷启动时它可能比会话恢复更早，或者上一次正好断网。幂等，重复调用无害。
+      context.read<CheckinStore>().recordToday();
     });
   }
 
@@ -87,31 +91,7 @@ class _DashboardBody extends StatelessWidget {
         const SizedBox(height: AppMetrics.gapXl),
         FadeSlideIn(order: 3, child: _StatGrid(dashboard: dashboard)),
         const SizedBox(height: AppMetrics.gapXl),
-        const FadeSlideIn(order: 4, child: SectionHeader(title: '最近做过的题')),
-        FadeSlideIn(
-          order: 5,
-          child: RecentAnswersSection(answers: dashboard.recent),
-        ),
-        const SizedBox(height: AppMetrics.gapXl),
-        const FadeSlideIn(
-          order: 4,
-          child: SectionHeader(
-            title: '近两周练习',
-            subtitle: '每天答对的题数越多，说明手感越稳',
-          ),
-        ),
-        FadeSlideIn(
-          order: 5,
-          child: DuoCard(
-            padding: const EdgeInsets.fromLTRB(
-              AppMetrics.gapMd,
-              AppMetrics.gapLg,
-              AppMetrics.gapLg,
-              AppMetrics.gapMd,
-            ),
-            child: DailyTrendChart(daily: dashboard.daily),
-          ),
-        ),
+        const FadeSlideIn(order: 4, child: PlatformScaleSection()),
         const SizedBox(height: AppMetrics.gapXl),
         // 与上面那张是同一个话题的两面：**练了多少** vs **记得多牢**。
         // 数据服务端早就在算（迁移 0067 给 practice_dashboard 加了 forgetting_curve），

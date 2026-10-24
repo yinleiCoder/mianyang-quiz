@@ -3,11 +3,11 @@
 // 原图直出时一张题干插图实测 7.6MB，缩过之后内联只有 38KB —— 差一个数量级。
 // 所以两档宽度取自 OssUrl.thumbWidth / OssUrl.fullWidth，不要在这里另写数字。
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/utils/utils.dart';
 import 'package:mianyang_quiz/values/values.dart';
+import 'package:mianyang_quiz/widgets/app_network_image.dart';
 import 'package:mianyang_quiz/widgets/media_fallback.dart';
 
 class ImageBlockView extends StatelessWidget {
@@ -36,7 +36,7 @@ class ImageBlockView extends StatelessWidget {
         onTap: () => _showFullscreen(context),
         child: ConstrainedBox(
           constraints: BoxConstraints(maxHeight: maxHeight.r),
-          child: CachedNetworkImage(
+          child: AppNetworkImage(
             imageUrl: thumbUrl,
             fit: BoxFit.contain,
             placeholder: (context, _) => SizedBox(
@@ -52,26 +52,48 @@ class ImageBlockView extends StatelessWidget {
   }
 
   void _showFullscreen(BuildContext context) {
+    // **整屏**看，四周不留 Dialog 的内边距（用户 2026-10-24：图片区域太小了）。
+    // 黑底 + 右上角关闭 + InteractiveViewer：题干里的示意图经常要看小字，
+    // 之前的 insetPadding 让 1600 的图在桌面上还没题干区大。
     showDialog<void>(
       context: context,
-      builder: (context) => Dialog(
-        insetPadding: const EdgeInsets.all(AppMetrics.gapXl),
-        child: InteractiveViewer(
-          // 全屏这一档同样要接住三种状态。这是 1600 的大图，首次打开必须现拉：
-          // 少了 placeholder，慢网下用户看到的是一个纯白弹窗——既不知道在加载，
-          // 也不知道是不是自己点错了；少了 errorWidget，失败后就是一片空白。
-          child: CachedNetworkImage(
-            imageUrl: fullUrl,
-            fit: BoxFit.contain,
-            // 解码尺寸锁在请求档位上：源图可能远大于 1600（例如非图片扩展名走不了
-            // OSS 处理），不限制的话会按原图解出几十 MB 的位图。
-            memCacheWidth: OssUrl.fullWidth,
-            placeholder: (context, _) => const Center(
-              child: CircularProgressIndicator(),
+      barrierColor: Colors.black,
+      builder: (dialogContext) => Dialog.fullscreen(
+        backgroundColor: Colors.black,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: InteractiveViewer(
+                minScale: 0.8,
+                maxScale: 5,
+                child: SizedBox.expand(
+                  child: AppNetworkImage(
+                    imageUrl: fullUrl,
+                    fit: BoxFit.contain,
+                    // 解码尺寸锁在请求档位上：源图可能远大于 1600（例如非图片扩展名
+                    // 走不了 OSS 处理），不限制的话会按原图解出几十 MB 的位图。
+                    memCacheWidth: OssUrl.fullWidth,
+                    placeholder: (context, _) => const Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                    errorWidget: (context, _, _) =>
+                        const MediaFallback(block: null, reason: '图片加载失败'),
+                  ),
+                ),
+              ),
             ),
-            errorWidget: (context, _, _) =>
-                const MediaFallback(block: null, reason: '图片加载失败'),
-          ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: SafeArea(
+                child: IconButton.filled(
+                  tooltip: '关闭',
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

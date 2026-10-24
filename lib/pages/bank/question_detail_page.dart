@@ -267,7 +267,7 @@ class _Body extends StatelessWidget {
             // 但这一页现在统一白卡，题干不套就会跟下面的解析卡长得不一样。
             // 内边距取 gapMd 而不是卡片默认的 gapLg：题干本来就占满整屏，少挤一点。
             DuoCard(
-              color: scheme.surface,
+              color: AppSurfaces.contentCard(scheme),
               padding: EdgeInsets.all(AppMetrics.gapMd.r),
               child: QuestionView(
                 qtype: brief.qtype,
@@ -286,7 +286,7 @@ class _Body extends StatelessWidget {
             // 空卡片比"没有解析"更让人觉得是加载失败。
             if (detail.content.analysis.isNotEmpty)
               DuoCard(
-                color: scheme.surface,
+                color: AppSurfaces.contentCard(scheme),
                 child: AnalysisView(content: detail.content, showAnswer: false),
               ),
             // 我提过的反馈：把作者的回复亮出来。
@@ -324,7 +324,7 @@ class _MyReportCard extends StatelessWidget {
     final badgeColor = settled ? scheme.primary : scheme.onSurfaceVariant;
 
     return DuoCard(
-      color: scheme.surface,
+      color: AppSurfaces.contentCard(scheme),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

@@ -8,10 +8,10 @@
 // 放在 ui/core 而不是某个 feature 下：个人档案页与题库的署名 chip 都要用，
 // 跨 feature 复用必须上提（AGENTS.md 分层）。参数只有数据，没有 store/session。
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/utils/utils.dart';
+import 'app_network_image.dart';
 
 class UserAvatar extends StatelessWidget {
   const UserAvatar({
@@ -53,7 +53,7 @@ class UserAvatar extends StatelessWidget {
           color: scheme.primaryContainer,
           child: url.isEmpty
               ? fallback
-              : CachedNetworkImage(
+              : AppNetworkImage(
                   imageUrl: url,
                   fit: BoxFit.cover,
                   placeholder: (context, _) => fallback,

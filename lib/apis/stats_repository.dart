@@ -31,4 +31,14 @@ class StatsRepository {
       throw mapError(error);
     }
   }
+
+  /// 平台规模（0114）：学校 / 学生 / 教师 / 市区。全局口径，所有登录用户可读。
+  Future<PlatformStats> fetchPlatformStats() async {
+    try {
+      final data = await _client.rpc<Map<String, dynamic>>('platform_stats');
+      return PlatformStats.fromJson(Map<String, dynamic>.from(data));
+    } catch (error) {
+      throw mapError(error);
+    }
+  }
 }

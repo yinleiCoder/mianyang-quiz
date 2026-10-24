@@ -44,8 +44,9 @@ const List<NavDestination> kNavDestinations = [
   ),
   // 记录用「打勾的清单」。原来是 insights（锯齿趋势线），既像股票图又和首页
   // 那张趋势图语义打架；fact_check 的选中态是实心块，不靠颜色也分得清选中。
+  // 用户 2026-10-24 要求：导航里的「记录」改叫「错题本」，与页内第一个页签同名。
   NavDestination(
-    label: '记录',
+    label: '错题本',
     icon: Icons.fact_check_outlined,
     activeIcon: Icons.fact_check,
   ),

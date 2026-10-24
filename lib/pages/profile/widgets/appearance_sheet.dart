@@ -77,7 +77,7 @@ class _AppearanceSheet extends StatelessWidget {
             ),
             SizedBox(height: AppMetrics.gapLg.r),
             Text(
-              '主题色会应用到按钮、选中态与图表；明暗可以跟着系统走，也可以固定。',
+              '主题色会应用到按钮、选中态、卡片底色与图表；明暗可以跟着系统走，也可以固定。',
               style: AppTextStyles.caption(
                 context,
               ).copyWith(color: theme.colorScheme.onSurfaceVariant),

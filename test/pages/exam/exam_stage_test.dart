@@ -25,8 +25,8 @@ void main() {
   testWidgets('窄屏：答题卡收进顶栏按钮，题目与底部操作区都在', (tester) async {
     await _pump(tester, const Size(390, 844), now: now);
 
-    // 顶栏：题号 + 倒计时（还剩 1 小时）+ 答题卡入口
-    expect(find.text('1/3'), findsOneWidget);
+    // 顶栏：已作答/总数（不是当前题号）+ 倒计时（还剩 1 小时）+ 答题卡入口
+    expect(find.text('0/3'), findsOneWidget);
     expect(find.text('1:00:00'), findsOneWidget);
     expect(find.byIcon(Icons.grid_view_rounded), findsOneWidget);
 

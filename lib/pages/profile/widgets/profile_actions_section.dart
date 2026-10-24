@@ -15,6 +15,7 @@ import 'package:mianyang_quiz/widgets/widgets.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:mianyang_quiz/pages/profile/widgets/appearance_sheet.dart';
 import 'package:mianyang_quiz/pages/profile/widgets/profile_entry_tile.dart';
+import 'package:mianyang_quiz/pages/profile/widgets/version_update_section.dart';
 
 /// 作者主页。只有这一处用，就先放这里（将来有第二处再上提到 values/）。
 const _authorHomeUrl = 'https://yinleilei.cn';
@@ -31,6 +32,10 @@ class ProfileActionsSection extends StatelessWidget {
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       const SectionHeader(title: '其他'),
+      // 版本更新放在最上面：它是"要不要升级"的账号级动作，与外观/反馈同一类；
+      // 当前版本号由这个组件自己印在下面（用户要求，不再放到页尾）。
+      const VersionUpdateTile(),
+      SizedBox(height: AppMetrics.gapMd.r),
       ProfileEntryTile(
         icon: Icons.palette_outlined,
         label: '外观',
@@ -68,17 +73,6 @@ class ProfileActionsSection extends StatelessWidget {
         label: '退出登录',
         danger: true,
         onTap: onSignOut,
-      ),
-      // 版本号摆在明面上：下载页、更新弹窗、意见反馈三处用的是同一个 APP_VERSION，
-      // 用户报"版本不同步"时能直接念出当前装的是哪一版。
-      SizedBox(height: AppMetrics.gapLg.r),
-      Center(
-        child: Text(
-          Env.appVersion.isEmpty ? '开发版' : '当前版本 ${Env.appVersion}',
-          style: AppTextStyles.caption(context).copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
-        ),
       ),
     ],
   );

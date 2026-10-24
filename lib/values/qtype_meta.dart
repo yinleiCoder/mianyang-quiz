@@ -16,7 +16,7 @@ enum QuestionType {
   trueFalse('true_false', '判断题', Icons.check_circle_outline),
   fillBlank('fill_blank', '填空题', Icons.short_text),
   shortAnswer('short_answer', '主观题', Icons.edit_note),
-  composite('composite', '复合题', Icons.layers_outlined),
+  composite('composite', '综合题', Icons.layers_outlined),
   unknown('unknown', '未知题型', Icons.help_outline);
 
   const QuestionType(this.wire, this.label, this.icon);
