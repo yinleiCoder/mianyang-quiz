@@ -27,10 +27,10 @@ void main() {
     expect(theme.scaffoldBackgroundColor.computeLuminance(), lessThan(0.2));
   });
 
-  testWidgets('亮色下卡片与页面分得开（白底上仍看得出层次）', (tester) async {
+  testWidgets('亮色下卡片是白色（2026-10-24 用户定；靠描边分界）', (tester) async {
     final theme = await _themeOf(tester, Brightness.light);
 
-    expect(theme.cardTheme.color, isNot(Colors.white));
+    expect(theme.cardTheme.color, Colors.white);
   });
 }
 

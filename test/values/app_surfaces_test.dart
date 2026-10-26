@@ -44,19 +44,14 @@ void main() {
     expect(sideNav, theme.colorScheme.surfaceContainer);
   });
 
-  testWidgets('卡片底色跟着主题色走，不是固定的淡紫色', (tester) async {
-    final indigoTheme = await _themeOf(tester, Brightness.light);
-    final greenScheme = ColorScheme.fromSeed(
-      seedColor: ThemeSeed.green.color,
-    );
+  testWidgets('卡片是白色（暗色下是深色 surface），不再叠主题色轻染', (tester) async {
+    final light = await _themeOf(tester, Brightness.light);
+    final dark = await _themeOf(tester, Brightness.dark);
 
-    final indigoCard = AppSurfaces.card(indigoTheme.colorScheme);
-    final greenCard = AppSurfaces.card(greenScheme);
-
-    // 换主题色后卡片必须不同 —— 这正是 2026-10-23 用户报的那个问题。
-    expect(greenCard, isNot(indigoCard));
-    // 也不是原封不动的 surfaceContainerLow：说明主题色轻染确实叠上去了。
-    expect(indigoCard, isNot(indigoTheme.colorScheme.surfaceContainerLow));
+    expect(AppSurfaces.card(light.colorScheme), Colors.white);
+    expect(AppSurfaces.contentCard(light.colorScheme), Colors.white);
+    // 暗色下卡片跟着主题的 surface；亮色固定白（不再叠主题色轻染）。
+    expect(AppSurfaces.card(dark.colorScheme), dark.colorScheme.surface);
   });
 }
 

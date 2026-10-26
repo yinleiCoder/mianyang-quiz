@@ -29,28 +29,14 @@ abstract final class AppSurfaces {
     return theme.colorScheme.surfaceContainer;
   }
 
-  /// 卡片底色：M3 的低彩度表面 + 一层 primary 轻染。
+  /// 卡片底色：**纯白**（暗色下用主题的 surface）。
   ///
-  /// 只用 `surfaceContainerLow` 时，换主题色几乎看不出变化（用户 2026-10-23
-  /// 反馈"卡片仍是固定的淡紫色"）——M3 的 surface 系列本来就是低彩度。
-  /// 2026-10-24 用户再次反馈"卡片还是固定色"，于是把轻染从 8% 提到
-  /// **亮色 12% / 暗色 16%**：仍然保留 outlined card 的层次，但换绿/橙/粉时
-  /// 一眼看得出卡片跟着变。
-  static Color card(ColorScheme scheme) => Color.alphaBlend(
-    scheme.primary.withValues(
-      alpha: scheme.brightness == Brightness.dark ? 0.16 : 0.12,
-    ),
-    scheme.surfaceContainerLow,
-  );
+  /// 2026-10-24 用户最终拍板：卡片用白色，带主题色倾向的底色放在页面上很突兀。
+  /// 主题色仍然体现在按钮、选中态、图标与图表上；卡片只靠描边分界。
+  /// 别再加 primary 轻染 —— 前两次（8%、12%）都被用户否掉了。
+  static Color card(ColorScheme scheme) => scheme.surface;
 
-  /// "内容白卡"：题库列表、题目详情、记录页那几处原先显式传 `scheme.surface`
-  /// 的位置。亮色下 surface 是纯白，直接用会让这几页完全不跟主题色走；
-  /// 这里同样叠一层很薄的 primary（亮 6% / 暗 12%），让白卡也有主题色倾向，
-  /// 同时仍比普通卡片更亮、文字对比更足。
-  static Color contentCard(ColorScheme scheme) => Color.alphaBlend(
-    scheme.primary.withValues(
-      alpha: scheme.brightness == Brightness.dark ? 0.12 : 0.06,
-    ),
-    scheme.surface,
-  );
+  /// "内容白卡"：与普通卡片同为 surface。保留这个入口是为了让调用点语义清楚
+  ///（题库列表、题目详情、记录页要的是"内容区"），将来若要再区分只改这一处。
+  static Color contentCard(ColorScheme scheme) => scheme.surface;
 }

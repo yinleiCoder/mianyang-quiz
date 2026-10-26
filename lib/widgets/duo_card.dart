@@ -6,15 +6,14 @@
 // **没有阴影**：M3 的 outlined / filled 卡片都是平的，层级由**表面色阶**表达
 // （surfaceContainerLow 比背景深一点 / 暗色下浅一点），不靠投影。旧版那圈
 // 0.04 的柔光正是"多邻国味"的一部分——它让每张卡都像贴纸，一屏十几张就发脏。
-// 底色再由 AppSurfaces.card 叠一层很薄的 primary：M3 的 surface 系列彩度过低，
-// 不叠的话换主题色时卡片几乎看不出变化（用户 2026-10-23 反馈"仍是淡紫色"）。
+// 底色由 AppSurfaces.card 统一取 **surface（亮色纯白 / 暗色深灰）**：
+// 2026-10-24 用户明确要白卡，带主题色倾向的底色看起来突兀。
 //
 // emphasized 用 primaryContainer：M3 里表达"这一块被选中/被强调"的正是**色调容器**，
 // 而不是加粗描边（旧版是 2dp 的主题色边，规范里没有这种画法）。
 //
-// 例外：题库列表、题目详情、记录页那几处**显式要白卡**，现在传
-// `AppSurfaces.contentCard(scheme)`（纯白 + 6% primary 轻染），不再直接传
-// `scheme.surface` —— 后者在换主题色时完全不变，正是用户两次反馈的"固定色"。
+// 例外：题库列表、题目详情、记录页传 `AppSurfaces.contentCard(scheme)`；
+// 它现在与普通卡片同为 surface，只是把"内容区"的语义留在调用点。
 
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:material_ui/material_ui.dart';

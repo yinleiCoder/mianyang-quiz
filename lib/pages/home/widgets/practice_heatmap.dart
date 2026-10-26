@@ -1,21 +1,17 @@
-// 练习热力图：按天染色的小方格，答得越多颜色越深。
+// 练习热力图：**只画本月**的日历小方格，答得越多颜色越深。
 //
-// **按周分行、周一→周日从左到右**（用户 2026-10-24 反馈：原来的 GitHub 式
-// "一列一周、星期从上往下"看着像竖着数天数）。现在每一行是一周，7 个格子
-// 从左到右就是周一到周日；行从上到下是更早的周到更近的周。
+// 用户 2026-10-24：只要本月。每个月是周一→周日的日历，按天染色；不再并排多个月。
+// 日历在分到的宽度里居中，格子最大 64（超宽屏也不至于变成一块块大色板）。
 //
-// 窗口取**近 12 周**（数据端给的是 20 周，这里只画最近 12 周）：12 行 × 7 列
-// 在一屏里放得下，再长首页就要为一张图滚很久。窗口起止以服务端给的 to 为准，
-// 不自己推日期——本机时区与服务器差一天时两边各算一次就会错位。
-//
-// 配色沿用 GitHub primer 的五档绿（亮暗各一套）。分档用固定阈值而不是按最大值
-// 分位：学生一天的题量普遍在 20 以内，按最大值切会把绝大多数日子压进同一档。
+// 起止以服务端给的 to 为准，不自己推日期——本机时区与服务器差一天时两边各算一次
+// 就会错位。配色沿用 GitHub primer 的五档绿；分档用固定阈值，避免按最大值切把
+// 绝大多数日子压进同一档。
 
 import 'dart:math' as math;
 
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/entity/entity.dart';
+import 'package:mianyang_quiz/pages/home/widgets/month_heatmap_grid.dart';
 
 class PracticeHeatmap extends StatelessWidget {
   const PracticeHeatmap({
@@ -23,23 +19,23 @@ class PracticeHeatmap extends StatelessWidget {
     required this.days,
     required this.from,
     required this.to,
+    required this.width,
   });
 
   /// 逐日答题数（只含有作答的日子）。
   final List<DailyStat> days;
-
-  /// 窗口起止（`YYYY-MM-DD`，含两端）。
   final String? from;
   final String? to;
 
-  /// 最多画 12 周（约三个月）。外层的说明文字要按同一个窗口统计。
-  static const int maxWeeks = 12;
+  /// 这块区域被分配到的宽度（由外层算好，避免在 IntrinsicHeight 里用 LayoutBuilder）。
+  final double width;
 
-  /// 格子边长与间距（逻辑像素，屏幕适配由 .r 处理）。
-  static const double _cell = 26;
-  static const double _gap = 4;
+  /// 只画本月；保留这个函数是为了外层的说明文字不用自己算月份。
+  static int monthsForWidth(double width) => 1;
 
-  static const _weekdayLabels = ['一', '二', '三', '四', '五', '六', '日'];
+  /// 这块宽度下显示的第一个月（就是 to 所在月的 1 号）。
+  static DateTime firstMonthFor(double width, DateTime to) =>
+      DateTime(to.year, to.month, 1);
 
   static const _githubLight = [
     Color(0xFFEBEDF0),
@@ -59,65 +55,33 @@ class PracticeHeatmap extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final end = _parseDate(to) ?? _today();
-    final rawStart = _parseDate(from) ?? end.subtract(const Duration(days: 83));
-    final alignedStart = rawStart.subtract(Duration(days: rawStart.weekday - 1));
-    final availableWeeks = math
-        .max(1, (end.difference(alignedStart).inDays / DateTime.daysPerWeek).ceil())
-        .toInt();
-    final weeks = math.min(maxWeeks, availableWeeks);
-    // 从**最近**的周往前数：取最后 weeks 周，而不是最早的 weeks 周。
-    final start = alignedStart.add(
-      Duration(days: DateTime.daysPerWeek * (availableWeeks - weeks)),
-    );
+    final month = firstMonthFor(width, end);
     final counts = {
       for (final day in days)
         if (day.count > 0) day.date: day.count,
     };
     final today = _today();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _weekdayHeader(context),
-        SizedBox(height: _gap.r),
-        for (var week = 0; week < weeks; week++) ...[
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (var weekday = 0; weekday < 7; weekday++)
-                _Cell(
-                  date: start.add(Duration(days: week * 7 + weekday)),
-                  count: counts[_key(start.add(Duration(days: week * 7 + weekday)))] ?? 0,
-                  future: start
-                      .add(Duration(days: week * 7 + weekday))
-                      .isAfter(today),
-                ),
-            ],
-          ),
-          if (week < weeks - 1) SizedBox(height: _gap.r),
-        ],
-      ],
+    // 16 列 × 2 行：宽度用满、高度只有两格（用户 2026-10-25：日历式太高太窄）。
+    const maxCell = 48.0;
+    final gridWidth = math.min(
+      width,
+      MonthHeatmapGrid.columns * maxCell +
+          (MonthHeatmapGrid.columns - 1) * MonthHeatmapGrid.gap,
     );
-  }
 
-  Widget _weekdayHeader(BuildContext context) {
-    final style = TextStyle(
-      fontSize: 10.sp,
-      color: Theme.of(context).colorScheme.onSurfaceVariant,
-    );
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (final label in _weekdayLabels) ...[
-          // 与格子用同一套 width + 间距，标签才和下面那一列对得齐
-          SizedBox(
-            width: _cell.r,
-            child: Center(child: Text(label, style: style)),
-          ),
-          SizedBox(width: _gap.r),
-        ],
-      ],
+    return Align(
+      alignment: Alignment.topCenter,
+      child: SizedBox(
+        width: gridWidth,
+        child: MonthHeatmapGrid(
+          month: month,
+          counts: counts,
+          today: today,
+          width: gridWidth,
+          maxCell: maxCell,
+          shade: (n) => shadeOf(Theme.of(context).brightness, n),
+        ),
+      ),
     );
   }
 
@@ -142,10 +106,6 @@ class PracticeHeatmap extends StatelessWidget {
     return DateTime(now.year, now.month, now.day);
   }
 
-  static String _key(DateTime date) =>
-      '${date.year}-${date.month.toString().padLeft(2, '0')}-'
-      '${date.day.toString().padLeft(2, '0')}';
-
   static DateTime? _parseDate(String? raw) {
     if (raw == null) return null;
     final parts = raw.split('-');
@@ -155,38 +115,5 @@ class PracticeHeatmap extends StatelessWidget {
     final day = int.tryParse(parts[2]);
     if (year == null || month == null || day == null) return null;
     return DateTime(year, month, day);
-  }
-}
-
-/// 一个格子。未来的日期画成透明（本周还没到的几天），其余按题量取色。
-class _Cell extends StatelessWidget {
-  const _Cell({
-    required this.date,
-    required this.count,
-    required this.future,
-  });
-
-  final DateTime date;
-  final int count;
-  final bool future;
-
-  @override
-  Widget build(BuildContext context) {
-    final cell = Container(
-      width: PracticeHeatmap._cell.r,
-      height: PracticeHeatmap._cell.r,
-      margin: EdgeInsets.only(right: PracticeHeatmap._gap.r),
-      decoration: BoxDecoration(
-        color: future
-            ? Colors.transparent
-            : PracticeHeatmap.shadeOf(Theme.of(context).brightness, count),
-        borderRadius: BorderRadius.circular(4.r),
-      ),
-    );
-    if (future) return cell;
-    return Tooltip(
-      message: '${PracticeHeatmap._key(date)} · $count 题',
-      child: cell,
-    );
   }
 }

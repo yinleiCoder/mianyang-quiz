@@ -25,7 +25,10 @@ void main() {
     await _pump(tester, store, const Size(390, 844));
 
     expect(find.text('连续打卡 9 天'), findsOneWidget);
-    expect(find.text('今日 3 / 20 题'), findsOneWidget);
+    expect(find.text('今日目标'), findsOneWidget);
+    expect(find.text('20 题'), findsOneWidget);
+    expect(find.text('今日已答'), findsOneWidget);
+    expect(find.text('3 题'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

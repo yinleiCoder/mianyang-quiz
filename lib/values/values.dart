@@ -22,6 +22,7 @@ export 'identity_meta.dart';
 export 'material_meta.dart';
 export 'qtype_meta.dart';
 export 'report_meta.dart';
+export 'science_notes.dart';
 export 'semantic_colors.dart';
 export 'share_links.dart';
 export 'theme_meta.dart';

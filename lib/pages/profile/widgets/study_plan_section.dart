@@ -61,9 +61,7 @@ class _PrincipleCard extends StatelessWidget {
             icon: Icons.filter_alt_outlined,
             title: '科学抽题原则',
             body:
-                '先发没做过的新题；其次是到期该复习的题；题量不够时，'
-                '再用最久没练的题补满。当天练过的题当天不会再发'
-                '（需要加练时可以在组卷页手动打开）。',
+                '${ScienceNotes.selection}需要加练时可以在组卷页手动打开。',
             style: muted,
             scheme: scheme,
           ),
@@ -71,10 +69,7 @@ class _PrincipleCard extends StatelessWidget {
           _Point(
             icon: Icons.timeline_rounded,
             title: '艾宾浩斯遗忘曲线',
-            body:
-                '遗忘先快后慢：学完 1 天大约只剩 33%，之后逐渐走平。'
-                '本软件按每道题的到期时间安排复习（1、2、4、7、15、30 天等间隔），'
-                '并在首页画出你的实测保持率与理论线的对比。',
+            body: '${ScienceNotes.forgetting}首页会画出你的实测保持率与理论线对比。',
             style: muted,
             scheme: scheme,
           ),
