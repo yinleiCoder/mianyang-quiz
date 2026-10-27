@@ -64,8 +64,6 @@ jobs:
             OSS_PUBLIC_HOST   = "mianyang-question-bank.oss-cn-chengdu.aliyuncs.com"
             API_BASE_URL      = "https://myquiz.cn"
             SHARE_BASE_URL    = "https://myquiz.cn"
-            # APK 走 gh-proxy（阿里云默认域名不允许分发 .apk）；换节点只改这一行
-            GH_PROXY          = "https://gh-proxy.com/"
             APP_VERSION       = "${{ github.ref_type == 'tag' && github.ref_name || 'dev' }}"
             # 崩溃上报的 DSN。留空（没配这个 secret）= 整个上报链路关掉，
             # 见 lib/apis/crash_reporter.dart。它同样不是机密（客户端里就有），
@@ -243,7 +241,6 @@ jobs:
             "OSS_PUBLIC_HOST": "mianyang-question-bank.oss-cn-chengdu.aliyuncs.com",
             "API_BASE_URL": "https://myquiz.cn",
             "SHARE_BASE_URL": "https://myquiz.cn",
-            "GH_PROXY": "https://gh-proxy.com/",
             "APP_VERSION": "${{ github.ref_type == 'tag' && github.ref_name || 'dev' }}",
             "SENTRY_DSN": "${{ secrets.SENTRY_DSN }}"
           }
@@ -446,7 +443,7 @@ jobs:
           body: |
             绵阳市中职共建题库客户端 ${{ github.ref_name }}
 
-            **官方下载页（Windows 走阿里云 OSS，Android 走 gh-proxy 加速）：https://myquiz.cn/download**
+            **官方下载页（Windows 直连阿里云 OSS，Android 走本站下载路由）：https://myquiz.cn/download**
 
             - **Android**：下载 `mianyang_quiz-android.apk` 直接安装（首次需允许「安装未知来源应用」）
               - 这份是 **arm64-v8a**，近几年的手机都是它。装不上、提示「应用未安装」的，
@@ -459,16 +456,18 @@ jobs:
           files: assets/*
           fail_on_unmatched_files: true
 
-      - name: 上传到阿里云 OSS（版本清单 + Windows 下载）
-        # **必须在 GitHub Release 之后**：APK 走 gh-proxy，代理的上游就是这次 Release
-        # 的资产；Release 没建好之前，网页/客户端拿到的 APK 地址会是 404。
-        #
+      - name: 上传到阿里云 OSS（版本清单 + 双端下载）
         # 网页端 /download 与客户端检查更新都只读 OSS 上的 client/latest.json。
         # 缺少 OSS 密钥直接失败：否则 GitHub 发了新版本、下载页却还停在旧 tag，
         # 正是 2.8.1 发布后清单仍是 2.8.0 的原因。
         #
-        # CLIENT_OSS_PUBLIC_BASE 可选：将来若给桶绑了自定义域名，APK 会改走 OSS；
-        # 现在不配，清单里 APK url 为 null，网页与客户端自动拼 gh-proxy 地址。
+        # APK 会另存一份 `client/dist/<资产名>.bin`：阿里云默认域名禁止分发 .apk
+        #（key 后缀 / Content-Type / Content-Disposition 文件名三条都挡，签名地址也挡），
+        # 清单里的 APK url 指向网页端 /api/client/download 路由，由它取回字节、
+        # 补上正确的文件名与类型。详见网页端 AGENTS.md「客户端下载」。
+        #
+        # CLIENT_OSS_PUBLIC_BASE 可选：只影响 Windows 资产的直链前缀
+        #（将来绑了自定义域名时用它）；不配就用 OSS 默认域名。
         env:
           OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
           OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
@@ -482,7 +481,7 @@ jobs:
             exit 1
           fi
           if [ -z "$CLIENT_OSS_PUBLIC_BASE" ]; then
-            echo "::notice::未配置 CLIENT_OSS_PUBLIC_BASE，APK 将走 gh-proxy（清单 url 为 null）"
+            echo "::notice::未配置 CLIENT_OSS_PUBLIC_BASE，Windows 资产用 OSS 默认域名；APK 走网页端下载路由"
             node tool/upload_to_oss.mjs --dir assets --tag "${{ github.ref_name }}"
           else
             node tool/upload_to_oss.mjs --dir assets --tag "${{ github.ref_name }}" --public-base "$CLIENT_OSS_PUBLIC_BASE"

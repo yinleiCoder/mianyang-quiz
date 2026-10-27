@@ -9,13 +9,20 @@
 // 用法（发布流水线由 .github/workflows/release.yml 调用，也可以本机手动跑）：
 //   OSS_ACCESS_KEY_ID=… OSS_ACCESS_KEY_SECRET=… \
 //     node tool/upload_to_oss.mjs --dir build/oss-upload --tag v2.7.5 \
-//     --public-base https://download.myquiz.cn/client
+//     [--public-base https://<自定义域名>/client] [--site-base https://myquiz.cn]
 //
-// **--public-base 可选**：阿里云禁止 .apk 从默认域名（*.aliyuncs.com）对外分发
-// （实测回 400 ApkDownloadForbidden，正文让我们用 CNAME）。不传时仍会照常上传，
-// 但 APK 的清单 url 写成 null；网页端与客户端会据此改走 gh-proxy
-// （网页 NEXT_PUBLIC_GH_PROXY / 客户端 Env.ghProxy，默认 https://gh-proxy.com/）。
-// 若将来给桶绑了自定义域名，用 --public-base 指向它即可让清单里的 url 优先走 OSS。
+// **APK 为什么要另存一份 .bin（2026-10-27 起）**：阿里云默认域名（*.aliyuncs.com）
+// 禁止分发 .apk —— 对象 key 以 .apk 结尾、Content-Type 是 APK、或 Content-Disposition
+// 的文件名以 .apk 结尾，三条命中任意一条就回 400 ApkDownloadForbidden（签名地址也挡，
+// 2026-10-27 逐条实测）。绑定自定义域名要大陆 ICP 备案，短期走不通。所以每个 APK
+// 都会**再上传一份** `client/dist/<资产名>.bin`（application/octet-stream、不带
+// Content-Disposition，三条都不命中），清单里的 url 指向网页端的
+// `<--site-base>/api/client/download` 路由，由它取回字节、在本站域名下补上正确的
+// 文件名与类型。网页端那条路由见 app/api/client/download/route.js。
+//
+// **--public-base 可选**：只影响 Windows 资产的直链前缀（默认是 OSS 默认域名）。
+// 若将来给桶绑了自定义域名，用 --public-base 指向它，APK 之外的资产就直接走那个域名。
+// **--site-base 可选**：默认 https://myquiz.cn，APK 的清单 url 用它拼下载路由。
 //
 // 资产名**不带版本号**——网页端与客户端写死的就是这几个名字，版本号只写进
 // client/latest.json（tag）与每个资产 url 的 ?v= 查询串（绕开 CDN 旧缓存）。
@@ -29,6 +36,8 @@ import { basename, join } from 'node:path';
 const BUCKET = process.env.OSS_BUCKET ?? 'mianyang-question-bank';
 const ENDPOINT = process.env.OSS_ENDPOINT ?? 'oss-cn-chengdu.aliyuncs.com';
 const PREFIX = 'client/';
+// APK 的 .bin 副本放在这个前缀下（与网页端 lib/client-assets.mjs 的 clientApkAliasKey 一致）
+const ALIAS_PREFIX = `${PREFIX}dist/`;
 
 const MIME = {
   '.apk': 'application/vnd.android.package-archive',
@@ -45,7 +54,7 @@ function arg(name, fallback = null) {
 const dir = arg('dir');
 const tag = arg('tag');
 if (!dir || !tag) {
-  console.error('用法：node tool/upload_to_oss.mjs --dir <发布产物目录> --tag vX.Y.Z [--public-base https://<自定义域名>/client]');
+  console.error('用法：node tool/upload_to_oss.mjs --dir <发布产物目录> --tag vX.Y.Z [--public-base https://<自定义域名>/client] [--site-base https://myquiz.cn]');
   process.exit(1);
 }
 
@@ -62,19 +71,29 @@ process.on('unhandledRejection', (err) => {
 });
 
 /** 规范化公共地址：去掉末尾斜杠；非法地址直接报错，别把坏 url 写进清单。 */
-function normalizeBase(raw) {
-  const u = new URL(raw);
-  if (u.protocol !== 'https:') throw new Error('--public-base 必须是 https 地址');
+function normalizeBase(raw, flag) {
+  let u;
+  try {
+    u = new URL(raw);
+  } catch {
+    throw new Error(`${flag} 不是合法地址：${raw}`);
+  }
+  if (u.protocol !== 'https:') throw new Error(`${flag} 必须是 https 地址`);
   return `https://${u.host}${u.pathname.replace(/\/+$/, '')}`;
 }
 
 const defaultBase = `https://${BUCKET}.${ENDPOINT}/${PREFIX.replace(/\/$/, '')}`;
-const publicBase = normalizeBase(arg('public-base', defaultBase));
+const publicBase = normalizeBase(arg('public-base', defaultBase), '--public-base');
+// 网页端地址：APK 的清单 url 指向它的下载路由（默认域名发不了 .apk，见文件头）
+const siteBase = normalizeBase(
+  arg('site-base', process.env.CLIENT_SITE_BASE ?? 'https://myquiz.cn'),
+  '--site-base',
+);
 const publicHost = new URL(publicBase).host;
-// 阿里云默认域名不能分发 .apk；这个判断只影响清单里的 url，不影响上传本身。
+// 阿里云默认域名不能分发 .apk；这个判断只影响清单里 APK 的 url 形态，不影响上传。
 const isDefaultAliyun = /\.aliyuncs\.com$/i.test(publicHost);
 // 启动日志：CI 失败时先看这一行有没有出现（没有就是脚本还没跑到上传）。
-console.log(`upload_to_oss: dir=${dir} tag=${tag} publicBase=${publicBase}`);
+console.log(`upload_to_oss: dir=${dir} tag=${tag} publicBase=${publicBase} siteBase=${siteBase}`);
 
 /** 一次 PUT。key 是相对 key（不含前导斜杠）。 */
 async function putObject(key, body, contentType, cacheControl) {
@@ -120,8 +139,8 @@ console.log(`upload_to_oss: files=${files.map((f) => f.name).join(', ')}`);
 const hasApk = files.some((f) => f.name.toLowerCase().endsWith('.apk'));
 if (hasApk && isDefaultAliyun) {
   console.warn(
-    '⚠ 当前 --public-base 是阿里云默认域名：APK 仍会上传，但阿里云禁止从该域名下载 .apk；' +
-      '清单里会把它写成 url:null，网页/客户端会改走 gh-proxy。',
+    '⚠ 当前 --public-base 是阿里云默认域名：APK 不能从该域名直接下载；' +
+      `每份都会另存一份 .bin 副本，清单 url 指向 ${siteBase}/api/client/download（本站下载路由）。`,
   );
 }
 
@@ -137,23 +156,34 @@ for (const file of files) {
 
   const sha256 = createHash('sha256').update(bytes).digest('hex');
   const isApk = ext === '.apk';
-  // APK + 默认域名：不写 url（页面会显示"暂不可用"），但照常上传，绑好域名后重跑即可
-  const blocked = isApk && isDefaultAliyun;
-  const url = blocked ? null : `${publicBase}/${encodeURIComponent(file.name)}?v=${encodeURIComponent(tag)}`;
 
   console.log(`↑ ${file.name}  ${(bytes.length / 1048576).toFixed(1)}MB  sha256=${sha256.slice(0, 12)}…`);
   await putObject(key, bytes, contentType, cacheControl);
 
-  try {
+  if (isApk) {
+    // 另存一份网页端下载路由的取数来源：key 不以 .apk 结尾、octet-stream、无
+    // Content-Disposition —— 三条都不触发阿里云的 APK 拦截（见文件头）。
+    const aliasKey = `${ALIAS_PREFIX}${file.name}.bin`;
+    await putObject(aliasKey, bytes, 'application/octet-stream', cacheControl);
+    console.log(`  ↳ ${aliasKey}（下载路由的副本）`);
+    // 副本是 APK 唯一的可下载来源，长度不对就别让这一版发出去
+    const aliasLanded = await headLength(aliasKey);
+    if (aliasLanded !== bytes.length) {
+      throw new Error(`${file.name} 的 .bin 副本长度对不上：本地 ${bytes.length} / OSS ${aliasLanded}`);
+    }
+  } else {
+    // 非 APK 的 HEAD 不该失败；长度不对就说明上传没落地，别让用户下到半截文件
     const landed = await headLength(key);
     if (landed !== bytes.length) {
       throw new Error(`${file.name} 上传后长度对不上：本地 ${bytes.length} / OSS ${landed}`);
     }
-  } catch (err) {
-    // 默认域名对 APK 的 HEAD 也可能回 400；上传本身已经成功，别让一个校验把发布挂掉。
-    if (!isApk) throw err;
-    console.warn(`  （APK 跳过长度回读：${err.message}）`);
   }
+
+  // 默认域名发不了 .apk：清单指向本站下载路由；自定义域名（非 aliyuncs.com）才直连。
+  const url =
+    isApk && isDefaultAliyun
+      ? `${siteBase}/api/client/download?name=${encodeURIComponent(file.name)}&v=${encodeURIComponent(tag)}`
+      : `${publicBase}/${encodeURIComponent(file.name)}?v=${encodeURIComponent(tag)}`;
 
   manifest.assets.push({ name: file.name, size: bytes.length, sha256, url });
 }
@@ -168,7 +198,7 @@ await putObject(
 );
 
 console.log(`\n完成：${manifest.assets.length} 个资产 + latest.json 已上传到 ${BUCKET}/${PREFIX}`);
-console.log(`版本 ${tag}；公共地址 ${publicBase}`);
+console.log(`版本 ${tag}；公共地址 ${publicBase}；网页端 ${siteBase}`);
 if (hasApk && isDefaultAliyun) {
-  console.log('⚠ APK 的下载 url 为 null：网页/客户端会改走 gh-proxy；若以后绑了自定义域名，用 --public-base 重跑即可。');
+  console.log('APK 走本站下载路由（每份都另存了 .bin 副本）；若以后绑了自定义域名，用 --public-base 重跑即可直连。');
 }

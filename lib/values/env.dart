@@ -42,13 +42,6 @@ abstract final class Env {
     defaultValue: '',
   );
 
-  /// gh-proxy 加速前缀（末尾带 /）。APK 不能从 OSS 默认域名下载（阿里云限制），
-  /// 客户端检查更新时用它拼 GitHub Release 的 APK 地址。换节点只改这个配置。
-  static const String ghProxy = String.fromEnvironment(
-    'GH_PROXY',
-    defaultValue: 'https://gh-proxy.com/',
-  );
-
   /// Sentry 的上报地址（DSN）。**留空则整个上报链路关掉**：不初始化 SDK、
   /// 不建 HTTP 客户端、什么都不发。开发机与 CI 都不配它，只有正式包才配。
   ///
