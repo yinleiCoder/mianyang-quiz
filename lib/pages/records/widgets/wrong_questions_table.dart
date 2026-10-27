@@ -50,64 +50,72 @@ class WrongQuestionsTable extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: DataTable(
-            showCheckboxColumn: false,
-            sortColumnIndex: sortIndex,
-            sortAscending: ascending,
-            headingRowHeight: 44.r,
-            dataRowMinHeight: 56.r,
-            dataRowMaxHeight: 72.r,
-            horizontalMargin: 12.r,
-            columnSpacing: 20.r,
-            headingTextStyle: AppTextStyles.caption(
-              context,
-            ).copyWith(color: scheme.onSurfaceVariant),
-            columns: [
-              const DataColumn(label: Text('题目')),
-              DataColumn(
-                label: const Text('累计错误'),
-                numeric: true,
-                onSort: (_, asc) => onSort(1, asc),
-              ),
-              DataColumn(
-                label: const Text('最近练习'),
-                onSort: (_, asc) => onSort(2, asc),
-              ),
-            ],
-            rows: [
-              for (final row in rows)
-                DataRow(
-                  key: ValueKey(row.questionId),
-                  onSelectChanged: row.available ? (_) => onOpen(row) : null,
-                  cells: [
-                    DataCell(_StemCell(row: row)),
-                    DataCell(
-                      Text(
-                        '${row.wrongCount} 次',
-                        textAlign: TextAlign.right,
-                        style: AppTextStyles.body(context).copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: row.available
-                              ? scheme.onSurface
-                              : scheme.onSurfaceVariant,
+        // DataTable 的列宽默认是 intrinsic（内容多宽就多宽），三列加起来常常
+        // 填不满一屏，右边留一条空白。套一层「至少和视口一样宽」的约束后，
+        // Table 会把多出来的宽度均分到各列；内容真的超宽时仍然横向滚动。
+        LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minWidth: constraints.maxWidth),
+              child: DataTable(
+                showCheckboxColumn: false,
+                sortColumnIndex: sortIndex,
+                sortAscending: ascending,
+                headingRowHeight: 44.r,
+                dataRowMinHeight: 56.r,
+                dataRowMaxHeight: 72.r,
+                horizontalMargin: 12.r,
+                columnSpacing: 20.r,
+                headingTextStyle: AppTextStyles.caption(context)
+                    .copyWith(color: scheme.onSurfaceVariant),
+                columns: [
+                  const DataColumn(label: Text('题目')),
+                  DataColumn(
+                    label: const Text('累计错误'),
+                    numeric: true,
+                    onSort: (_, asc) => onSort(1, asc),
+                  ),
+                  DataColumn(
+                    label: const Text('最近练习'),
+                    onSort: (_, asc) => onSort(2, asc),
+                  ),
+                ],
+                rows: [
+                  for (final row in rows)
+                    DataRow(
+                      key: ValueKey(row.questionId),
+                      onSelectChanged: row.available
+                          ? (_) => onOpen(row)
+                          : null,
+                      cells: [
+                        DataCell(_StemCell(row: row)),
+                        DataCell(
+                          Text(
+                            '${row.wrongCount} 次',
+                            textAlign: TextAlign.right,
+                            style: AppTextStyles.body(context).copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: row.available
+                                  ? scheme.onSurface
+                                  : scheme.onSurfaceVariant,
+                            ),
+                          ),
                         ),
-                      ),
+                        DataCell(
+                          Text(
+                            row.answeredAt == null
+                                ? '—'
+                                : Formatters.relative(row.answeredAt!),
+                            style: AppTextStyles.caption(context)
+                                .copyWith(color: scheme.onSurfaceVariant),
+                          ),
+                        ),
+                      ],
                     ),
-                    DataCell(
-                      Text(
-                        row.answeredAt == null
-                            ? '—'
-                            : Formatters.relative(row.answeredAt!),
-                        style: AppTextStyles.caption(
-                          context,
-                        ).copyWith(color: scheme.onSurfaceVariant),
-                      ),
-                    ),
-                  ],
-                ),
-            ],
+                ],
+              ),
+            ),
           ),
         ),
         if (hasMore)
@@ -153,9 +161,7 @@ class _StemCell extends StatelessWidget {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: AppTextStyles.body(context).copyWith(
-              color: row.available
-                  ? scheme.onSurface
-                  : scheme.onSurfaceVariant,
+              color: row.available ? scheme.onSurface : scheme.onSurfaceVariant,
             ),
           ),
           if (row.hasMeta) ...[
