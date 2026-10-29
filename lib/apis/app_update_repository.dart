@@ -4,12 +4,11 @@
 // 于是出现"网页端已经 v2.8.1、客户端还说没有新版本"。发布流水线把清单写到 OSS，
 // 版本号与下载直链都在里面，客户端读它就是与网页端同源。
 //
-// APK 的下载地址由清单直接给出：指向本站的 `/api/client/download` 路由。阿里云默认域名
-// 不能分发 .apk（key 后缀 / Content-Type / 文件名三条都挡），那条路由取 OSS 里的
-// `.bin` 副本、补上正确的文件名与类型再吐给浏览器。万一清单里的 url 还是空的
-//（旧清单、还没回填），这里按同一个口径自己拼一条路由地址。Windows 直接用清单里的
-// OSS 直链。失败一律返回 null（没发过版、断网、清单还没写）：调用方静默跳过——
-// 更新提示是锦上添花，绝不能因为它把启动流程搞出一个错误弹窗。
+// APK 的下载地址由清单直接给出：指向网页端的 `/download/apk` 自动下载页。阿里云默认域名
+// 不能分发 .apk（key 后缀 / Content-Type / 文件名三条都挡），所以那一页由**浏览器**
+// 直连 OSS 的 `.bin` 副本、转 Blob 存成 `.apk`；客户端这里只负责把用户送过去。
+// Windows 直接用清单里的 OSS 直链。失败一律返回 null（没发过版、断网、清单还没写）：
+// 调用方静默跳过——更新提示是锦上添花，绝不能因为它把启动流程搞出一个错误弹窗。
 
 import 'package:dio/dio.dart';
 import 'package:mianyang_quiz/values/values.dart';
@@ -71,17 +70,9 @@ class AppUpdateRepository {
             break;
           }
         }
-        // 清单里的 url 为空（旧清单）时按同一个口径拼本站下载路由：路由只按资产名
-        // 取对象，不依赖清单内容。版本号只用于缓存键，缺了也能下。
-        // **只对 Android 这样做**：路由只认 APK，Windows 资产名传进去只会得到 404，
-        // 那种情况应该退回下载页（pageUrl）。
-        if (assetUrl == null && platform == 'android') {
-          final base = Env.shareBaseUrl.endsWith('/')
-              ? Env.shareBaseUrl.substring(0, Env.shareBaseUrl.length - 1)
-              : Env.shareBaseUrl;
-          assetUrl =
-              '$base/api/client/download?name=${Uri.encodeComponent(assetName)}';
-        }
+        // 清单里的 url 为空（旧清单、还没回填）就让它空着：调用方会退回下载页
+        //（pageUrl），页面上那颗按钮会直连 OSS 取包。
+
       }
       return (tag: tag, pageUrl: pageUrl, assetUrl: assetUrl);
     } catch (_) {

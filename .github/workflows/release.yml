@@ -443,7 +443,7 @@ jobs:
           body: |
             绵阳市中职共建题库客户端 ${{ github.ref_name }}
 
-            **官方下载页（Windows 直连阿里云 OSS，Android 走本站下载路由）：https://myquiz.cn/download**
+            **官方下载页（双端都由浏览器直连阿里云 OSS）：https://myquiz.cn/download**
 
             - **Android**：下载 `mianyang_quiz-android.apk` 直接安装（首次需允许「安装未知来源应用」）
               - 这份是 **arm64-v8a**，近几年的手机都是它。装不上、提示「应用未安装」的，
@@ -462,9 +462,10 @@ jobs:
         # 正是 2.8.1 发布后清单仍是 2.8.0 的原因。
         #
         # APK 会另存一份 `client/dist/<资产名>.bin`：阿里云默认域名禁止分发 .apk
-        #（key 后缀 / Content-Type / Content-Disposition 文件名三条都挡，签名地址也挡），
-        # 清单里的 APK url 指向网页端 /api/client/download 路由，由它取回字节、
-        # 补上正确的文件名与类型。详见网页端 AGENTS.md「客户端下载」。
+        #（key 后缀 / Content-Type / Content-Disposition 文件名三条都挡，签名地址也挡）。
+        # 清单里的 APK url 指向网页端 /download/apk 落地页：**浏览器**直连 OSS 取这份
+        # .bin，转 Blob 存成 .apk（服务端转发不可行——Vercel 香港函数连不上成都 OSS）。
+        # 详见网页端 AGENTS.md「客户端下载」。
         #
         # CLIENT_OSS_PUBLIC_BASE 可选：只影响 Windows 资产的直链前缀
         #（将来绑了自定义域名时用它）；不配就用 OSS 默认域名。
@@ -481,7 +482,7 @@ jobs:
             exit 1
           fi
           if [ -z "$CLIENT_OSS_PUBLIC_BASE" ]; then
-            echo "::notice::未配置 CLIENT_OSS_PUBLIC_BASE，Windows 资产用 OSS 默认域名；APK 走网页端下载路由"
+            echo "::notice::未配置 CLIENT_OSS_PUBLIC_BASE，Windows 资产用 OSS 默认域名；APK 走网页端自动下载页"
             node tool/upload_to_oss.mjs --dir assets --tag "${{ github.ref_name }}"
           else
             node tool/upload_to_oss.mjs --dir assets --tag "${{ github.ref_name }}" --public-base "$CLIENT_OSS_PUBLIC_BASE"

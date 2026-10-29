@@ -623,14 +623,15 @@ Windows 的 exe/zip 直接从 OSS 下；网页端与客户端都写死资产名�
 - `mianyang_quiz-android.apk` —— Android 直接装（**必须已配正式签名**，见下）
 - `mianyang_quiz-windows-x64.zip` —— 整个目录解压后运行
 
-⚠ **APK 走网页端的下载路由**（2026-10-27 起，gh-proxy 已停用）：阿里云默认域名
+⚠ **APK 走网页端的自动下载页**（2026-10-29 起，gh-proxy 已停用）：阿里云默认域名
 （`*.aliyuncs.com`）禁止分发 .apk——对象 key 以 .apk 结尾、Content-Type 是 APK、
 Content-Disposition 文件名以 .apk 结尾，三条命中任意一条就 400（签名地址也挡）。
 发布脚本会给每个 APK 另存一份 `client/dist/<资产名>.bin`（octet-stream、无
 Content-Disposition），清单里 APK 的 `url` 指向
-`https://myquiz.cn/api/client/download?name=<资产名>&v=<tag>`，由网页端那条路由取回
-字节、补上正确的文件名与类型。Windows 仍用清单里的 OSS 直链。细节见网页端仓库的
-`AGENTS.md`「客户端下载」与 `app/api/client/download/route.js`。
+`https://myquiz.cn/download/apk?name=<资产名>&v=<tag>`：**浏览器**直连 OSS 取这份
+.bin、转 Blob 存成 .apk（服务端转发不可行——Vercel 香港函数连不上成都 OSS，
+2026-10-29 实测）。Windows 仍用清单里的 OSS 直链。细节见网页端仓库的
+`AGENTS.md`「客户端下载」与 `components/download/apk-download.jsx`。
 
 ### Android 按 ABI 拆包（2026-09-28 起）
 
@@ -771,9 +772,9 @@ kotlin.incremental=false
 `client/latest.json`（与网页端 `/download` 同一份清单），拿它的 `tag` 与本机
 `Env.appVersion` 比大小（比较逻辑在 `lib/utils/app_version.dart`，纯函数可单测）。
 不再读 GitHub API：国内那条线路取不到响应，版本检查会静默失败。
-Android 资产的 `url` 指向网页端 `/api/client/download` 路由（阿里云默认域名不能分发
-.apk，细则见网页端仓库；`Env.ghProxy` 已删除）。万一 `url` 为空（旧清单），客户端用
-`Env.shareBaseUrl` + 同一个路由地址自己拼一条；Windows 直接用清单里的 OSS 直链。
+Android 资产的 `url` 指向网页端 `/download/apk` 自动下载页（阿里云默认域名不能分发
+.apk，细则见网页端仓库；`Env.ghProxy` 已删除）。`url` 为空时退回下载页（`pageUrl`），
+用户在那里点按钮直连 OSS 下载；Windows 直接用清单里的 OSS 直链。
 `APP_VERSION` 由流水线按 tag 注入 —— 两边同源才不会误报；个人资料页会显示当前版本。
 调试构建（`kDebugMode`）与 `APP_VERSION` 带 `-` 的包不检查；同一个版本「稍后再说」过就不再弹。
 

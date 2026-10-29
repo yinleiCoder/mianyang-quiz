@@ -16,13 +16,14 @@
 // 的文件名以 .apk 结尾，三条命中任意一条就回 400 ApkDownloadForbidden（签名地址也挡，
 // 2026-10-27 逐条实测）。绑定自定义域名要大陆 ICP 备案，短期走不通。所以每个 APK
 // 都会**再上传一份** `client/dist/<资产名>.bin`（application/octet-stream、不带
-// Content-Disposition，三条都不命中），清单里的 url 指向网页端的
-// `<--site-base>/api/client/download` 路由，由它取回字节、在本站域名下补上正确的
-// 文件名与类型。网页端那条路由见 app/api/client/download/route.js。
+// Content-Disposition，三条都不命中）。清单里的 url 指向网页端的
+// `<--site-base>/download/apk` 落地页：**浏览器**直连 OSS 取这份 .bin，转 Blob
+// 存成 .apk（服务端转发不可行——Vercel 香港函数连不上成都 OSS，2026-10-29 实测）。
+// 网页端见 components/download/apk-download.jsx 与 app/download/apk/page.jsx。
 //
 // **--public-base 可选**：只影响 Windows 资产的直链前缀（默认是 OSS 默认域名）。
 // 若将来给桶绑了自定义域名，用 --public-base 指向它，APK 之外的资产就直接走那个域名。
-// **--site-base 可选**：默认 https://myquiz.cn，APK 的清单 url 用它拼下载路由。
+// **--site-base 可选**：默认 https://myquiz.cn，APK 的清单 url 用它拼自动下载落地页的地址。
 //
 // 资产名**不带版本号**——网页端与客户端写死的就是这几个名字，版本号只写进
 // client/latest.json（tag）与每个资产 url 的 ?v= 查询串（绕开 CDN 旧缓存）。
@@ -84,7 +85,7 @@ function normalizeBase(raw, flag) {
 
 const defaultBase = `https://${BUCKET}.${ENDPOINT}/${PREFIX.replace(/\/$/, '')}`;
 const publicBase = normalizeBase(arg('public-base', defaultBase), '--public-base');
-// 网页端地址：APK 的清单 url 指向它的下载路由（默认域名发不了 .apk，见文件头）
+// 网页端地址：APK 的清单 url 指向它的自动下载落地页（默认域名发不了 .apk，见文件头）
 const siteBase = normalizeBase(
   arg('site-base', process.env.CLIENT_SITE_BASE ?? 'https://myquiz.cn'),
   '--site-base',
@@ -140,7 +141,7 @@ const hasApk = files.some((f) => f.name.toLowerCase().endsWith('.apk'));
 if (hasApk && isDefaultAliyun) {
   console.warn(
     '⚠ 当前 --public-base 是阿里云默认域名：APK 不能从该域名直接下载；' +
-      `每份都会另存一份 .bin 副本，清单 url 指向 ${siteBase}/api/client/download（本站下载路由）。`,
+      `每份都会另存一份 .bin 副本，清单 url 指向 ${siteBase}/download/apk（浏览器直连 OSS 的落地页）。`,
   );
 }
 
@@ -161,11 +162,11 @@ for (const file of files) {
   await putObject(key, bytes, contentType, cacheControl);
 
   if (isApk) {
-    // 另存一份网页端下载路由的取数来源：key 不以 .apk 结尾、octet-stream、无
+    // 另存一份给浏览器直连下载：key 不以 .apk 结尾、octet-stream、无
     // Content-Disposition —— 三条都不触发阿里云的 APK 拦截（见文件头）。
     const aliasKey = `${ALIAS_PREFIX}${file.name}.bin`;
     await putObject(aliasKey, bytes, 'application/octet-stream', cacheControl);
-    console.log(`  ↳ ${aliasKey}（下载路由的副本）`);
+    console.log(`  ↳ ${aliasKey}（浏览器直连下载的副本）`);
     // 副本是 APK 唯一的可下载来源，长度不对就别让这一版发出去
     const aliasLanded = await headLength(aliasKey);
     if (aliasLanded !== bytes.length) {
@@ -179,10 +180,11 @@ for (const file of files) {
     }
   }
 
-  // 默认域名发不了 .apk：清单指向本站下载路由；自定义域名（非 aliyuncs.com）才直连。
+  // 默认域名发不了 .apk：清单指向网页端的自动下载落地页（浏览器直连 OSS 的 .bin 副本、
+  // 转 Blob 存成 .apk）；自定义域名（非 aliyuncs.com）才直连。
   const url =
     isApk && isDefaultAliyun
-      ? `${siteBase}/api/client/download?name=${encodeURIComponent(file.name)}&v=${encodeURIComponent(tag)}`
+      ? `${siteBase}/download/apk?name=${encodeURIComponent(file.name)}&v=${encodeURIComponent(tag)}`
       : `${publicBase}/${encodeURIComponent(file.name)}?v=${encodeURIComponent(tag)}`;
 
   manifest.assets.push({ name: file.name, size: bytes.length, sha256, url });
@@ -200,5 +202,5 @@ await putObject(
 console.log(`\n完成：${manifest.assets.length} 个资产 + latest.json 已上传到 ${BUCKET}/${PREFIX}`);
 console.log(`版本 ${tag}；公共地址 ${publicBase}；网页端 ${siteBase}`);
 if (hasApk && isDefaultAliyun) {
-  console.log('APK 走本站下载路由（每份都另存了 .bin 副本）；若以后绑了自定义域名，用 --public-base 重跑即可直连。');
+  console.log('APK 走网页端落地页（浏览器直连 OSS 的 .bin 副本）；若以后绑了自定义域名，用 --public-base 重跑即可直连。');
 }
