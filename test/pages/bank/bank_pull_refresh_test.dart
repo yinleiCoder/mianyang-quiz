@@ -50,10 +50,10 @@ class _FakeSubjectRepository extends SubjectRepository {
   _FakeSubjectRepository(super.client);
 
   @override
-  Future<List<SubjectNode>> fetchNodes() async => const [];
+  Future<List<SubjectNode>> fetchNodes({bool force = false}) async => const [];
 
   @override
-  Future<List<QuestionTag>> fetchTags() async => const [];
+  Future<List<QuestionTag>> fetchTags({bool force = false}) async => const [];
 }
 
 void main() {

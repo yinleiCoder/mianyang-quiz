@@ -39,6 +39,10 @@ class ImageBlockView extends StatelessWidget {
           child: AppNetworkImage(
             imageUrl: thumbUrl,
             fit: BoxFit.contain,
+            // 正常情况下 OSS 已经把图缩到 720 宽；但历史数据里可能有完整 URL
+            // （OssUrl.media 对非自家域名的 key 原样透传），不设上限就会按原图解码。
+            // 一张 4000×3000 的图解码后约 48MB，两张就够低端机 OOM 了。
+            memCacheWidth: OssUrl.thumbWidth,
             placeholder: (context, _) => SizedBox(
               height: 80.r,
               child: const Center(child: CircularProgressIndicator()),

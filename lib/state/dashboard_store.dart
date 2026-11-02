@@ -23,11 +23,26 @@ class DashboardStore extends ChangeNotifier {
 
   bool get isLoading => _state.isLoading;
 
+  /// 正在进行的请求。启动预取与首页首帧各会触发一次 refresh，去重后只发一条。
+  Future<void>? _inFlight;
+
   /// 拉取（或重新拉取）看板。
   ///
   /// [silent] 为 true 时不进入 loading 态——用于"交卷后顺手刷新"这类场景：
   /// 界面上已有旧数据，闪一下骨架屏比晚半秒更新更难受。
-  Future<void> refresh({bool silent = false}) async {
+  ///
+  /// **并发去重（2026-11-02）**：`startSession()` 会预取一次，首页 post-frame
+  /// 又刷一次；跨境网络下一来一回 0.5~1.5s，重复发就是白白多等一个来回。
+  /// 两次调用共享同一个 Future，后到的那个不会另发请求。
+  Future<void> refresh({bool silent = false}) {
+    final pending = _inFlight;
+    if (pending != null) return pending;
+    return _inFlight = _refresh(silent: silent).whenComplete(
+      () => _inFlight = null,
+    );
+  }
+
+  Future<void> _refresh({required bool silent}) async {
     if (!silent) {
       _state = const AsyncLoading();
       notifyListeners();

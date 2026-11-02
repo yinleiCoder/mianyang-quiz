@@ -7,6 +7,7 @@
 // Bearer，于是重放还是 401——"自愈"根本没生效，而当时的测试只数了调用次数，看不出来。
 // 所以这里的断言全都盯着**重放的那份请求长什么样**，不只是"发了几次"。
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -119,6 +120,53 @@ void main() {
     expect(response.statusCode, 401);
     expect(inner.calls, 1);
   });
+
+  test('响应头迟迟不来：超时抛 TimeoutException，而不是无限转圈', () async {
+    final client = AuthRefreshClient(
+      _HangingClient(),
+      responseTimeout: const Duration(milliseconds: 50),
+    );
+
+    await expectLater(
+      client.get(Uri.parse('https://x.supabase.co/rest/v1/rpc/foo')),
+      throwsA(isA<TimeoutException>()),
+      reason: 'SDK 自带通道没有超时；这里是"加载不出来"唯一能被翻成错误页的地方',
+    );
+  });
+
+  test('响应体读到一半不再吐数据：空闲超时同样抛出，不挂死', () async {
+    final body = StreamController<List<int>>();
+    addTearDown(body.close);
+    final client = AuthRefreshClient(
+      _StreamedClient(body.stream),
+      responseTimeout: const Duration(seconds: 1),
+      bodyIdleTimeout: const Duration(milliseconds: 50),
+    );
+
+    await expectLater(
+      client.get(Uri.parse('https://x.supabase.co/rest/v1/rpc/foo')),
+      throwsA(isA<TimeoutException>()),
+      reason: 'headers 已到但 body 卡住时，外层 timeout 救不了',
+    );
+  });
+}
+
+/// 永远不返回响应头的客户端（模拟连接卡死）。
+class _HangingClient extends http.BaseClient {
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) =>
+      Completer<http.StreamedResponse>().future;
+}
+
+/// 响应头立刻回来、body 是一个一直不收尾的流（模拟读到一半断流）。
+class _StreamedClient extends http.BaseClient {
+  _StreamedClient(this.body);
+
+  final Stream<List<int>> body;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async =>
+      http.StreamedResponse(body, 200);
 }
 
 /// 按顺序吐出预设状态码的假客户端，同时记下每次请求的 body 与 Authorization。

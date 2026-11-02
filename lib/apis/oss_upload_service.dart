@@ -39,7 +39,17 @@ abstract final class OssPurpose {
 }
 
 class OssUploadService {
-  OssUploadService(this._client, {Dio? dio}) : _dio = dio ?? Dio();
+  OssUploadService(this._client, {Dio? dio})
+      : _dio = dio ??
+            Dio(
+              BaseOptions(
+                // 连不上 OSS/签名接口时别无限转圈；上传大文件（1GB 视频）
+                // 的发送上限按 OSS policy 的 60 分钟留足余量。
+                connectTimeout: const Duration(seconds: 15),
+                receiveTimeout: const Duration(seconds: 60),
+                sendTimeout: const Duration(minutes: 45),
+              ),
+            );
 
   final SupabaseClient _client;
   final Dio _dio;
@@ -56,18 +66,29 @@ class OssUploadService {
     required int size,
   }) async {
     try {
-      final token = _client.auth.currentSession?.accessToken;
+      Future<Response<Map<String, dynamic>>> send(String token) => _dio.post(
+            '${Env.apiBaseUrl}/api/oss/sign',
+            data: {'purpose': purpose, 'contentType': contentType, 'size': size},
+            options: Options(
+              headers: {'Authorization': 'Bearer $token'},
+              contentType: Headers.jsonContentType,
+              // 4xx 也让 dio 把响应体交出来：{error: …} 正是要给用户看的话
+              validateStatus: (status) => status != null && status < 500,
+            ),
+          );
+
+      var token = _client.auth.currentSession?.accessToken;
       if (token == null) throw const AuthException();
-      final response = await _dio.post<Map<String, dynamic>>(
-        '${Env.apiBaseUrl}/api/oss/sign',
-        data: {'purpose': purpose, 'contentType': contentType, 'size': size},
-        options: Options(
-          headers: {'Authorization': 'Bearer $token'},
-          contentType: Headers.jsonContentType,
-          // 4xx 也让 dio 把响应体交出来：{error: …} 正是要给用户看的话
-          validateStatus: (status) => status != null && status < 500,
-        ),
-      );
+      var response = await send(token);
+
+      // 令牌可能在请求途中过期：刷新一次再重放（与 auth_refresh_client 同口径）。
+      // 不接这一步的话，上传按钮会一直报「会话已过期」，只能手动重登。
+      if (response.statusCode == 401) {
+        final refreshed = await _client.auth.refreshSession();
+        token = refreshed.session?.accessToken;
+        if (token == null) throw const AuthException();
+        response = await send(token);
+      }
       final body = response.data;
       if (response.statusCode != 200 || body == null) {
         throw ServerException(

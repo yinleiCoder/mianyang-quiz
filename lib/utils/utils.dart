@@ -6,6 +6,7 @@
 
 library utils;
 
+export 'android_abi.dart';
 export 'answer_grader.dart';
 export 'app_exception.dart';
 export 'app_version.dart';

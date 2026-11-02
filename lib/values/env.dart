@@ -53,7 +53,11 @@ abstract final class Env {
 
   /// 四项配置是否齐备。未配置时启动会停在提示页，而不是抛一堆网络异常。
   static bool get isConfigured =>
-      supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty;
+      supabaseUrl.isNotEmpty &&
+      supabaseAnonKey.isNotEmpty &&
+      // 之前漏了这项：missingKeys 会提示 OSS_PUBLIC_HOST，但启动仍放行，
+      // 结果是图片/分享链接静默空白。三项必须一起校验。
+      ossPublicHost.isNotEmpty;
 
   /// 缺哪几项（用于给开发者精确的提示文案）。
   static List<String> get missingKeys => [

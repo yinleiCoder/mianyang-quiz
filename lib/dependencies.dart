@@ -31,11 +31,29 @@ class AppDependencies {
       analyticsRepository = AnalyticsRepository(client),
       materialRepository = MaterialRepository(client),
       checkinRepository = CheckinRepository(client),
-      appUpdateRepository = AppUpdateRepository(Dio()),
+      // **必须给 Dio 配超时**：Dio 默认 connect/receive 都是"永不超时"。
+      // 清单只有几十 KB，8 秒足够；不加的话，跨境网络一卡，"检查更新"就永远转圈。
+      appUpdateRepository = AppUpdateRepository(
+        Dio(
+          BaseOptions(
+            connectTimeout: const Duration(seconds: 8),
+            receiveTimeout: const Duration(seconds: 8),
+          ),
+        ),
+      ),
       ossUploadService = OssUploadService(client),
       // 下载用独立的 Dio：与 appUpdateRepository 一样是"拿别人的东西"，
-      // 不该跟 OSS 直传共用（那个带签名相关的拦截器与超时设置）
-      materialDownloadService = MaterialDownloadService(Dio()),
+      // 不该跟 OSS 直传共用（那个带签名相关的拦截器与超时设置）。
+      // receiveTimeout 是**块间空闲**上限（不是总时长）：资料最大 2GB，
+      // 只要还在持续下载就不会被 30 秒腰斩。
+      materialDownloadService = MaterialDownloadService(
+        Dio(
+          BaseOptions(
+            connectTimeout: const Duration(seconds: 10),
+            receiveTimeout: const Duration(seconds: 30),
+          ),
+        ),
+      ),
       sfxService = SfxService(),
       examDraftService = ExamDraftService(),
       questionPdfService = QuestionPdfService();
@@ -110,6 +128,10 @@ class AppDependencies {
   /// 路由守卫已经在 isReady 为 false 时挂起，页面自己显示加载态即可。
   void startSession() {
     authStore.bootstrap();
+    // 看板与档案**并行预取**：两者互不依赖，串行会让首页首屏多等一个来回。
+    // 会话令牌在 Supabase.initialize 时已从本地恢复，RPC 自己会校验；
+    // 首页 post-frame 的那次 refresh 与这里共享同一个 Future（见 DashboardStore）。
+    dashboardStore.refresh(silent: true);
     // 音效开关存本地，启动时恢复一次（失败保持默认开）
     sfxService.load();
   }

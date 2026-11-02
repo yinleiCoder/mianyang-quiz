@@ -41,6 +41,16 @@ typedef StartupResult = ({AppDependencies? deps, String? failure});
 Future<StartupResult> bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // 图片内存缓存护栏（2026-11-02）。Flutter 默认 100MB / 1000 张，低端安卓机
+  // （学生机很常见）在题库里连看几十张题干插图后会逼近 OOM —— 而 Android 的
+  // 进程被系统 OOM kill 时**没有 Dart 堆栈**，用户看到的就是"用着用着闪退"，
+  // Sentry 也只能拿到一条原生崩溃。压到 48MB / 300 张：仍够放一屏的图，
+  // 超出的部分从磁盘缓存（flutter_cache_manager，半年/3000 张）重新解码，
+  // 不重新走网络。这是护栏，不是修复某个已确认的崩溃点。
+  PaintingBinding.instance.imageCache
+    ..maximumSizeBytes = 48 << 20
+    ..maximumSize = 300;
+
   if (!Env.isConfigured) {
     // 不是错误，是"还没配"——提示页会列出缺哪几项
     return (
@@ -100,6 +110,11 @@ Future<StartupResult> bootstrap() async {
   } catch (error, stack) {
     debugPrint('启动失败：$error');
     debugPrintStack(stackTrace: stack);
-    return (deps: null, failure: '无法连接后端服务，请检查网络与配置。\n$error');
+    // 启动装配失败是"意料之外、被 catch 住了"的典型：之前只写本机日志，
+    // 线上等于没有信号。report() 内部吞掉上报失败，不影响提示页。
+    await CrashReporter.report(error, stack, during: 'bootstrap');
+    // 原始异常只在 debug 回显：release 里它可能带 URL/key/内部细节。
+    final detail = kDebugMode ? '\n$error' : '';
+    return (deps: null, failure: '无法连接后端服务，请检查网络与配置。$detail');
   }
 }

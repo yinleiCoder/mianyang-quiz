@@ -643,8 +643,8 @@ CI 用的是 `flutter build apk --split-per-abi`，出三份而不是一个通�
 
 | 资产名 | ABI | 给谁 |
 |---|---|---|
-| `mianyang_quiz-android.apk` | **arm64-v8a** | **真机**——下载页的固定链接指向它 |
-| `mianyang_quiz-android-armv7.apk` | armeabi-v7a | 32 位老设备 |
+| `mianyang_quiz-android-armv7.apk` | armeabi-v7a | **下载页默认下发它**：32 位与 64 位真机通吃 |
+| `mianyang_quiz-android.apk` | **arm64-v8a** | 64 位设备；GitHub Release 的固定链接指向它 |
 | `mianyang_quiz-android-x86_64.apk` | x86_64 | 模拟器 |
 
 固定名一旦指错 ABI，用户拿到的是**装不上的包**——报错就一句「应用未安装」，
@@ -653,6 +653,53 @@ CI 用的是 `flutter build apk --split-per-abi`，出三份而不是一个通�
 
 **换 ABI 覆盖安装会失败**：Android 不允许换 ABI 覆盖安装，从通用包转成分包、
 或从 armv7 换到 arm64，都要先卸载（和换签名是同一类问题，见下面那段警告）。
+
+### 更新检查要按**自己的 ABI** 选包，不写死（2026-11-02）
+
+客户端的更新检查**不能写死一个 ABI**。可装性在两个方向上都是不对称的：
+
+- 32 位 ARM 设备装不了只有 arm64-v8a 的包（`INSTALL_FAILED_NO_MATCHING_ABIS`）；
+- **64 位-only 的系统**（Pixel 7 起那批只暴露 64 位 ABI 的镜像）也装不了只有
+  armeabi-v7a 的包——CPU 跑得动 32 位 ARM，是**系统不提供 32 位 ABI**。
+
+所以写死一个名字，就会有一批用户永远更新不了：走了备用链接装了 arm64 的用户被推 armv7
+（或反过来），那份包在他机器上根本装不上，界面只显示一句「应用未安装」。
+
+**做法**：`lib/utils/android_abi.dart` 从 `/proc/self/maps` 里读出当前进程的 ABI
+（映射路径里带 `lib/<abi>/`，应用读自己的进程不需要权限），再把 ABI 映射成发布资产名：
+
+| ABI | 资产名 |
+|---|---|
+| `arm64-v8a` | `mianyang_quiz-android.apk` |
+| `armeabi-v7a` | `mianyang_quiz-android-armv7.apk` |
+| `x86_64` | `mianyang_quiz-android-x86_64.apk` |
+
+`AppUpdateRepository.assetNamesFor('android')` 返回 **[自己那个 ABI 的资产, 兜底资产]**，
+清单里没有前者时退到后者；都没有就退回下载页。**永远不因为"找不到资产"把更新提示吞掉。**
+
+⚠ 资产名**必须与网页端 `lib/client-assets.mjs` 的 `APK_ASSET` / `APK_ARM64_ASSET` /
+`APK_X86_64_ASSET` 逐字一致**，改一处必须改另一处，否则更新页给的是 404。
+
+### 默认发 arm64，32 位走备用链接（2026-11-02 定案）
+
+**下载页默认下发 `mianyang_quiz-android.apk`（arm64-v8a）**，并提供一条显眼的
+「32 位版」链接指向 `mianyang_quiz-android-armv7.apk`。
+
+两边的可装性**不对称**：arm64-v8a 只在 64 位设备上装得上（32 位手机点主按钮只会
+得到一句「应用未安装」，且不告诉任何人该换哪个文件）；反过来 64 位-only 的系统
+（Pixel 7 起那批只暴露 64 位 ABI 的镜像）装不了只有 armv7 的包。
+
+**为什么默认给 arm64**：armv7 覆盖面更大，但**用户反馈里没有"装不上"这一类**——
+唯一的硬信号（闪退）全在 Windows，与 ABI 无关。没有证据说 32 位用户成规模，
+就先给性能更好的那份，32 位由备用链接兜底。
+
+**三处必须同时改**（只改一处就是"装的是 A、更新推的是 B"）：
+
+1. 网页端 `lib/client-assets.mjs` 的 `APK_ASSET`；
+2. 本仓 `lib/utils/android_abi.dart` 的 `assetByAbi`（客户端按自身 ABI 选包，见上一节）；
+3. `.github/workflows/release.yml` 的资产名映射注释与 Release 说明。
+
+第 2 条尤其不能漏：**装与更新要落在同一个 ABI 上**。
 
 ### Android 正式签名（一次性配好）
 
@@ -978,6 +1025,31 @@ Sentry 的那两个 integration 是**链式**的（先捕获，再调用原来�
    但 Sentry 里的堆栈会是混淆后的名字。
 
 两者都是"不配照常发版"——不该因为上报没配好就发不出包。
+
+### Sentry 里现在到底有什么（2026-11-02 实测，别再猜）
+
+组织 `yinlei` / 项目 `mianyang-quiz`，90 天（= 保留期内全部）**只有 57 个事件**，
+其中 **56 个来自 Windows、1 个来自 Android**。这个分布本身就是信息：
+
+| 现象 | 意味着什么 |
+|---|---|
+| 6 个原生 issue 全是 Windows 的 `EXCEPTION_ACCESS_VIOLATION_READ` | 崩在 **ntdll 的堆管理器**里（`RtlpFreeHeapInternal` / `RtlpAllocateNTHeapInternal` / `RtlpHeapGenerateRandomValue32`），加一个 `truncl$thunk`（MSVC 的 `/GS` **栈溢出检测桩**）。崩溃点在堆管理器内部，说明**破坏发生在更早的写**——典型的缓冲区越界/释放后使用 |
+| 全部 32 个不同用户都在 **Windows 10.19045** 上 | 同一个系统镜像 = 同一批单位的电脑。不是"部分机型"普遍问题，是**一个环境**的问题（老显卡驱动、杀软注入、机器配置）——先怀疑环境，别怀疑代码 |
+| 崩溃横跨 v2.7.1 → v2.9.3 **每个版本**（连 dev 版都有） | **不是某次改版引入的回归**，别去 bisect |
+| Android 90 天只有 **1 条** | 要么 Android 真不崩，要么**Android 的崩溃发不到 Sentry**。移动网络到 sentry.io 的可达性**从未在目标网络上验证过**（上面那节测的是开发机）——这是个必须验的未知数 |
+| 标签里**没有 `device.architecture`、也没有 `device.model`** | **Sentry 这条路回答不了 32/64 位的问题**（Dart SDK 不填 device.model，`sendDefaultPii=false` 时连 name 都是 null）。别指望从崩溃数据里读 ABI |
+| `tracesSampleRate` 是关的 | **"卡"在 Sentry 里一条数据都没有**。Sentry 只抓崩溃，不抓卡顿 |
+
+**最要紧的一条：符号从来没上传过。** `release.yml` 的符号上传步骤被
+`SENTRY_AUTH_TOKEN` 空值短路（"未配置 SENTRY_AUTH_TOKEN，跳过符号上传"），
+所以每一条 Windows 崩溃的帧都是 `flutter_windows.dll` + `symbolicatorStatus: missing`
+——**堆栈完全不可读**，只能看到"崩在堆管理器里"，看不到是谁把它写坏的。
+而**历史版本的符号只在 CI 产物里**（GitHub Actions artifact，默认 90 天过期），
+过期就彻底没了。
+
+所以顺序是：**先配 `SENTRY_AUTH_TOKEN`**，让下一版开始堆栈可读；
+再回头查那批 Windows 崩溃（如果 artifact 还在的话，可以把符号补传上去当场读出来）。
+在符号可读之前，**任何针对这批崩溃的代码修改都是猜**。
 
 **验一遍接线**（改完 Sentry 相关代码后值得跑一次）：
 

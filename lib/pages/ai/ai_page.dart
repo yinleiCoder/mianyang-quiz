@@ -16,6 +16,7 @@
 // 用户始终有出口。
 
 import 'dart:io';
+import 'dart:ui' show AppExitResponse;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
@@ -42,12 +43,45 @@ class _AiPageState extends State<AiPage> {
   /// WebView 起不来（多半是缺 WebView2 运行时）——这时给说明与浏览器出口。
   bool _failed = false;
 
+  /// 当前 WebView 控制器。**退出前必须自己 dispose**，理由见 [_onExitRequested]。
+  InAppWebViewController? _controller;
+
+  /// 监听系统的"退出应用"请求（Windows 关窗）。
+  late final AppLifecycleListener _lifecycle;
+
   @override
   void initState() {
     super.initState();
+    _lifecycle = AppLifecycleListener(onExitRequested: _onExitRequested);
     if (defaultTargetPlatform == TargetPlatform.windows) {
       _prepareWindowsEnvironment();
     }
+  }
+
+  /// 关窗时**先把 WebView 拆掉再放行**。
+  ///
+  /// 踩过的坑（flutter/flutter#191704，2026-11-02 用本机 WER 日志定位）：
+  /// Windows 引擎在 `~FlutterWindowsEngine` 里先 `messenger_->SetEngine(nullptr)`
+  /// 再拆插件；而 `flutter_inappwebview` 的控制器在 dispose 时会
+  /// `SetMethodCallHandler(nullptr)` → 进到 `FlutterDesktopMessengerSetCallback`
+  /// → `GetEngine()` 已经是 null → 访问违例（`0xc0000005`），随后
+  /// Windows 把回调里抛出的异常报成 `0xc000041d`。表现为**关窗/退出时闪退**，
+  /// 而崩溃模块永远是 `flutter_windows.dll`。引擎侧把"插件不应在析构里注销回调"
+  /// 定成了契约、不打算加保护，所以只能在应用侧赶在引擎拆之前把 WebView 收掉。
+  ///
+  /// 150ms 是给平台线程跑完 dispose 消息的余量：dispose() 本身只是把消息发出去，
+  /// 立刻返回 `exit` 的话引擎可能已经开始销毁，等于没修。
+  Future<AppExitResponse> _onExitRequested() async {
+    _controller?.dispose();
+    _controller = null;
+    await Future<void>.delayed(const Duration(milliseconds: 150));
+    return AppExitResponse.exit;
+  }
+
+  @override
+  void dispose() {
+    _lifecycle.dispose();
+    super.dispose();
   }
 
   /// 建一个把用户数据放进 %LOCALAPPDATA% 的 WebView2 环境。
@@ -120,6 +154,7 @@ class _AiPageState extends State<AiPage> {
           webViewEnvironment: _environment,
           initialUrlRequest: URLRequest(url: WebUri(_url)),
           initialSettings: InAppWebViewSettings(javaScriptEnabled: true),
+          onWebViewCreated: (controller) => _controller = controller,
           onLoadStop: (_, _) {
             if (mounted) setState(() => _loading = false);
           },

@@ -52,12 +52,14 @@ class _MyStandingPageState extends State<MyStandingPage> {
       final paperRepo = context.read<PaperRepository>();
       final subjectRepo = context.read<SubjectRepository>();
 
-      final nodes = await analytics.fetchMyNodeAccuracy();
-      final subjectNodes = await subjectRepo.fetchNodes();
+      // 三个请求互不依赖，并行发：串行等三次往返会让整个学情页首屏多花两跳。
+      // 榜单依赖 attempts 选出的那场，所以它仍在后面单独发。
+      final (nodes, subjectNodes, attempts) = await (
+        analytics.fetchMyNodeAccuracy(),
+        subjectRepo.fetchNodes(),
+        paperRepo.fetchMyAttempts(limit: 20),
+      ).wait;
       final rolled = rollUpByTopNode(nodes, subjectNodes);
-
-      // 最近一场**官方且已出分**的考试：重做的场次不计入排行，拿它算排名会误导
-      final attempts = await paperRepo.fetchMyAttempts(limit: 20);
       final official = attempts.where((a) => a.isOfficial && a.statusValue.isFinal).toList();
       final target = official.isNotEmpty ? official.first : null;
       if (target == null) {

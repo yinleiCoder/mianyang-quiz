@@ -51,10 +51,18 @@ class _FilterFieldsState extends State<FilterFields> {
     setState(() => _reference = const AsyncLoading());
     try {
       final repo = context.read<SubjectRepository>();
-      final nodes = await repo.fetchNodes();
-      final tags = await repo.fetchTags();
+      // 并行：两条互不依赖，串行会把两个网络来回相加（见 bank_reference.dart）。
+      final results = await Future.wait<Object>([
+        repo.fetchNodes(),
+        repo.fetchTags(),
+      ]);
       if (!mounted) return;
-      setState(() => _reference = AsyncData((nodes: nodes, tags: tags)));
+      setState(
+        () => _reference = AsyncData((
+          nodes: results[0] as List<SubjectNode>,
+          tags: results[1] as List<QuestionTag>,
+        )),
+      );
     } catch (error) {
       if (!mounted) return;
       setState(() => _reference = const AsyncData((nodes: [], tags: [])));

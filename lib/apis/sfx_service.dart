@@ -4,8 +4,20 @@
 //   · **默认开、可关**：偏好存本地（跨会话记住），开关在组卷页的练习方式里；
 //   · **绝不打断答题**：播放失败（设备静音、插件缺失、测试环境没有音频通道）一律静默，
 //     一个音效不该让判题结果弹不出来；
-//   · **一次只放一个**：共用一个 AudioPlayer，新的会顶掉上一个——
-//     "点一下"（几百毫秒）与随后的判定音本来就该是先后关系，不是混音。
+//   · **每个音效一个 AudioPlayer，音源只设置一次**（2026-11-02 改）。
+//
+// 最后一条是修 Windows 崩溃才改成这样的。原先全站共用一个 AudioPlayer：
+// 选完选项放「选择一个选项」，紧接着答对/答错又要切到另一个 asset，插件会在
+// **同一个 MediaEngine 上反复 SetSourceUrl**；而 audioplayers_windows 的
+// `SetSourceUrl` 是 `std::thread(...).detach()` 出去的，与主线程的 Play/Stop
+// 没有同步。学生点得快时（尤其是"选项音 → 判定音"这一两百毫秒内）就是两个线程
+// 同时动同一套 Media Foundation 对象——Sentry 里
+// `CMediaEngine::CompleteSourceCreation` 的崩溃和 32 个用户的
+// `RtlpFreeHeapInternal` 堆崩溃都指向这里（堆损坏是"崩在 free，坏在更早的写"）。
+//
+// 改成每个 asset 一个 player 后，`AudioPlayer::SetSourceUrl` 里的
+// `if (_url != url)` 会让同一音效的后续播放直接走 Play/Resume，**不再重建音源**；
+// 不同音效也落在不同的 player/MediaEngine 上，互不共享状态。
 //
 // 音频文件是**老师提供的**（2026-09-17 换掉了原先程序合成的 wav），
 // 文件名是中文，走 assets/sounds/ 整目录打包（见 pubspec.yaml）。
@@ -17,9 +29,14 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SfxService extends ChangeNotifier {
-  SfxService({AudioPlayer? player}) : _player = player ?? AudioPlayer();
+  /// [playerFactory] 只给测试注入用；生产走默认的 [AudioPlayer.new]。
+  SfxService({AudioPlayer Function()? playerFactory})
+    : _newPlayer = playerFactory ?? AudioPlayer.new;
 
-  final AudioPlayer _player;
+  final AudioPlayer Function() _newPlayer;
+
+  /// 每个 asset 一个 player。键是资源路径（如 `sounds/答对.mp3`）。
+  final Map<String, AudioPlayer> _players = {};
   static const _prefKey = 'practice.sound';
 
   /// 资源目录前缀。AudioCache 默认会再加一层 `assets/`。
@@ -72,8 +89,11 @@ class SfxService extends ChangeNotifier {
   Future<void> _play(String asset) async {
     if (!_enabled) return;
     try {
+      // 同一个 asset 永远复用同一个 player：插件的 SetSourceUrl 会在
+      // `_url == url` 时短路，不会重建 Media Foundation 音源。
+      final player = _players[asset] ??= _newPlayer();
       // PlayerMode.lowLatency 走系统音效通道，答题时的延迟明显低于默认模式
-      await _player.play(AssetSource(asset), mode: PlayerMode.lowLatency);
+      await player.play(AssetSource(asset), mode: PlayerMode.lowLatency);
     } catch (_) {
       // 见文件头：播放失败静默
     }
@@ -81,7 +101,10 @@ class SfxService extends ChangeNotifier {
 
   @override
   void dispose() {
-    _player.dispose();
+    for (final player in _players.values) {
+      player.dispose();
+    }
+    _players.clear();
     super.dispose();
   }
 }

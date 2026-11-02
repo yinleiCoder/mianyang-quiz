@@ -14,8 +14,8 @@ import 'package:mianyang_quiz/entity/entity.dart';
 import 'package:mianyang_quiz/apis/apis.dart';
 import 'package:mianyang_quiz/widgets/widgets.dart';
 import 'package:mianyang_quiz/pages/bank/widgets/report_message_bubble.dart';
+import 'package:mianyang_quiz/state/state.dart';
 import 'package:provider/provider.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ReportThread extends StatefulWidget {
   const ReportThread({
@@ -42,7 +42,9 @@ class _ReportThreadState extends State<ReportThread> {
   final _controller = TextEditingController();
   bool _busy = false;
 
-  String? get _uid => context.read<SupabaseClient>().auth.currentUser?.id;
+  // 从 AuthStore 取，不要读 SupabaseClient：它没有注册进 MultiProvider，
+  // 有历史反馈时这一行会在 build 里抛 ProviderNotFoundException（整张反馈卡崩）。
+  String? get _uid => context.read<AuthStore>().userId;
 
   @override
   void initState() {

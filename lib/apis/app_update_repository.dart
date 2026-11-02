@@ -11,6 +11,7 @@
 // 调用方静默跳过——更新提示是锦上添花，绝不能因为它把启动流程搞出一个错误弹窗。
 
 import 'package:dio/dio.dart';
+import 'package:mianyang_quiz/utils/utils.dart';
 import 'package:mianyang_quiz/values/values.dart';
 
 /// 一次发布的关键信息。
@@ -28,19 +29,30 @@ class AppUpdateRepository {
 
   final Dio _dio;
 
-  /// 当前平台的安装包资产名。与流水线里的资产名**逐字一致**（那边特意不带版本号，
-  /// 这样同一个 OSS key 永远指向最新版）。
+  /// 当前平台**可能**用到的资产名，按优先级排；第一个在清单里出现的那个胜出。
   ///
   /// Windows 给**安装包**而不是 zip：让用户下载完还要自己解压、自己建桌面快捷方式，
   /// 是这一整套体验里最别扭的一环。zip 仍在 OSS 上，只是不再推荐给普通用户。
   ///
+  /// Android 给**自己实际在跑的那个 ABI** 的包，后面再跟一个兜底：
+  /// 更新必须与安装时同一个 ABI，否则那份包在用户的机器上根本装不上
+  /// （32 位设备装不了 arm64；64 位-only 的系统装不了只有 armv7 的包）。
+  /// 详见 `lib/utils/android_abi.dart` 的说明。清单里没有匹配的那份时退到兜底，
+  /// 绝不因为"找不到资产"就把更新提示整个吞掉——界面还有下载页那条退路。
+  ///
   /// 名字对不上时 [fetchLatest] 会拿不到 assetUrl，界面退回下载页 —— 是有意留的兜底：
   /// 万一某次发布没构建出安装包，用户还能从下载页自己找 zip，而不是卡在一个死链上。
-  static String? assetNameFor(String platform) => switch (platform) {
-    'android' => 'mianyang_quiz-android.apk',
-    'windows' => 'mianyang_quiz-windows-x64-setup.exe',
-    _ => null,
-  };
+  static List<String> assetNamesFor(String platform) => switch (platform) {
+        'android' => _androidAssetNames(),
+        'windows' => const ['mianyang_quiz-windows-x64-setup.exe'],
+        _ => const [],
+      };
+
+  static List<String> _androidAssetNames() {
+    final matched = AndroidAbi.assetForAbi(AndroidAbi.detect());
+    if (matched == AndroidAbi.fallbackAsset) return const [AndroidAbi.fallbackAsset];
+    return [matched, AndroidAbi.fallbackAsset];
+  }
 
   Future<AppRelease?> fetchLatest({required String platform}) async {
     final host = Env.ossPublicHost;
@@ -59,21 +71,22 @@ class AppUpdateRepository {
       if (tag == null || tag.isEmpty) return null;
       // 没有资产直链时退回网页端下载页（它同样只读 OSS 清单）
       final pageUrl = '${Env.shareBaseUrl}/download';
-      final assetName = assetNameFor(platform);
+      final assetNames = assetNamesFor(platform);
       final assets = (data?['assets'] as List?) ?? const [];
       String? assetUrl;
-      if (assetName != null) {
+      // 按优先级找：自己那个 ABI 的包 → 兜底包 → （都没有就退回下载页）
+      for (final name in assetNames) {
         for (final a in assets) {
-          if (a is Map && a['name'] == assetName) {
+          if (a is Map && a['name'] == name) {
             final url = a['url'];
             if (url is String && url.isNotEmpty) assetUrl = url;
             break;
           }
         }
-        // 清单里的 url 为空（旧清单、还没回填）就让它空着：调用方会退回下载页
-        //（pageUrl），页面上那颗按钮会直连 OSS 取包。
-
+        if (assetUrl != null) break;
       }
+      // 清单里的 url 为空（旧清单、还没回填）就让它空着：调用方会退回下载页
+      //（pageUrl），页面上那颗按钮会直连 OSS 取包。
       return (tag: tag, pageUrl: pageUrl, assetUrl: assetUrl);
     } catch (_) {
       return null;

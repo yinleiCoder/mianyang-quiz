@@ -39,6 +39,7 @@
 // 本仓被境外域名坑过一次（PDF 字体走 fonts.gstatic.com 且没超时，点「打印」毫无反应）。
 
 import 'package:flutter/foundation.dart';
+import 'package:mianyang_quiz/utils/utils.dart';
 import 'package:mianyang_quiz/values/values.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
@@ -47,6 +48,24 @@ abstract final class CrashReporter {
 
   /// 是否已启用（配了 DSN 且初始化没抛）。
   static bool get enabled => _ready;
+
+  static final _phoneRe = RegExp(r'1[3-9]\d{9}');
+  static final _emailRe =
+      RegExp(r'[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}');
+  static final _jwtRe =
+      RegExp(r'eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+');
+
+  /// 上报前擦掉可能进入异常文本的敏感串。单独暴露出来是为了能单测。
+  @visibleForTesting
+  static String scrub(String? text) {
+    if (text == null || text.isEmpty) return '';
+    // 先邮箱后手机：手机号登录的合成邮箱是 `138…@phone.myquiz.cn`，
+    // 先擦手机号会留下 `[手机号]@phone…`，邮箱规则就匹配不上了。
+    return text
+        .replaceAll(_emailRe, '[邮箱]')
+        .replaceAll(_phoneRe, '[手机号]')
+        .replaceAll(_jwtRe, '[令牌]');
+  }
 
   /// 装配上报。**必须在 installErrorHandling() 之后调用**——
   /// 顺序反了的话 Sentry 会把它的 integration 装在前面，链不到我们的钩子。
@@ -79,6 +98,42 @@ abstract final class CrashReporter {
         // 崩溃要的是"全都要"，不是抽样；性能追踪（tracesSampleRate）
         // 保持 null = 完全不开，本仓没有那方面需求，开了纯属多传数据。
         options.sampleRate = 1.0;
+
+        // ---- ABI 打点（2026-11-02）----
+        // Sentry 自带的 device.architecture 在本项目的 Dart SDK 里是空的（AGENTS 已核实），
+        // 而"默认下发哪个 ABI"需要真实用户数据，不能只靠市场报告。
+        // 这里从 /proc/self/maps 读出当前进程的 ABI（Android 读自己的进程不需要权限），
+        // 挂成标签；Windows 上 detect() 返回 null，不加标签。ABI 不是个人信息。
+        options.beforeSend = (event, hint) {
+          final abi = AndroidAbi.detect();
+          if (abi != null) {
+            event.tags = {...?event.tags, 'device.abi': abi};
+          }
+
+          // 脱敏：异常文本与面包屑里可能混进手机号、邮箱、JWT。
+          // 题干正文/姓名无法用正则可靠识别，所以更根本的防线是 init 里
+          // 关闭截图、视图树与 debugPrint 面包屑。
+          final exceptions = event.exceptions;
+          if (exceptions != null) {
+            for (final e in exceptions) {
+              if (e.value != null) e.value = scrub(e.value);
+            }
+          }
+          final message = event.message;
+          if (message != null) {
+            message.formatted = scrub(message.formatted);
+            if (message.template != null) {
+              message.template = scrub(message.template);
+            }
+          }
+          final breadcrumbs = event.breadcrumbs;
+          if (breadcrumbs != null) {
+            for (final b in breadcrumbs) {
+              if (b.message != null) b.message = scrub(b.message);
+            }
+          }
+          return event;
+        };
       });
       _ready = true;
     } catch (error, stack) {

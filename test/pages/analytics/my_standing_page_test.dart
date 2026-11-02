@@ -162,7 +162,7 @@ class _FakeSubjects extends SubjectRepository {
   );
 
   @override
-  Future<List<SubjectNode>> fetchNodes() async => const [
+  Future<List<SubjectNode>> fetchNodes({bool force = false}) async => const [
     SubjectNode(id: 'cat', scope: 'vocational', kind: 'category', name: '计算机类'),
     SubjectNode(id: 'c1', scope: 'vocational', kind: 'course', name: '办公应用', parentId: 'cat'),
     SubjectNode(id: 'c2', scope: 'vocational', kind: 'course', name: '网络基础', parentId: 'cat'),

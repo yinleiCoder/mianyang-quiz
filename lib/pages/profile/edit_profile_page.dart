@@ -128,7 +128,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('已保存')));
-      context.pop();
+      // 只有确实有上一页才 pop。资料页也可能是深链/初始路由（栈里没有上一页），
+      // 那时 GoRouter 会抛 `GoError: There is nothing to pop` —— Sentry 上
+      // Android 唯一一条事件就是它（2026-10-29，vivo V2452A / Android 16）。
+      // 保存已经成功，停在本页让用户自己返回即可，不该再抛一个错。
+      if (context.canPop()) context.pop();
     } on AppException catch (error) {
       if (!mounted) return;
       _toast(error.message);

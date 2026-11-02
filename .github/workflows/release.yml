@@ -25,8 +25,37 @@ env:
   FLUTTER_VERSION: "3.47.0"
 
 jobs:
+  # ---------- 质量门禁（两个构建都必须先过这里）----------
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: 安装依赖
+        run: flutter pub get
+
+      - name: 静态分析
+        run: flutter analyze
+
+      - name: 单元/组件测试
+        run: flutter test
+
+      - name: 架构守卫（已知 5 项历史基线，暂不阻塞发布）
+        # `tool/check_architecture.dart` 目前仍判红 5 个历史超限文件。
+        # analyze / test 是硬门槛，不放 continue-on-error；架构检查先保持可见，
+        # 等 P2 把 5 个文件拆完再改成阻塞。
+        continue-on-error: true
+        run: dart run tool/check_architecture.dart
+
   # ---------- Windows ----------
   build-windows:
+    needs: quality
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -204,6 +233,7 @@ jobs:
 
   # ---------- Android ----------
   build-android:
+    needs: quality
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -304,9 +334,9 @@ jobs:
         # 三套原生库（Flutter engine、PDFium、各插件），84MB 里绝大部分是重复的。
         # 拆开后每份只带自己那套，真机那份约 30MB。
         #
-        # 代价：**不再有"一个包通吃"**。下载页那条固定链接现在指向 arm64-v8a
-        # （见 release job 的「规整资产名」），32 位老设备要走 Release 里的
-        # `mianyang_quiz-android-armv7.apk`。改这里之前先想清楚这两条。
+        # 代价：**不再有"一个包通吃"**。下载页默认下发的现在是 **arm64-v8a**
+        # （见 release job 的「规整资产名」与网页端 lib/client-assets.mjs 的
+        # `APK_ASSET`），32 位老设备走页面上的「32 位版」链接。改这里之前先想清楚这两条。
         run: |
           flutter pub get
           flutter build apk --release \
@@ -413,11 +443,14 @@ jobs:
 
       - name: 规整资产名
         # Android 已按 ABI 拆成三份（见 build-android 的构建步骤）。映射关系是**刻意**的：
-        #   · `mianyang_quiz-android.apk`   ← arm64-v8a。**真机 ABI**，下载页的固定链接
-        #      `/releases/latest/download/mianyang_quiz-android.apk` 指向它，永远指向最新版。
-        #   · `mianyang_quiz-android-armv7.apk`   ← armeabi-v7a，32 位老设备
+        #   · `mianyang_quiz-android.apk`   ← arm64-v8a。**下载页默认下发它**，
+        #      GitHub Release 的固定链接 `/releases/latest/download/mianyang_quiz-android.apk`
+        #      也指向它，永远指向最新版。
+        #   · `mianyang_quiz-android-armv7.apk`   ← armeabi-v7a。**32 位老设备的兜底**：
+        #      下载页上有一条显眼的「32 位版」链接指向它（arm64-v8a 只在 64 位设备上装得上，
+        #      32 位手机点主按钮只会得到一句「应用未安装」）。
         #   · `mianyang_quiz-android-x86_64.apk`  ← x86_64，模拟器
-        # 换映射之前先想清楚：固定名一旦指错 ABI，用户拿到的是装不上的包（「应用未安装」），
+        # 换映射之前先想清楚：固定名一旦指错 ABI，用户拿到的是**装不上的包**——
         # 而这个报错不告诉任何人"你该下另一个文件"。
         run: |
           mkdir -p assets
@@ -445,9 +478,10 @@ jobs:
 
             **官方下载页（双端都由浏览器直连阿里云 OSS）：https://myquiz.cn/download**
 
-            - **Android**：下载 `mianyang_quiz-android.apk` 直接安装（首次需允许「安装未知来源应用」）
-              - 这份是 **arm64-v8a**，近几年的手机都是它。装不上、提示「应用未安装」的，
-                换 `mianyang_quiz-android-armv7.apk`（32 位老设备），模拟器用 `mianyang_quiz-android-x86_64.apk`
+            - **Android**：到官方下载页 https://myquiz.cn/download 点「下载 APK」即可
+              （首次需允许「安装未知来源应用」）。默认给的是 **arm64-v8a** 那份（64 位手机）
+              - 提示「应用未安装」的，多半是老旧的 32 位手机，换下载页上的「32 位版」
+                （`mianyang_quiz-android-armv7.apk`）；模拟器用 `mianyang_quiz-android-x86_64.apk`
               - **换 ABI 覆盖安装会失败**，要先卸载旧版再装（Android 不允许换签名/ABI 覆盖）
             - **Windows**：下载 `mianyang_quiz-windows-x64-setup.exe`，双击安装即可
               - 默认按当前用户安装，**不需要管理员权限**；会创建桌面与开始菜单快捷方式

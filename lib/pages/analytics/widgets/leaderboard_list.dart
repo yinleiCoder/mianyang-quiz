@@ -41,12 +41,17 @@ class LeaderboardList extends StatelessWidget {
       children: [
         _Card(
           children: [
-            // 名次依次落位：榜单是"看结果"的地方，一行行落下来比整块闪出来好读
+            // 名次依次落位：榜单是"看结果"的地方，一行行落下来比整块闪出来好读。
+            // 只给前 20 行做入场动画：榜单最多 200 行，逐行挂 AnimationController
+            // 在低端机上会明显拖慢首帧；后面的行直接出现，视觉上仍由前 20 行带节奏。
             for (final (i, row) in board.rows.indexed)
-              FadeSlideIn(
-                order: i,
-                child: LeaderboardRowTile(row: row, showSchool: showSchool),
-              ),
+              if (i < 20)
+                FadeSlideIn(
+                  order: i,
+                  child: LeaderboardRowTile(row: row, showSchool: showSchool),
+                )
+              else
+                LeaderboardRowTile(row: row, showSchool: showSchool),
           ],
         ),
         if (!inRows && board.nearby.isNotEmpty) ...[

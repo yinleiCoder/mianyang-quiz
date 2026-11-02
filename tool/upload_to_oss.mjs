@@ -190,6 +190,31 @@ for (const file of files) {
   manifest.assets.push({ name: file.name, size: bytes.length, sha256, url });
 }
 
+// 写清单前先确认网页端的自动下载落地页已经上线：清单里所有 APK 的 url 都指向它。
+// 没上线就拒绝写，免得已装客户端拿到 404 的更新地址（与 client-apk-alias.mjs
+// 的 --manifest 同一口径）。HEAD 只探页面，不碰 OSS。
+if (hasApk && isDefaultAliyun) {
+  const probeName = manifest.assets.find((a) => a.name.endsWith('.apk'))?.name;
+  const probeUrl = `${siteBase}/download/apk?name=${encodeURIComponent(probeName)}`;
+  let probeOk = false;
+  try {
+    const res = await fetch(probeUrl, {
+      method: 'HEAD',
+      signal: AbortSignal.timeout(10_000),
+    });
+    probeOk = res.ok;
+    if (!probeOk) console.warn(`自动下载页探测失败：HEAD ${probeUrl} → ${res.status}`);
+  } catch (error) {
+    console.warn(`自动下载页探测失败：${error.message}`);
+  }
+  if (!probeOk) {
+    throw new Error(
+      `自动下载页还没就绪（${probeUrl}）。先部署网页端，再发版；` +
+      `本轮未写 client/latest.json。`
+    );
+  }
+}
+
 // 网页端与客户端读这份清单：版本号、资产列表与**每个资产的直链**都在这里。
 // 60 秒缓存：够挡住刷新风暴，又不会让新版本迟迟不出现（页面自己还有 1 分钟的重验证）。
 await putObject(

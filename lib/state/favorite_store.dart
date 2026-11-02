@@ -49,6 +49,13 @@ class FavoriteStore extends ChangeNotifier {
     if (changed) notifyListeners();
   }
 
+  /// 退出登录 / 会话过期时清空：共享设备上不能把上一个人的收藏带给下一个人。
+  void clear() {
+    _favorited.clear();
+    _pending.clear();
+    notifyListeners();
+  }
+
   void markNotFavorite(String questionId) {
     if (_favorited.remove(questionId)) notifyListeners();
   }

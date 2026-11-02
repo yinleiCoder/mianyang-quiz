@@ -73,15 +73,20 @@ class _ClipboardLinkListenerState extends State<ClipboardLinkListener>
       }
       if (text == null || text.isEmpty) return;
 
+      final questionId = ShareLinks.questionIdOf(text);
+      // **只有确认是题目链接才落盘**：剪贴板里可能是密码、地址或聊天内容，
+      // 不能把原文写进 SharedPreferences。存题目 id 而不是 URL——同一个 id 的
+      // 不同分享链接不该反复弹窗。
+      if (questionId == null) return;
+
       final prefs = await SharedPreferences.getInstance();
       final seen = _seen ?? prefs.getString(_seenKey);
-      if (text == seen) return; // 同一条内容只看一次
+      if (questionId == seen) return; // 同一道题只看一次
       // 先记账再处理：弹窗是异步的，期间若又收到一次 resumed，不该弹两遍
-      _seen = text;
-      await prefs.setString(_seenKey, text);
+      _seen = questionId;
+      await prefs.setString(_seenKey, questionId);
 
-      final questionId = ShareLinks.questionIdOf(text);
-      if (questionId == null || !mounted) return;
+      if (!mounted) return;
       await _confirmOpen(questionId);
     } finally {
       _checking = false;

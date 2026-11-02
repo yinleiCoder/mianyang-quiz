@@ -132,7 +132,13 @@ class _FillBlankInputViewState extends State<FillBlankInputView> {
                     controller: _controllers[i],
                     readOnly: widget.readOnly,
                     onChanged: (_) {
-                      setState(() {});
+                      // 只有"显示对错"的场景才需要本组件重建（suffix 图标随输入变）。
+                      // 其余场景 _emit 已经会让父级重建，这里再 setState 是白重画一遍。
+                      // **不做去抖**：检查/交卷按钮可能紧跟输入被点，延迟通知会吞掉
+                      // 最后一个字符；现有组件测试也按"输入后立即回调"写契约。
+                      if (widget.reveal == AnswerReveal.graded) {
+                        setState(() {});
+                      }
                       _emit();
                     },
                     decoration: _decoration(context, i),

@@ -63,7 +63,7 @@ dependencies:
   # 试过，无效）。1.2.0-beta.3 是作者自己的前向修复：改用 proguard-android-optimize.txt，
   # 且 compileSdk 跟随 Flutter 而不再钉死 34。
   # 升级代价：umbrella 包会把 Windows 端一起带到 0.7.0-beta.3（原 0.6.0），两端都要验。
-  flutter_inappwebview: ^6.2.0-beta.3
+  flutter_inappwebview: 6.2.0-beta.3
   audioplayers: ^6.8.1
   pdf: ^3.13.0
   printing: ^5.15.0
