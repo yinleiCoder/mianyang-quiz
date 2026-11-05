@@ -124,7 +124,7 @@ class MyRankCard extends StatelessWidget {
   /// 与服务端 viewer_note 一一对应（0077）。文案要给出下一步动作。
   static String? _noteText(String? note) => switch (note) {
     'not_submitted' => '你还没交过这份卷子：交卷后就会出现在榜上。',
-    'not_official' => '你这一场是自主练习。同一份卷只有第一次交卷计入排行。',
+    'not_official' => '你这一场是自主练习。同一份卷取最新一次官方成绩计入排行。',
     'not_graded' => '你已交卷，等主观题判完出分后才会进榜。',
     'not_in_class' => '你还没有分班，看不到全班榜——先看全校或全省。',
     // 0086 起"全市"是真按市筛的：没绑学校就推不出市（原先这档能看到全平台，

@@ -4,8 +4,10 @@
 // 进练习页。堆在组卷页的 _start() 里会把那个本来只管"选什么练"的页面撑爆
 //（AGENTS.md 三：单文件 ≤200 行，上个版本练习页涨到 1379 行就是这么来的）。
 //
-// 返回 true = 已经跳进练习页（调用方不要再动状态，那个页面马上就要被替换掉）；
-// false = 停在组卷页（用户取消、或今天没题可练）。
+// 返回 true = 已经跳进练习页（调用方不要再动状态）。默认 replace=true 会把当前页
+// 替换成练习页；学习路径这类"练习完还要回来刷新"的页面传 replace=false，改用 push，
+// 返回时由 RouteAware 的 didPopNext 重新拉数据。
+// false = 停在原页（用户取消、或今天没题可练）。
 //
 // **它自己弹提示与报错**：这些后果（进行中会话将被作废、今天练完了、抽不到题）
 // 都只有在这里才知道，回抛给页面再弹一次等于把同一个判断写两遍。
@@ -26,6 +28,7 @@ import 'package:provider/provider.dart';
 Future<bool> startPracticeFlow(
   BuildContext context, {
   required PracticeDraftStore draft,
+  bool replace = true,
 }) async {
   // 看板还没到手就先等它一次。**没有这张看板就看不见进行中的会话**，
   // 而开始新练习会把那场练习静默作废 —— 冷启动直奔组卷页时（看板还挂在
@@ -43,7 +46,11 @@ Future<bool> startPracticeFlow(
     final choice = await showActiveSessionBanner(context, active);
     if (!context.mounted || choice == null) return false;
     if (choice == ActiveSessionChoice.resume) {
-      context.pushReplacement(AppRoutes.practiceOf(active.sessionId));
+      if (replace) {
+        context.pushReplacement(AppRoutes.practiceOf(active.sessionId));
+      } else {
+        unawaited(context.push(AppRoutes.practiceOf(active.sessionId)));
+      }
       return true;
     }
     // 重新开始：继续往下走，服务端会作废旧会话
@@ -99,10 +106,19 @@ Future<bool> startPracticeFlow(
     // 等它等于把一次 practice_dashboard RPC 塞进「开始练习」的等待路径，
     // 用户多等一个往返才进题。refresh 自己吞掉异常，这里不会产生未处理的错误。
     unawaited(context.read<DashboardStore>().refresh(silent: true));
-    context.pushReplacement(
-      AppRoutes.practiceOf(outcome.snapshot.sessionId),
-      extra: (mode: draft.mode, shuffle: draft.shuffleOptions),
-    );
+    if (replace) {
+      context.pushReplacement(
+        AppRoutes.practiceOf(outcome.snapshot.sessionId),
+        extra: (mode: draft.mode, shuffle: draft.shuffleOptions),
+      );
+    } else {
+      unawaited(
+        context.push(
+          AppRoutes.practiceOf(outcome.snapshot.sessionId),
+          extra: (mode: draft.mode, shuffle: draft.shuffleOptions),
+        ),
+      );
+    }
     return true;
   } catch (error) {
     if (!context.mounted) return false;

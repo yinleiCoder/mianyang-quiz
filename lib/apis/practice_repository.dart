@@ -10,6 +10,7 @@
 import 'package:mianyang_quiz/utils/utils.dart';
 import 'package:mianyang_quiz/entity/entity.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'practice_reason_queries.dart';
 
 class PracticeRepository {
   const PracticeRepository(this._client);
@@ -93,6 +94,10 @@ class PracticeRepository {
       throw mapError(error);
     }
   }
+
+  /// 「为什么推这道题」的逐题依据（0137）。实现见 practice_reason_queries.dart。
+  Future<Map<String, PracticeReason>> fetchSessionReasons(String sessionId) =>
+      querySessionReasons(_client, sessionId);
 
   /// 提交单题作答（可改答：同一题重复提交按最后一次算，不叠加记录）。
   ///

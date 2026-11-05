@@ -15,6 +15,7 @@ export 'crash_reporter.dart';
 export 'exam_draft_service.dart';
 export 'favorite_repository.dart';
 export 'feedback_repository.dart';
+export 'learning_repository.dart';
 export 'list_repository.dart';
 export 'material_download_service.dart';
 export 'material_repository.dart';

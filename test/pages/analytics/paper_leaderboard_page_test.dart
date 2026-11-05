@@ -43,7 +43,7 @@ void main() {
     final fake = _FakeAnalytics(_board(viewerNote: 'not_official'));
     await _pump(tester, fake);
 
-    expect(find.textContaining('只有第一次交卷计入排行'), findsOneWidget);
+    expect(find.textContaining('取最新一次官方成绩计入排行'), findsOneWidget);
   });
 
   testWidgets('切到全校：带着新 scope 重新取数', (tester) async {

@@ -116,15 +116,18 @@ class _Cell extends StatelessWidget {
       width: cell.r,
       height: cell.r,
       decoration: BoxDecoration(
-        color: future ? Colors.transparent : shade(count),
+        // 未到的日子也画成空槽（而不是透明）——否则月中打开首页，
+        // 热力图只显示到今天，看起来像"这个月只有几天"。
+        color: future ? shade(0) : shade(count),
         borderRadius: BorderRadius.circular(
           (cell * 0.18).clamp(2.0, 6.0).toDouble().r,
         ),
       ),
     );
-    if (future) return box;
     return Tooltip(
-      message: '${MonthHeatmapGrid._key(date)} · $count 题',
+      message: future
+          ? '${MonthHeatmapGrid._key(date)} · 未到'
+          : '${MonthHeatmapGrid._key(date)} · $count 题',
       child: box,
     );
   }

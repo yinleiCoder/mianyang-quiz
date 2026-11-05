@@ -29,6 +29,7 @@ class AppDependencies {
       feedbackRepository = FeedbackRepository(client),
       paperRepository = PaperRepository(client),
       analyticsRepository = AnalyticsRepository(client),
+      learningRepository = LearningRepository(client),
       materialRepository = MaterialRepository(client),
       checkinRepository = CheckinRepository(client),
       // **必须给 Dio 配超时**：Dio 默认 connect/receive 都是"永不超时"。
@@ -97,6 +98,9 @@ class AppDependencies {
 
   /// 成绩榜（试卷维度的聚合读，与作答写路径分开，理由见仓储文件头）。
   final AnalyticsRepository analyticsRepository;
+
+  /// AI 学习路径（BKT 画像 / 推荐练习，只读）。
+  final LearningRepository learningRepository;
   final MaterialRepository materialRepository;
 
   /// 每日打卡与今日目标（云端）。

@@ -2,7 +2,8 @@
 //
 // 两个"为什么榜上是空的"必须由这里解释清楚，否则老师会以为功能坏了（迁移 0077 的注释）：
 //   ungarded       有主观题时，判完出分才进榜 —— 全班可能一个都还没上
-//   otherVersionSkipped  考的是旧版卷面（改版前），不计入当前这一榜
+//   otherVersionSkipped  0118 起榜单跨版本合并（每人取最新一次官方成绩），
+//                        榜单恒为 0；旧版跳过只用于试题分析页签
 //
 // 得分率一律是 totalScore / fullScore 的口径：同卷不同人满分一致，比原始分直观且不会读错。
 
@@ -19,7 +20,7 @@ abstract class LeaderboardStats with _$LeaderboardStats {
     @Default(0) int graded,
     /// 已交卷但还没判完（主观题）的人数。
     @Default(0) int ungraded,
-    /// 考的是旧版卷面、因此不计入本榜的场次。
+    /// 0118 起榜单跨版本合并，该字段恒为 0；旧版跳过只用于试题分析页签。
     @JsonKey(name: 'other_version_skipped') @Default(0) int otherVersionSkipped,
     @JsonKey(name: 'avg_score') double? avgScore,
     @JsonKey(name: 'avg_percent') double? avgPercent,

@@ -248,6 +248,12 @@ GoRouter createAppRouter(AuthStore auth) {
         name: AppRoutes.myStandingName,
         builder: (context, state) => const MyStandingPage(),
       ),
+      // AI 学习路径：全屏页，入口在首页工作台
+      GoRoute(
+        path: AppRoutes.learningPathPath,
+        name: AppRoutes.learningPathName,
+        builder: (context, state) => const LearningPathPage(),
+      ),
       GoRoute(
         path: AppRoutes.editProfilePath,
         name: AppRoutes.editProfileName,

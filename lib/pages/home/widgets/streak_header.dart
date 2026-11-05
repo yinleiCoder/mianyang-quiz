@@ -11,7 +11,6 @@ import 'package:mianyang_quiz/entity/entity.dart';
 import 'package:mianyang_quiz/state/state.dart';
 import 'package:mianyang_quiz/pages/home/widgets/checkin_facts.dart';
 import 'package:mianyang_quiz/pages/home/widgets/heatmap_block.dart';
-import 'package:mianyang_quiz/pages/home/widgets/science_note.dart';
 import 'package:provider/provider.dart';
 
 class StreakHeader extends StatelessWidget {
@@ -65,7 +64,6 @@ class StreakHeader extends StatelessWidget {
                   goal: goal,
                   todayAnswers: dashboard.todayAnswers,
                 ),
-                const ScienceNote(),
               ],
             );
 
@@ -80,9 +78,6 @@ class StreakHeader extends StatelessWidget {
                     goal: goal,
                     todayAnswers: dashboard.todayAnswers,
                   ),
-                  const SizedBox(height: AppMetrics.gapLg),
-                  // 原理说明放在热力图之前：在连续打卡区域就能直接看到
-                  const ScienceNote(),
                   const SizedBox(height: AppMetrics.gapLg),
                   heatmap,
                 ],

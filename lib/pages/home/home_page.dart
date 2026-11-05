@@ -16,6 +16,7 @@ import 'package:mianyang_quiz/pages/home/widgets/active_session_card.dart';
 import 'package:mianyang_quiz/pages/home/widgets/forgetting_curve_card.dart';
 import 'package:mianyang_quiz/pages/home/widgets/home_actions.dart';
 import 'package:mianyang_quiz/pages/home/widgets/platform_scale_section.dart';
+import 'package:mianyang_quiz/pages/home/widgets/science_note.dart';
 import 'package:mianyang_quiz/pages/home/widgets/streak_header.dart';
 import 'package:provider/provider.dart';
 
@@ -86,6 +87,10 @@ class _DashboardBody extends StatelessWidget {
           const SizedBox(height: AppMetrics.gapLg),
           FadeSlideIn(order: 1, child: ActiveSessionCard(session: active)),
         ],
+        // 原理卡片排在热力图与连续打卡区域下方（用户 2026-11-03）；
+        // 若有一场没交的练习，继续练习仍排在它前面。
+        const SizedBox(height: AppMetrics.gapXl),
+        const FadeSlideIn(order: 1, child: ScienceNote()),
         const SizedBox(height: AppMetrics.gapLg),
         const FadeSlideIn(order: 2, child: HomeActions()),
         const SizedBox(height: AppMetrics.gapXl),

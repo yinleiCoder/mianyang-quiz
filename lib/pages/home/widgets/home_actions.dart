@@ -26,6 +26,15 @@ class HomeActions extends StatelessWidget {
         ),
         const SizedBox(height: AppMetrics.gapSm),
         DuoButton(
+          // AI 学习路径：BKT 掌握度 + 推荐练习 + 专项练题/到期复习。
+          // 放首页工作台而不是底部导航（底部已经 5 格，考试/资料同样走这里）。
+          label: 'AI 学习路径',
+          icon: Icons.route_outlined,
+          variant: DuoButtonVariant.secondary,
+          onPressed: () => safePush(context, AppRoutes.learningPathPath),
+        ),
+        const SizedBox(height: AppMetrics.gapSm),
+        DuoButton(
           // 考试入口放首页而不是底部导航：考试是"被安排的事"（老师入库了卷子才有得考），
           // 不像刷题那样随时发生，占一个常驻 tab 会把刷题挤下去。
           label: '参加考试',

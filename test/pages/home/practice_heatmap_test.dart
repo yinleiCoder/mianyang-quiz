@@ -64,6 +64,32 @@ void main() {
     );
   });
 
+  testWidgets('未到的日子也画出空槽：本月 1 日到月末都可见', (tester) async {
+    // to 取一个未来月份：所有日子都晚于 today，正好覆盖"月中打开首页"的场景。
+    await _pump(
+      tester,
+      from: '2099-12-01',
+      to: '2099-12-31',
+      days: const [],
+      width: 390,
+    );
+
+    for (final day in ['2099-12-01', '2099-12-15', '2099-12-31']) {
+      expect(find.byTooltip('$day · 未到'), findsOneWidget);
+    }
+    final cell = tester.widget<Container>(
+      find
+          .descendant(
+            of: find.byTooltip('2099-12-15 · 未到'),
+            matching: find.byType(Container),
+          )
+          .first,
+    );
+    final decoration = cell.decoration! as BoxDecoration;
+    expect(decoration.color, isNot(Colors.transparent));
+    expect(find.text('1 日 → 31 日，从左到右'), findsOneWidget);
+  });
+
   testWidgets('脏数据被忽略，不影响其余日子', (tester) async {
     await _pump(
       tester,

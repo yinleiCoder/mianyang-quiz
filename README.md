@@ -2,13 +2,24 @@
 
 [myquiz.cn](https://myquiz.cn)
 
-![绵阳市中职共建题库刷题软件](./docs/网站.png)
+![绵阳市中职共建题库刷题软件](../docs/windows软件效果图/练习页.png)
 
 学生用的刷题客户端（Flutter，Windows / Android）。服务端在仓库根目录的 Next.js 应用里。
 
 ## 运行
 
+先在仓库根目录启动网页端（客户端开发配置默认连 `http://localhost:3000`）：
+
+```bash
+# 仓库根目录
+npm install
+npm run dev          # http://localhost:3000
+```
+
+再另开一个终端跑客户端：
+
 ```powershell
+cd mianyang_quiz
 flutter pub get
 cp config/dev.example.json config/dev.json          # 第一次：填上真实配置（配置不入库）
 $env:CL = "/utf-8 /D_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS"

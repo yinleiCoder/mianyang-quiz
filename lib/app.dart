@@ -86,6 +86,7 @@ class _MianyangQuizAppState extends State<MianyangQuizApp> {
                 Provider.value(value: deps.passwordRepository),
                 Provider.value(value: deps.paperRepository),
                 Provider.value(value: deps.analyticsRepository),
+                Provider.value(value: deps.learningRepository),
                 Provider.value(value: deps.materialRepository),
                 Provider.value(value: deps.materialDownloadService),
                 Provider.value(value: deps.checkinRepository),

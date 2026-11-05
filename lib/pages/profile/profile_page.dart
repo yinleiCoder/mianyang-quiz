@@ -21,6 +21,7 @@ import 'package:mianyang_quiz/widgets/widgets.dart';
 import 'package:mianyang_quiz/pages/profile/widgets/confirm_dialog.dart';
 import 'package:mianyang_quiz/pages/profile/widgets/profile_actions_section.dart';
 import 'package:mianyang_quiz/pages/profile/widgets/profile_entry_tile.dart';
+import 'package:mianyang_quiz/pages/profile/widgets/learning_profile_section.dart';
 import 'package:mianyang_quiz/pages/profile/widgets/profile_header.dart';
 import 'package:mianyang_quiz/pages/profile/widgets/study_plan_section.dart';
 import 'package:provider/provider.dart';
@@ -181,6 +182,10 @@ class _ProfilePageState extends State<ProfilePage> {
                   )
                 : null,
           ),
+        ],
+        if (identity == Identity.student) ...[
+          SizedBox(height: AppMetrics.gapXl.r),
+          const LearningProfileSection(),
         ],
         SizedBox(height: AppMetrics.gapXl.r),
         // 学习计划（今日目标 + 抽题/遗忘曲线原理）：独立组件，避免本文件顶到 200 行

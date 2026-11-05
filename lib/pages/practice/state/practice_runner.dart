@@ -28,6 +28,7 @@ class PracticeRunner extends ChangeNotifier {
     required PracticeSessionSnapshot snapshot,
     required this.mode,
     bool shuffleOptions = true,
+    this._reasons = const {},
     DateTime Function()? clock,
   }) : _clock = _resolveClock(clock),
        _startedAt = _resolveClock(clock)(),
@@ -45,6 +46,11 @@ class PracticeRunner extends ChangeNotifier {
   final PracticeRepository _repository;
   final PracticeMode mode;
   final String _sessionId;
+
+  /// 逐题的推荐依据（0137）。解释性数据，缺失时不影响作答。
+  final Map<String, PracticeReason> _reasons;
+
+  PracticeReason? reasonFor(String questionId) => _reasons[questionId];
 
   /// 取"现在"的方式。默认 DateTime.now；测试注入假时钟才能断言
   /// 「暂停的那段时间既不算进显示、也不算进结算」。

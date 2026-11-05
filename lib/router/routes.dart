@@ -96,6 +96,11 @@ abstract final class AppRoutes {
   static const myStandingPath = '/me/standing';
   static const myStandingName = 'myStanding';
 
+  /// AI 学习路径：BKT 掌握度画像 + 推荐练习 + 专项练题/到期复习。
+  /// 全屏页，入口在首页工作台（不占底部导航）。
+  static const learningPathPath = '/learning-path';
+  static const learningPathName = 'learningPath';
+
   static const editProfilePath = '/profile/edit';
   static const editProfileName = 'editProfile';
 

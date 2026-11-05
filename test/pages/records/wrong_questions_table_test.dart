@@ -27,14 +27,40 @@ void main() {
     expect(find.textContaining('下列词语'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('两行题干 + 题型/难度 chip 不撑破行高', (tester) async {
+    await _pump(
+      tester,
+      const Size(390, 844),
+      rows: const [
+        WrongQuestion(
+          questionId: 'q-long',
+          qtype: 'single_choice',
+          difficulty: 3,
+          wrongCount: 12,
+          stemText: '下列对计算机病毒特征的描述中，属于病毒自我复制与传播能力、'
+              '潜伏性和破坏性综合考查的选项是',
+        ),
+      ],
+      // 系统字体放大到 1.5 倍时，两行题干 + chip 会超过 72 的行高上限。
+      textScale: 1.5,
+    );
+
+    expect(tester.takeException(), isNull);
+  });
 }
 
-Future<void> _pump(WidgetTester tester, Size size) async {
+Future<void> _pump(
+  WidgetTester tester,
+  Size size, {
+  List<WrongQuestion>? rows,
+  double textScale = 1.0,
+}) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
 
-  const rows = [
+  final data = rows ?? const [
     WrongQuestion(
       questionId: 'q1',
       qtype: 'single_choice',
@@ -51,6 +77,12 @@ Future<void> _pump(WidgetTester tester, Size size) async {
       enableScaleText: () => false,
       builder: (context, _) => MaterialApp(
         theme: AppTheme.light(),
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: TextScaler.linear(textScale)),
+          child: child!,
+        ),
         home: Scaffold(
           body: Padding(
             padding: EdgeInsets.symmetric(
@@ -58,7 +90,7 @@ Future<void> _pump(WidgetTester tester, Size size) async {
             ),
             child: SingleChildScrollView(
               child: WrongQuestionsTable(
-                rows: rows,
+                rows: data,
                 sortKey: 'wrong',
                 ascending: false,
                 onSort: (_, _) {},

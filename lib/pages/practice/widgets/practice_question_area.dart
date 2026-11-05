@@ -10,6 +10,7 @@ import 'package:mianyang_quiz/utils/utils.dart';
 import 'package:mianyang_quiz/widgets/widgets.dart';
 import 'package:mianyang_quiz/pages/bank/widgets/question_report_sheet.dart';
 import 'package:mianyang_quiz/pages/practice/state/practice_runner.dart';
+import 'package:mianyang_quiz/pages/practice/widgets/practice_reason_card.dart';
 
 class PracticeQuestionArea extends StatelessWidget {
   const PracticeQuestionArea({
@@ -28,6 +29,7 @@ class PracticeQuestionArea extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final runtime = runner.current;
+    final reason = runner.reasonFor(runtime.item.questionId);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(
@@ -73,6 +75,10 @@ class PracticeQuestionArea extends StatelessWidget {
                 dense: true,
               ),
             ),
+            if (reason != null) ...[
+              SizedBox(height: AppMetrics.gapMd.r),
+              PracticeReasonCard(reason: reason),
+            ],
             SizedBox(height: AppMetrics.gapMd.r),
             QuestionView(
               qtype: runtime.item.qtype,

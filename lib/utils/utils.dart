@@ -15,6 +15,7 @@ export 'error_mapper.dart';
 export 'forgetting_curve.dart';
 export 'formatters.dart';
 export 'like_escape.dart';
+export 'mastery.dart';
 export 'node_accuracy.dart';
 export 'option_order.dart';
 export 'oss_url.dart';

@@ -110,8 +110,8 @@ class _MyStandingPageState extends State<MyStandingPage> {
   }
 
   static String _emptyText(String? note) => switch (note) {
-    'not_official' => '你的考试记录都是自主练习（或还没出分）。同一份卷只有第一次交卷计入排行，'
-        '出分后就能看到自己的名次。',
+    'not_official' => '你的考试记录都是自主练习（或还没出分）。同一份卷取最新一次官方成绩计入排行'
+        '（重做是自主练习），出分后就能看到自己的名次。',
     'not_submitted' => '还没有参加过考试。去试卷库挑一份试试——考完就知道自己在班里什么水平了。',
     _ => '暂时没有可显示的名次。',
   };

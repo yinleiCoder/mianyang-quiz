@@ -21,6 +21,7 @@ export 'auth/register_page.dart';
 export 'bank/bank_page.dart';
 export 'bank/question_detail_page.dart';
 export 'compose/compose_page.dart';
+export 'compose/learning_path_page.dart';
 export 'compose/start_practice_flow.dart';
 export 'exam/exam_list_page.dart';
 export 'exam/exam_page.dart';

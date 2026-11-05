@@ -1,9 +1,9 @@
-// 「我的 → 学习计划」：今日目标题数 + 科学抽题原则 + 艾宾浩斯原理。
+// 「我的 → 学习计划」：今日目标题数 + 科学抽题原则 + FSRS / BKT + 遗忘曲线。
 //
 // 用户口径（2026-10-24）：默认 20 题，可在「我的」里设置；目标下方要展示
 // 本软件的科学抽题原则与遗忘曲线原理，让学生知道"为什么今天给我这些题"。
 //
-// 文案与实现同源（迁移 0069 的四层抽题 + 0067 的遗忘曲线）：
+// 文案与实现同源（迁移 0122 的 BKT + 0125/0126 的 FSRS 抽题 + 0067 的遗忘曲线）：
 // 不写"AI 智能推送"这类没有实现支撑的话。
 
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -40,7 +40,7 @@ class StudyPlanSection extends StatelessWidget {
   }
 }
 
-/// 抽题原则 + 遗忘曲线原理。两条都是产品真实在做的事，不写成营销文案。
+/// 抽题原则 + FSRS / BKT + 遗忘曲线原理。四条都是产品真实在做的事，不写成营销文案。
 class _PrincipleCard extends StatelessWidget {
   const _PrincipleCard();
 
@@ -60,8 +60,23 @@ class _PrincipleCard extends StatelessWidget {
           _Point(
             icon: Icons.filter_alt_outlined,
             title: '科学抽题原则',
-            body:
-                '${ScienceNotes.selection}需要加练时可以在组卷页手动打开。',
+            body: '${ScienceNotes.selection}需要加练时可以在组卷页手动打开。',
+            style: muted,
+            scheme: scheme,
+          ),
+          SizedBox(height: AppMetrics.gapMd.r),
+          _Point(
+            icon: Icons.event_repeat_outlined,
+            title: 'FSRS 复习排期',
+            body: '${ScienceNotes.fsrs}「到期复习」就是按它排出来的。',
+            style: muted,
+            scheme: scheme,
+          ),
+          SizedBox(height: AppMetrics.gapMd.r),
+          _Point(
+            icon: Icons.insights_rounded,
+            title: 'BKT 掌握度',
+            body: '${ScienceNotes.bkt}「AI 学习路径」里的掌握度与推荐顺序由它决定。',
             style: muted,
             scheme: scheme,
           ),
@@ -107,9 +122,8 @@ class _Point extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                style: Theme.of(context).textTheme.titleSmall
+                    ?.copyWith(fontWeight: FontWeight.w700),
               ),
               SizedBox(height: AppMetrics.gapXs.r),
               Text(body, style: style),

@@ -48,15 +48,17 @@ class _PracticePageState extends State<PracticePage> {
   Future<void> _loadSession() async {
     setState(() => _load = const AsyncLoading());
     try {
-      final snapshot = await context.read<PracticeRepository>().fetchSession(
-        widget.sessionId,
-      );
+      final repository = context.read<PracticeRepository>();
+      final snapshot = await repository.fetchSession(widget.sessionId);
+      // 解释性数据：取不到就空表，绝不因为"为什么推这题"取不到而让孩子进不去练习。
+      final reasons = await repository.fetchSessionReasons(widget.sessionId);
       if (!mounted) return;
       _runner = PracticeRunner(
-        repository: context.read<PracticeRepository>(),
+        repository: repository,
         snapshot: snapshot,
         mode: _modeFor(snapshot),
         shuffleOptions: widget.shuffleOptions,
+        reasons: reasons,
       );
       setState(() => _load = const AsyncData(null));
     } catch (error) {

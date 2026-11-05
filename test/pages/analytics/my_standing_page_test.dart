@@ -40,7 +40,7 @@ void main() {
       attempts: [_attempt(isOfficial: false, status: 'graded')],
     );
 
-    expect(find.textContaining('只有第一次交卷计入排行'), findsOneWidget);
+    expect(find.textContaining('取最新一次官方成绩计入排行'), findsOneWidget);
     expect(find.text('第 3 名'), findsNothing);
     // 没挑到合格的那一场，就不该再去拉榜
     expect(fake.boardCalls, 0);

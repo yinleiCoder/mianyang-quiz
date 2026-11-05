@@ -63,8 +63,10 @@ class WrongQuestionsTable extends StatelessWidget {
                 sortColumnIndex: sortIndex,
                 sortAscending: ascending,
                 headingRowHeight: 44.r,
-                dataRowMinHeight: 56.r,
-                dataRowMaxHeight: 72.r,
+                // 题干两行 + 题型/难度两枚 chip 在 72 高里会顶出黄黑溢出条；
+                // 留到 120 让两行题干的真实高度撑得下（单行题干仍按 64 收紧）。
+                dataRowMinHeight: 64.r,
+                dataRowMaxHeight: 120.r,
                 horizontalMargin: 12.r,
                 columnSpacing: 20.r,
                 headingTextStyle: AppTextStyles.caption(context)

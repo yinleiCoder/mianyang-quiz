@@ -23,11 +23,11 @@ class LeaderboardHeadline extends StatelessWidget {
       if (paper.examName != null && paper.examName!.isNotEmpty) paper.examName!,
       '上榜 ${stats.total} 人',
     ];
-    // 待阅卷 / 旧版场次都要说出来，否则"榜上怎么就这几个人"会被当成故障（0077 的口径）
+    // 待阅卷要说出来，否则"榜上怎么就这几个人"会被当成故障（0077 的口径）。
+    // 0118 起榜单跨版本合并（每人取最新一次官方成绩），旧版场次不再跳过，
+    // 所以这里不再提示 otherVersionSkipped。
     final hints = [
       if (stats.ungraded > 0) '还有 ${stats.ungraded} 人待阅卷，出分后才进榜',
-      if (stats.otherVersionSkipped > 0)
-        '另有 ${stats.otherVersionSkipped} 场考的是旧版卷面，未计入',
     ];
 
     return Column(
