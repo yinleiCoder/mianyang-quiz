@@ -14,9 +14,11 @@ import 'package:mianyang_quiz/state/state.dart';
 import 'package:mianyang_quiz/widgets/widgets.dart';
 import 'package:mianyang_quiz/pages/home/widgets/active_session_card.dart';
 import 'package:mianyang_quiz/pages/home/widgets/forgetting_curve_card.dart';
+import 'package:mianyang_quiz/pages/home/widgets/learning_profile_section.dart';
 import 'package:mianyang_quiz/pages/home/widgets/home_actions.dart';
 import 'package:mianyang_quiz/pages/home/widgets/platform_scale_section.dart';
 import 'package:mianyang_quiz/pages/home/widgets/science_note.dart';
+import 'package:mianyang_quiz/pages/home/widgets/stat_grid.dart';
 import 'package:mianyang_quiz/pages/home/widgets/streak_header.dart';
 import 'package:provider/provider.dart';
 
@@ -50,6 +52,11 @@ class _HomePageState extends State<HomePage> {
       (store) => store.state,
     );
     final name = context.select<AuthStore, String>((auth) => auth.displayName);
+    // 学习画像是学生数据（0128 student_learning_profile）：教师/待审核教师不显示，
+    // 与「我的」页（profile_page.dart）同一口径。
+    final isStudent = context.select<AuthStore, bool>(
+      (auth) => auth.identity == Identity.student,
+    );
 
     return Scaffold(
       body: SafeArea(
@@ -60,7 +67,11 @@ class _HomePageState extends State<HomePage> {
           state: state,
           loadingMessage: '正在加载学情…',
           onRetry: () => context.read<DashboardStore>().refresh(),
-          builder: (dashboard) => _DashboardBody(name: name, dashboard: dashboard),
+          builder: (dashboard) => _DashboardBody(
+            name: name,
+            dashboard: dashboard,
+            isStudent: isStudent,
+          ),
         ),
       ),
     );
@@ -68,10 +79,15 @@ class _HomePageState extends State<HomePage> {
 }
 
 class _DashboardBody extends StatelessWidget {
-  const _DashboardBody({required this.name, required this.dashboard});
+  const _DashboardBody({
+    required this.name,
+    required this.dashboard,
+    required this.isStudent,
+  });
 
   final String name;
   final PracticeDashboard dashboard;
+  final bool isStudent;
 
   @override
   Widget build(BuildContext context) {
@@ -94,22 +110,28 @@ class _DashboardBody extends StatelessWidget {
         const SizedBox(height: AppMetrics.gapLg),
         const FadeSlideIn(order: 2, child: HomeActions()),
         const SizedBox(height: AppMetrics.gapXl),
-        FadeSlideIn(order: 3, child: _StatGrid(dashboard: dashboard)),
+        FadeSlideIn(order: 3, child: StatGrid(dashboard: dashboard)),
         const SizedBox(height: AppMetrics.gapXl),
         const FadeSlideIn(order: 4, child: PlatformScaleSection()),
         const SizedBox(height: AppMetrics.gapXl),
+        // 学习画像（2026-11-05 用户要求从「我的」挪到首页，放在遗忘曲线上方）。
+        // 只对学生显示；组件内部自己兜底加载失败，不拖累这一页的其他区块。
+        if (isStudent) ...[
+          const FadeSlideIn(order: 4, child: LearningProfileSection()),
+          const SizedBox(height: AppMetrics.gapXl),
+        ],
         // 与上面那张是同一个话题的两面：**练了多少** vs **记得多牢**。
         // 数据服务端早就在算（迁移 0067 给 practice_dashboard 加了 forgetting_curve），
         // 客户端一直没接——这张图就是把它接上。
         const FadeSlideIn(
-          order: 4,
+          order: 5,
           child: SectionHeader(
             title: '遗忘曲线',
             subtitle: '你自己的保持率 vs 艾宾浩斯理论曲线',
           ),
         ),
         FadeSlideIn(
-          order: 5,
+          order: 6,
           child: DuoCard(
             padding: const EdgeInsets.fromLTRB(
               AppMetrics.gapMd,
@@ -121,64 +143,6 @@ class _DashboardBody extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-/// 三个累计数字。用 DuoStatTile 而不是自绘，保持与其他页的排版一致。
-///
-/// **按可用宽度决定并排还是竖排**：每个统计卡里有一个固定 44px 的图标徽标
-/// 加上内边距，三个并排实际需要约 480px。窗口更窄时如果强行并排，
-/// 标签会被压成一个字（「累计答题」→「累…」），看起来像坏了。
-/// 宁可竖排也不截断——数字本身是重点，指标名不能省。
-class _StatGrid extends StatelessWidget {
-  const _StatGrid({required this.dashboard});
-
-  static const double _minWidthForRow = 480;
-
-  final PracticeDashboard dashboard;
-
-  @override
-  Widget build(BuildContext context) {
-    final tiles = <Widget>[
-      DuoStatTile(
-        label: '累计答题',
-        value: '${dashboard.totalAnswers}',
-        icon: Icons.task_alt,
-      ),
-      DuoStatTile(
-        label: '正确率',
-        value: Formatters.percent(dashboard.accuracy),
-        icon: Icons.percent,
-      ),
-      DuoStatTile(
-        label: '错题',
-        value: '${dashboard.wrongCount}',
-        icon: Icons.error_outline,
-      ),
-    ];
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth < _minWidthForRow) {
-          return Column(
-            children: [
-              for (final tile in tiles) ...[
-                tile,
-                if (tile != tiles.last) const SizedBox(height: AppMetrics.gapSm),
-              ],
-            ],
-          );
-        }
-        return Row(
-          children: [
-            for (final tile in tiles) ...[
-              Expanded(child: tile),
-              if (tile != tiles.last) const SizedBox(width: AppMetrics.gapMd),
-            ],
-          ],
-        );
-      },
     );
   }
 }

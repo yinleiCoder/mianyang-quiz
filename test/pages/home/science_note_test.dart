@@ -28,6 +28,26 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('四张卡都可点，各自跳到对应章节', (tester) async {
+    final opened = <String>[];
+    await _pump(
+      tester,
+      const Size(390, 844),
+      onOpen: (url) async => opened.add(url),
+    );
+
+    for (final title in _titles) {
+      await tester.tap(find.text(title));
+      await tester.pump();
+    }
+
+    expect(opened, hasLength(4), reason: '每张卡都应触发一次打开');
+    expect(opened[0], endsWith('/showcase/scheduler?scene=mix'));
+    expect(opened[1], endsWith('/showcase/scheduler?scene=fsrs'));
+    expect(opened[2], endsWith('/showcase/scheduler?scene=bkt'));
+    expect(opened[3], endsWith('/showcase/scheduler?scene=curve'));
+  });
+
   testWidgets('宽屏两列排列，不溢出', (tester) async {
     await _pump(tester, const Size(1280, 800));
 
@@ -53,7 +73,11 @@ void _expectEqualHeights(WidgetTester tester) {
   }
 }
 
-Future<void> _pump(WidgetTester tester, Size size) async {
+Future<void> _pump(
+  WidgetTester tester,
+  Size size, {
+  ScienceLinkOpener? onOpen,
+}) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
@@ -65,10 +89,10 @@ Future<void> _pump(WidgetTester tester, Size size) async {
       enableScaleText: () => false,
       builder: (context, _) => MaterialApp(
         theme: AppTheme.light(),
-        home: const Scaffold(
+        home: Scaffold(
           body: SingleChildScrollView(
-            padding: EdgeInsets.all(16),
-            child: ScienceNote(),
+            padding: const EdgeInsets.all(16),
+            child: ScienceNote(onOpen: onOpen),
           ),
         ),
       ),

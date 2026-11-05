@@ -6,9 +6,10 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/apis/apis.dart';
 import 'package:mianyang_quiz/entity/entity.dart';
-import 'package:mianyang_quiz/pages/profile/widgets/learning_profile_view.dart';
+import 'package:mianyang_quiz/widgets/learning_profile_view.dart';
 import 'package:mianyang_quiz/utils/utils.dart';
-import 'package:mianyang_quiz/widgets/widgets.dart';
+import 'package:mianyang_quiz/widgets/duo_card.dart';
+import 'package:mianyang_quiz/widgets/section_header.dart';
 import 'package:provider/provider.dart';
 
 class LearningProfileSection extends StatefulWidget {

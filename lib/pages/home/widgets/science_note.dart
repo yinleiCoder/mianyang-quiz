@@ -1,35 +1,38 @@
 // 首页「科学抽题原理」四张卡片：科学抽题 / FSRS / BKT / 遗忘曲线。
 //
 // 用户 2026-11-03：把原理从打卡区里拿出来，做成卡片，排在热力图与连续打卡区域下方。
+// 用户 2026-11-05：四张卡可点击，用 url_launcher 打开网页端对应章节的动画演示。
 // 文案与「我的 → 学习计划」同源（values/science_notes.dart）；
 // 宽屏两列、窄屏一列。
 //
 // 四张卡**等高**：先按当前宽度与字号量出最长正文，再给每张卡同一个高度。
 // 不用固定 Grid 高，避免窄屏 / 系统字体放大时正文被裁掉。
+//
+// 卡片本身在 science_card.dart（本文件只做布局与测量）。
 
 import 'dart:math' as math;
 
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:mianyang_quiz/pages/home/widgets/science_card.dart';
+import 'package:mianyang_quiz/pages/home/widgets/science_item.dart';
 import 'package:mianyang_quiz/values/values.dart';
-import 'package:mianyang_quiz/widgets/widgets.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+/// 打开链接的方式。测试注入假实现，线上走 url_launcher。
+typedef ScienceLinkOpener = Future<void> Function(String url);
 
 class ScienceNote extends StatelessWidget {
-  const ScienceNote({super.key});
+  const ScienceNote({super.key, this.onOpen});
+
+  /// 为 null 时用系统浏览器打开。
+  final ScienceLinkOpener? onOpen;
 
   static const _items = [
-    _ScienceItem(
-      Icons.filter_alt_outlined,
-      '科学抽题',
-      ScienceNotes.selection,
-    ),
-    _ScienceItem(
-      Icons.event_repeat_outlined,
-      'FSRS 复习排期',
-      ScienceNotes.fsrs,
-    ),
-    _ScienceItem(Icons.insights_rounded, 'BKT 掌握度', ScienceNotes.bkt),
-    _ScienceItem(Icons.timeline_rounded, '遗忘曲线', ScienceNotes.forgetting),
+    ScienceItem(Icons.filter_alt_outlined, '科学抽题', ScienceNotes.selection, 'mix'),
+    ScienceItem(Icons.event_repeat_outlined, 'FSRS 复习排期', ScienceNotes.fsrs, 'fsrs'),
+    ScienceItem(Icons.insights_rounded, 'BKT 掌握度', ScienceNotes.bkt, 'bkt'),
+    ScienceItem(Icons.timeline_rounded, '遗忘曲线', ScienceNotes.forgetting, 'curve'),
   ];
 
   @override
@@ -47,9 +50,10 @@ class ScienceNote extends StatelessWidget {
             ? (constraints.maxWidth - gap) / 2
             : constraints.maxWidth;
         final textWidth = math.max(0.0, itemWidth - gap * 2);
+        // 标题行两侧各一个图标（左：分类；右：可点提示），都要从标题宽度里扣掉。
         final titleWidth = math.max(
           0.0,
-          textWidth - 18.r - AppMetrics.gapXs.r,
+          textWidth - (18.r + AppMetrics.gapXs.r) * 2,
         );
 
         // 用与卡片内完全相同的样式量文字：取最长正文，四张卡统一高度。
@@ -83,7 +87,10 @@ class ScienceNote extends StatelessWidget {
           for (final item in _items)
             SizedBox(
               height: cardHeight,
-              child: _ScienceCard(item: item),
+              child: ScienceCard(
+                item: item,
+                onTap: () => _open(context, item),
+              ),
             ),
         ];
 
@@ -116,6 +123,24 @@ class ScienceNote extends StatelessWidget {
     );
   }
 
+  Future<void> _open(BuildContext context, ScienceItem item) async {
+    final url = scienceUrlFor(item);
+    final opener = onOpen;
+    if (opener != null) {
+      await opener(url);
+      return;
+    }
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
+    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    // await 之后 context 可能已经失效（用户切走了），必须先判 mounted
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('无法打开浏览器，请检查系统是否有可用的默认程序')),
+      );
+    }
+  }
+
   static double _measure(
     BuildContext context,
     String text,
@@ -133,52 +158,13 @@ class ScienceNote extends StatelessWidget {
   }
 }
 
-class _ScienceItem {
-  const _ScienceItem(this.icon, this.title, this.body);
-
-  final IconData icon;
-  final String title;
-  final String body;
-}
-
-class _ScienceCard extends StatelessWidget {
-  const _ScienceCard({required this.item});
-
-  final _ScienceItem item;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    return DuoCard(
-      padding: EdgeInsets.all(AppMetrics.gapMd.r),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(item.icon, size: 18.r, color: scheme.primary),
-              SizedBox(width: AppMetrics.gapXs.r),
-              Expanded(
-                child: Text(
-                  item.title,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: AppMetrics.gapSm.r),
-          Text(
-            item.body,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: scheme.onSurfaceVariant,
-              height: 1.5,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+/// 卡片对应的网页地址：站点域名 + 动画页 + 章节。
+///
+/// `shareBaseUrl` 与分享链接同源（生产 `https://myquiz.cn`）；末尾斜杠要削掉，
+/// 否则会拼出 `//showcase`。
+String scienceUrlFor(ScienceItem item) {
+  final base = Env.shareBaseUrl.endsWith('/')
+      ? Env.shareBaseUrl.substring(0, Env.shareBaseUrl.length - 1)
+      : Env.shareBaseUrl;
+  return '$base/showcase/scheduler?scene=${item.scene}';
 }

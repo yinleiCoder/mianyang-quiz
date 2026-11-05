@@ -7,9 +7,10 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/entity/entity.dart';
 import 'package:mianyang_quiz/utils/profile_persona.dart';
 import 'package:mianyang_quiz/values/values.dart';
-import 'package:mianyang_quiz/widgets/widgets.dart';
-import 'package:mianyang_quiz/pages/profile/widgets/learning_profile_radar.dart';
-import 'package:mianyang_quiz/pages/profile/widgets/learning_profile_stat.dart';
+import 'package:mianyang_quiz/widgets/duo_card.dart';
+import 'package:mianyang_quiz/widgets/duo_chip.dart';
+import 'package:mianyang_quiz/widgets/learning_profile_radar.dart';
+import 'package:mianyang_quiz/widgets/learning_profile_stat.dart';
 
 class LearningProfileView extends StatelessWidget {
   const LearningProfileView({super.key, required this.profile});

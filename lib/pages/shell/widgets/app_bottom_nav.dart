@@ -67,9 +67,17 @@ class AppBottomNav extends StatelessWidget {
   }
 
   /// 分支下标 → 条上槽位（跳过中间那格 FAB）。
+  ///
+  /// ⚠ 换算的基准是「分支出现在 kBottomNavBranches 里的**第几个**」，
+  /// **不是分支号本身**。分支号只在 0/1 两个位置上恰好等于序号；3（错题本）的
+  /// 序号是 2、4（我的）的序号是 3。拿分支号硬加减会让「我的」算出槽位 5
+  /// （条上只有 5 格，下标 0–4），NavigationBar 直接断言崩溃 —— 2026-11-05 实测。
   static int _slotOf(int branch) {
-    if (!kBottomNavBranches.contains(branch)) return _practiceSlot;
-    return branch < _practiceSlot ? branch : branch + 1;
+    final index = kBottomNavBranches.indexOf(branch);
+    // AI 答疑（分支 2）不在条上：让"选中"落在中间那格空的 FAB 位，
+    // 视觉上等于"这一页不在底部导航里"。
+    if (index < 0) return _practiceSlot;
+    return index < _practiceSlot ? index : index + 1;
   }
 
   /// 第 [slot] 个位置画什么：中间那格**留空**，让码头在缺口里；其余按分支顺序取。
