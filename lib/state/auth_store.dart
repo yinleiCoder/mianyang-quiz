@@ -15,10 +15,27 @@ import 'package:mianyang_quiz/entity/entity.dart';
 import 'package:mianyang_quiz/apis/apis.dart';
 
 class AuthStore extends ChangeNotifier {
-  AuthStore(this._auth, this._users);
+  AuthStore(this._auth, this._users, {DateTime Function() now = DateTime.now})
+    // 私有字段做不了命名参数（下划线开头的参数名非法），只能这样赋值
+    // ignore: prefer_initializing_formals
+    : _now = now;
 
   final AuthService _auth;
   final UserRepository _users;
+
+  final DateTime Function() _now;
+
+  /// 档案的保鲜期：同一账号的事件若发生在上一次拉取后的这个窗口内，就不再重拉。
+  ///
+  /// 要挡的是**启动时的重复**：bootstrap() 拉一次，订阅后 SDK 又把当前会话
+  /// 事件化一次（initialSession / tokenRefreshed），线上日志里就是同一条
+  /// profiles 查询连发两次、间隔 0.5~1 秒。
+  ///
+  /// 但窗口不能取消：token 刷新是小时级的，那时重拉一次能捡到服务端的变化
+  /// （典型场景：管理员把"待审核教师"批成正式教师）。5 分钟兼顾两头。
+  static const profileFreshAfter = Duration(minutes: 5);
+
+  DateTime? _profileLoadedAt;
   // 用 Object? 而不是 supabase 的 AuthState：Store 不需要知道事件的具体形状，
   // 它只关心"变了就去重新拉档案"。这样也少一层对本类的包依赖。
   StreamSubscription<Object?>? _subscription;
@@ -65,6 +82,22 @@ class AuthStore extends ChangeNotifier {
     // 令牌过期被踢、或换账号时，档案必须跟着变，否则会拿旧档案渲染新会话
     _subscription = _auth.authStateChanges.listen(
       (_) {
+        // 2026-11-06：**启动时的同一账号事件不重拉档案**。
+        //
+        // Supabase 在订阅/启动恢复会话时会把当前会话再事件化一次
+        //（initialSession / tokenRefreshed），而上面 bootstrap() 刚刚已经拉过。
+        // 线上日志里能直接看到冷启动时同一条 profiles 查询连发两次（间隔 0.5~1 秒）。
+        //
+        // 判据用"同账号 + 档案还在保鲜期内"，而不是简单的同账号：token 小时级刷新
+        // 时仍要重拉一次，才能捡到服务端的变化（如待审核教师被批准）。
+        final sameUser = _profile?.userId == _auth.currentUser?.id;
+        final loadedAt = _profileLoadedAt;
+        if (sameUser &&
+            loadedAt != null &&
+            _now().difference(loadedAt) < profileFreshAfter) {
+          return;
+        }
+
         // 必须自己接住异常：_loadProfile 抛错时 then 不执行，错误会变成
         // 未捕获的异步异常（只在控制台出现），而登录态已经变了、档案却停在旧值上。
         unawaited(
@@ -140,9 +173,11 @@ class AuthStore extends ChangeNotifier {
   Future<void> _loadProfile() async {
     if (!_auth.isSignedIn) {
       _profile = null;
+      _profileLoadedAt = null;
       return;
     }
     _profile = await _users.fetchProfile();
+    _profileLoadedAt = _now();
   }
 
   /// 统一处理忙碌标志与错误归一，避免每个方法各写一遍 try/catch。

@@ -133,6 +133,11 @@ _PracticeSessionSnapshot _$PracticeSessionSnapshotFromJson(
         'total_available',
         (v) => (v as num?)?.toInt(),
       ),
+      mode: $checkedConvert('mode', (v) => v as String? ?? ''),
+      drafts: $checkedConvert(
+        'drafts',
+        (v) => v as Map<String, dynamic>? ?? const <String, dynamic>{},
+      ),
       items: $checkedConvert(
         'items',
         (v) =>
@@ -182,6 +187,8 @@ Map<String, dynamic> _$PracticeSessionSnapshotToJson(
   'scored': instance.scored,
   'offset': instance.offset,
   'total_available': instance.totalAvailable,
+  'mode': instance.mode,
+  'drafts': instance.drafts,
   'items': instance.items.map((e) => e.toJson()).toList(),
   'answers': instance.answers.map((e) => e.toJson()).toList(),
 };

@@ -5,7 +5,7 @@
 // 加粗、最后五分钟变红，并且到点会触发自动交卷（见 ExamTimer）。
 //
 // 退出按钮是 ×（同练习）：考试中途退出的代价比练习大得多，所以点它要过一道确认
-// （见 ExamStage），而确认框里会明说"作答已保存在本机"。
+// （见 ExamStage）。0144 起退出会暂停倒计时、作答也已同步到云端，确认框里两件事都写明。
 
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:material_ui/material_ui.dart';

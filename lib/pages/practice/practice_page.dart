@@ -35,14 +35,25 @@ class PracticePage extends StatefulWidget {
   State<PracticePage> createState() => _PracticePageState();
 }
 
-class _PracticePageState extends State<PracticePage> {
+class _PracticePageState extends State<PracticePage> with WidgetsBindingObserver {
   PracticeRunner? _runner;
   AsyncValue<void> _load = const AsyncLoading();
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadSession();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // 切后台 / 窗口最小化：800ms 节流窗口里可能还有没送出的草稿。
+    // 硬杀进程不会走 dispose，这里是最后一道保险。
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused) {
+      _runner?.flushDrafts();
+    }
   }
 
   Future<void> _loadSession() async {
@@ -67,20 +78,30 @@ class _PracticePageState extends State<PracticePage> {
     }
   }
 
-  /// 会话自己说了它是不是"不计分的课堂讲练"（0095 让 get_practice_session 返回 scored）。
+  /// 会话自己说了它当时用的是什么模式（0144 的 practice_sessions.mode）。
   ///
   /// **续练必须沿用当时的模式**，不能信路由的默认值：「继续练习」有几个入口
   /// （首页卡片、练习记录）都是直接 push 不带 extra 的，路由于是按"即时练习"重开——
-  /// 而即时练习**每答一题就往服务端提交**，正好违反 0090「讲练一轮里一个答案都不提交」。
+  /// 而即时练习**每答一题就往服务端提交**，正好把批量练习的草稿当成已判定的作答，
+  /// 顺序讲练更违反 0090「一轮里一个答案都不提交」。
   /// 表现是静默的：错题本、正确率、遗忘曲线被灌进课堂讲练的作答，没有任何地方会报错。
   ///
-  /// 反过来（真会话 scored 为 true 时仍用路由给的模式）是安全的：即时与批量都计分。
-  PracticeMode _modeFor(PracticeSessionSnapshot snapshot) =>
-      snapshot.scored ? widget.mode : PracticeMode.sequential;
+  /// 三步兜底：
+  ///   1. 服务端明确记过**非即时**模式（batch / sequential）→ 直接信它；
+  ///   2. 否则看 scored：false 只能是课堂讲练（0090）；
+  ///   3. 其余用路由给的模式——刚开的一轮带着 extra 进来，这时服务端还没记上
+  ///      （或登记失败），路由才是对的。
+  PracticeMode _modeFor(PracticeSessionSnapshot snapshot) {
+    final saved = practiceModeFromWire(snapshot.mode);
+    if (saved != null && saved != PracticeMode.instant) return saved;
+    return snapshot.scored ? widget.mode : PracticeMode.sequential;
+  }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     // Runner 是本页私有状态，页面的生命周期就是它的生命周期
+    // （dispose 里会把还没同步的草稿补推一次）
     _runner?.dispose();
     super.dispose();
   }

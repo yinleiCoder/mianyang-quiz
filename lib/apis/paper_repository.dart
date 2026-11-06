@@ -12,6 +12,8 @@ import 'package:flutter/foundation.dart';
 import 'package:mianyang_quiz/utils/utils.dart';
 import 'package:mianyang_quiz/entity/entity.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'exam_answer_normalize.dart';
+import 'exam_progress_queries.dart';
 
 class PaperRepository {
   const PaperRepository(this._client);
@@ -83,7 +85,7 @@ class PaperRepository {
         'start_exam_attempt',
         params: {'p_paper_version_id': paperVersionId},
       );
-      return ExamSnapshot.fromJson(_normalizeAnswerUnits(data));
+      return ExamSnapshot.fromJson(normalizeExamAnswerUnits(data));
     } catch (error) {
       throw mapError(error);
     }
@@ -100,7 +102,7 @@ class PaperRepository {
         'get_my_exam_attempt',
         params: {'p_attempt_id': attemptId},
       );
-      return ExamSnapshot.fromJson(_normalizeAnswerUnits(data));
+      return ExamSnapshot.fromJson(normalizeExamAnswerUnits(data));
     } catch (error) {
       throw mapError(error);
     }
@@ -151,36 +153,21 @@ class PaperRepository {
     }
   }
 
-  /// 把答卷里 `units` 的**旧布尔形状**改写成对象形状。
-  ///
-  /// 服务端有两种历史写法：自动判分题存 `[{ok, score}]`，人工判分题（简答）
-  /// 在 0139 之前存的是裸布尔 `[false, false]`。客户端模型是 `List<ScoreUnit>`，
-  /// 生成代码里写死 `e as Map<String, dynamic>` —— 碰到布尔会抛 TypeError，
-  /// **整份答卷解析失败**，成绩单页只剩一句「操作失败，请稍后重试」。
-  ///
-  /// 服务端已统一（0139），这里兜的是修复前落库的旧数据：解析层的容错，
-  /// 不改变任何判分口径（布尔只有"没给分"一种含义，`score` 恒为 0）。
-  ///
-  /// 返回原对象（就地改写），调用方直接喂给 ExamSnapshot.fromJson。
-  Map<String, dynamic> _normalizeAnswerUnits(Map<String, dynamic> data) =>
-      normalizeExamAnswerUnits(data);
-}
+  /// 取回一场考试**还没交卷**的作答（0144）。实现见 exam_progress_queries.dart。
+  /// 换台设备继续答靠的就是它；已交卷的场次服务端一律返回空。
+  Future<ExamDraftBundle> fetchExamDrafts(String attemptId) =>
+      fetchExamDraftsFrom(_client, attemptId);
 
-/// 见 [PaperRepository] 里 [_normalizeAnswerUnits] 的说明。
-///
-/// 提成顶层函数只为可测：解析容错是"整页能不能打开"的事，值得一条回归。
-@visibleForTesting
-Map<String, dynamic> normalizeExamAnswerUnits(Map<String, dynamic> data) {
-  final answers = data['answers'];
-  if (answers is! List) return data;
-  for (final record in answers) {
-    if (record is! Map) continue;
-    final units = record['units'];
-    if (units is! List || !units.any((unit) => unit is bool)) continue;
-    record['units'] = [
-      for (final unit in units)
-        unit is Map ? unit : <String, dynamic>{'ok': unit == true, 'score': 0},
-    ];
-  }
-  return data;
+  /// 写回几道题的作答草稿（0144）。**只传改过的题**，服务端逐题合并。
+  Future<void> saveExamDrafts({
+    required String attemptId,
+    required Map<String, Map<String, dynamic>> answers,
+  }) => saveExamDraftsTo(_client, attemptId: attemptId, answers: answers);
+
+  /// 暂停倒计时（0144）。**离开考试页**时调，幂等。
+  ///
+  /// 恢复不需要客户端操心：服务端读考试（get_my_exam_attempt / start_exam_attempt）
+  /// 会把冻结的剩余时间接回去（见 0144 的 _resume_exam_attempt_if_paused）。
+  Future<void> pauseAttempt(String attemptId) =>
+      pauseExamAttempt(_client, attemptId);
 }

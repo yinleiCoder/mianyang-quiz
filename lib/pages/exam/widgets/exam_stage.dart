@@ -72,9 +72,9 @@ class _ExamStageState extends State<ExamStage> {
     final leave = await showExamConfirmSheet(
       context,
       title: '离开考试？',
-      // 两条都要说：倒计时不暂停（会亏时间），作答已存本机（不会白答）。
-      message: '倒计时不会暂停，离开期间它照常走。\n'
-          '已作答的内容已保存在本机，回来可以从「我的考试」接着答。',
+      // 两条都要说：倒计时会暂停（不亏时间），作答已同步（不会白答，换设备也能接着答）。
+      message: '离开后倒计时会暂停，回来从「我的考试」接着答，剩余时间还在。\n'
+          '已作答的内容已同步到云端，换台设备也能接着答。',
       confirmLabel: '离开',
       cancelLabel: '继续答题',
     );

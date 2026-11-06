@@ -12,6 +12,7 @@ export 'auth_refresh_client.dart';
 export 'auth_service.dart';
 export 'checkin_repository.dart';
 export 'crash_reporter.dart';
+export 'exam_answer_normalize.dart';
 export 'exam_draft_service.dart';
 export 'favorite_repository.dart';
 export 'feedback_repository.dart';

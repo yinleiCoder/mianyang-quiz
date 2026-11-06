@@ -41,9 +41,11 @@ class _PracticeResultPageState extends State<PracticeResultPage> {
     } else {
       _load();
     }
-    // 交卷后看板数字变了，回来时要是新的
+    // 交卷后看板数字变了，回来时要是新的 —— force 绕过 45 秒保鲜期
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) context.read<DashboardStore>().refresh(silent: true);
+      if (mounted) {
+        context.read<DashboardStore>().refresh(silent: true, force: true);
+      }
     });
   }
 

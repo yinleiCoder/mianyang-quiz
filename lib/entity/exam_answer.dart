@@ -62,3 +62,20 @@ extension ExamAnswerRecordX on ExamAnswerRecord {
   /// 学生答过没有。空 Map / 只有 type 的标记都算没答。
   bool get isAnswered => answer.isNotEmpty && answer['type'] != 'unknown';
 }
+
+/// 一场考试**还没交卷**的作答草稿（0144 的 exam_attempts.draft_answers）。
+///
+/// 它不是判分记录：分数、对错都还没有，只是"学生写到哪儿了"。
+/// [updatedAt] 是本机暂存与服务端草稿合并时判新旧的依据。
+class ExamDraftBundle {
+  const ExamDraftBundle({required this.answers, this.updatedAt});
+
+  static const empty = ExamDraftBundle(answers: {});
+
+  /// 题项 id（paper_items.id）→ 作答 JSON。
+  final Map<String, Map<String, dynamic>> answers;
+
+  final DateTime? updatedAt;
+
+  bool get isEmpty => answers.isEmpty;
+}

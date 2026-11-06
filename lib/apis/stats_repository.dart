@@ -13,9 +13,16 @@ import 'package:mianyang_quiz/entity/entity.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class StatsRepository {
-  const StatsRepository(this._client);
+  StatsRepository(this._client, {DateTime Function() now = DateTime.now})
+    : _platform = TtlCache<PlatformStats>(platformStatsStaleAfter, now: now);
 
   final SupabaseClient _client;
+
+  /// 平台规模是全站同一份、几小时才变一次的数据（搬迁/注册高峰除外）。
+  /// 5 分钟保鲜：足够挡掉"来回切到首页"的重复请求，又不会让新学校半分钟看不到。
+  static const platformStatsStaleAfter = Duration(minutes: 5);
+
+  final TtlCache<PlatformStats> _platform;
 
   /// 拉取本人看板数据。
   ///
@@ -34,9 +41,14 @@ class StatsRepository {
 
   /// 平台规模（0114）：学校 / 学生 / 教师 / 市区。全局口径，所有登录用户可读。
   Future<PlatformStats> fetchPlatformStats() async {
+    final cached = _platform.read();
+    if (cached != null) return cached;
     try {
       final data = await _client.rpc<Map<String, dynamic>>('platform_stats');
-      return PlatformStats.fromJson(Map<String, dynamic>.from(data));
+      final stats = PlatformStats.fromJson(Map<String, dynamic>.from(data));
+      // 只缓存成功的结果：失败时下次仍会重试
+      _platform.write(stats);
+      return stats;
     } catch (error) {
       throw mapError(error);
     }

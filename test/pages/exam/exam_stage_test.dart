@@ -100,6 +100,10 @@ void main() {
     expect(runner.answeredCount, 1);
     expect(find.text('已作答 1/3'), findsOneWidget);
     expect(find.textContaining('还有 2 道题没作答'), findsOneWidget);
+
+    // 让 800ms 的草稿同步节流跑完：留着它，测试结束时会报「还有 pending timer」。
+    // 这一跳也顺带覆盖了"改完 → 延迟 → 推送"这条链路（RPC 在测试里必然失败，是预期的）。
+    await tester.pump(const Duration(milliseconds: 900));
   });
 
   testWidgets('桌面 1280×800 下不出现布局异常', (tester) async {
@@ -129,6 +133,9 @@ Future<ExamRunner> _pump(
     snapshot: _snapshot(now),
     clock: () => now,
   );
+  // 作答会起 800ms 的草稿同步节流；生产里由 ExamPage 在 dispose 时收尾，
+  // 测试直接建 Runner，得自己关（否则 flutter_test 判「还有 pending timer」）。
+  addTearDown(runner.dispose);
 
   await tester.pumpWidget(
     ScreenUtilInit(

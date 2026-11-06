@@ -102,10 +102,28 @@ Future<bool> startPracticeFlow(
       totalAvailable: outcome.snapshot.totalAvailable,
     );
 
+    // 把练习方式记到会话上（0144）。**必须在进练习页之前完成**：
+    // 练习页从 get_practice_session 读 mode，读不到就会把批量练习当成即时练习重开
+    // （顺序讲练更严重，见 PracticePage._modeFor）。
+    // 即时练习是服务端的默认值，不必多打一次；失败也不挡流程——
+    // 最坏情况是续练按即时练习兜底，与 0144 之前的行为一致。
+    if (draft.mode != PracticeMode.instant) {
+      try {
+        await repository.saveProgress(
+          sessionId: outcome.snapshot.sessionId,
+          mode: draft.mode.wire,
+        );
+      } catch (error) {
+        debugPrint('登记练习方式失败（续练会按默认模式兜底）：$error');
+      }
+      if (!context.mounted) return false;
+    }
+
     // 看板刷新不 await：练习页根本不显示看板，交卷后的结果页还会再刷一次。
     // 等它等于把一次 practice_dashboard RPC 塞进「开始练习」的等待路径，
     // 用户多等一个往返才进题。refresh 自己吞掉异常，这里不会产生未处理的错误。
-    unawaited(context.read<DashboardStore>().refresh(silent: true));
+    // force：刚开了一轮新练习，「进行中会话」变了，不能被 45 秒保鲜期挡住。
+    unawaited(context.read<DashboardStore>().refresh(silent: true, force: true));
     if (replace) {
       context.pushReplacement(
         AppRoutes.practiceOf(outcome.snapshot.sessionId),

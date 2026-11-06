@@ -29,9 +29,11 @@ enum QuitAction {
 
 /// 走完"退出练习"这件事：弹面板 → 按选择作废或保留 → 离开练习页。
 ///
-/// 放弃分支里那次看板刷新**不是顺手做的**：首页「继续练习」卡是看板画的，
-/// 不刷新的话它还指着这场刚作废的练习，用户一点进去就是一场答不了题的练习
-/// —— 线上「本次练习已结束，无法继续作答」的主要来路正是这里。
+/// 两条分支都要刷一次看板，理由不同：
+///   · 放弃：不刷新的话它还指着这场刚作废的练习，用户一点进去就是一场答不了题的练习
+///     —— 线上「本次练习已结束，无法继续作答」的主要来路正是这里；
+///   · 保留：这一轮刚同步上去的草稿会改变 `answered_count`（0144），
+///     不刷新的话首页「继续练习」卡还写着退出前的进度。
 Future<void> confirmQuitPractice(BuildContext context, PracticeRunner runner) async {
   final action = await showQuitConfirmSheet(context);
   if (!context.mounted || action == null) return;
@@ -42,8 +44,9 @@ Future<void> confirmQuitPractice(BuildContext context, PracticeRunner runner) as
   if (action == QuitAction.abandon) {
     await runner.abandon();
     if (!context.mounted) return;
-    unawaited(context.read<DashboardStore>().refresh(silent: true));
   }
+  // 作废 / 保留都会变「进行中会话」与它上面的进度 —— 绕过看板保鲜期
+  unawaited(context.read<DashboardStore>().refresh(silent: true, force: true));
   if (context.mounted) Navigator.of(context).pop();
 }
 

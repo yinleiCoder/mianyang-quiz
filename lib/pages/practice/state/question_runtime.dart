@@ -83,24 +83,40 @@ List<QuestionRuntime> buildQuestionRuntimes(
   required bool shuffleOptions,
 }) {
   final records = snapshot.answersByQuestion;
+  final drafts = snapshot.drafts;
   return [
     for (final item in snapshot.items)
-      _buildOne(item, records[item.questionId], shuffleOptions),
+      _buildOne(
+        item,
+        records[item.questionId],
+        drafts[item.questionId],
+        shuffleOptions,
+      ),
   ];
 }
 
 QuestionRuntime _buildOne(
   PracticeItem item,
   PracticeAnswerRecord? record,
+  Object? draftEntry,
   bool shuffle,
 ) {
   final keys = item.content.options.map((o) => o.key).toList();
+  // 草稿（0144）：批量 / 顺序练习中途退出时，作答还没进 practice_answers，
+  // 靠它把"学生答到哪儿、当时选了什么"还原出来。
+  final draft = draftEntry is Map
+      ? Map<String, dynamic>.from(draftEntry)
+      : const <String, dynamic>{};
+  final rawAnswer = draft['answer'];
   return QuestionRuntime(
     item: item,
     // 种子取 questionId：同一题每次进入顺序一致，复盘时才对得上
     displayOrder: displayOrder(keys, seed: item.questionId, shuffle: shuffle),
-    verdict: record?.isCorrect,
-    selfMastered: record?.selfMastered,
+    draft: rawAnswer is Map
+        ? submittedAnswerFrom(Map<String, dynamic>.from(rawAnswer))
+        : null,
+    verdict: draft['is_correct'] as bool? ?? record?.isCorrect,
+    selfMastered: draft['self_mastered'] as bool? ?? record?.selfMastered,
     durationMs: record?.durationMs ?? 0,
   );
 }

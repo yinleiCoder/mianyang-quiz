@@ -1,16 +1,14 @@
 // 练习会话：组卷、续练、提交单题、交卷、放弃（0029/0030 的 5 个 RPC）。
-//
-// 会话的状态全在服务端：题面快照与判分都由 RPC 决定，客户端只负责把作答原样送回去。
+// 会话状态全在服务端：题面快照与判分都由 RPC 决定，客户端只负责把作答原样送回去。
 // 本地判分（utils/answer_grader.dart）只用于抢先显示，提交后一律以返回的
 // SubmitResult.isCorrect 覆盖。
-//
-// 与「背题模式」的分界：背题**不建会话**，纯 PostgREST 查题 + 本地翻题，不走这里。
-// 因为这批方法都有副作用（会写 practice_sessions / practice_answers）。
+// 与「背题模式」的分界：背题**不建会话**，纯 PostgREST 查题就够——它没有副作用。
 
 import 'package:mianyang_quiz/utils/utils.dart';
 import 'package:mianyang_quiz/entity/entity.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'practice_reason_queries.dart';
+import 'practice_progress_queries.dart';
 
 class PracticeRepository {
   const PracticeRepository(this._client);
@@ -94,6 +92,15 @@ class PracticeRepository {
       throw mapError(error);
     }
   }
+
+  /// 同步「还没提交的作答」（0144）。实现见 practice_progress_queries.dart。
+  /// 批量 / 顺序练习续练靠它；[mode] 传 `PracticeMode.wire` 时顺带登记练习方式。
+  Future<void> saveProgress({
+    required String sessionId,
+    String? mode,
+    Map<String, Map<String, dynamic>> answers = const {},
+  }) => savePracticeProgress(
+    _client, sessionId: sessionId, mode: mode, answers: answers);
 
   /// 「为什么推这道题」的逐题依据（0137）。实现见 practice_reason_queries.dart。
   Future<Map<String, PracticeReason>> fetchSessionReasons(String sessionId) =>

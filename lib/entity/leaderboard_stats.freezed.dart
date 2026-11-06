@@ -18,7 +18,7 @@ mixin _$LeaderboardStats {
 
 /// 当前口径下上榜人数。
  int get total; int get graded;/// 已交卷但还没判完（主观题）的人数。
- int get ungraded;/// 考的是旧版卷面、因此不计入本榜的场次。
+ int get ungraded;/// 0118 起榜单跨版本合并，该字段恒为 0；旧版跳过只用于试题分析页签。
 @JsonKey(name: 'other_version_skipped') int get otherVersionSkipped;@JsonKey(name: 'avg_score') double? get avgScore;@JsonKey(name: 'avg_percent') double? get avgPercent;@JsonKey(name: 'max_score') double? get maxScore;@JsonKey(name: 'min_score') double? get minScore;@JsonKey(name: 'median_percent') double? get medianPercent;@JsonKey(name: 'p25_percent') double? get p25Percent;@JsonKey(name: 'p75_percent') double? get p75Percent;
 /// Create a copy of LeaderboardStats
 /// with the given fields replaced by the non-null parameter values.
@@ -236,7 +236,7 @@ class _LeaderboardStats implements LeaderboardStats {
 @override@JsonKey() final  int graded;
 /// 已交卷但还没判完（主观题）的人数。
 @override@JsonKey() final  int ungraded;
-/// 考的是旧版卷面、因此不计入本榜的场次。
+/// 0118 起榜单跨版本合并，该字段恒为 0；旧版跳过只用于试题分析页签。
 @override@JsonKey(name: 'other_version_skipped') final  int otherVersionSkipped;
 @override@JsonKey(name: 'avg_score') final  double? avgScore;
 @override@JsonKey(name: 'avg_percent') final  double? avgPercent;

@@ -85,6 +85,16 @@ abstract class PracticeSessionSnapshot with _$PracticeSessionSnapshot {
     /// 符合筛选条件的题目**总数**（不是本轮题数）。只有顺序练习会返回，
     /// 用来算"共几轮、还有没有下一轮"；null = 未知，界面就别显示轮次。
     @JsonKey(name: 'total_available') int? totalAvailable,
+
+    /// 练习方式（0144 的 practice_sessions.mode）。续练必须按它重开——
+    /// 批量练习不能被当成即时练习逐题提交，顺序讲练更不能（0090）。
+    /// 旧服务端不返回这个键时是空串，调用方再按 [scored] 兜底。
+    @Default('') String mode,
+
+    /// **还没提交**的作答草稿（0144）：question_id → {answer, is_correct, self_mastered}。
+    /// 批量 / 顺序练习中途退出后，换台设备接着答靠的就是它；即时练习这里恒为空。
+    @Default(<String, dynamic>{}) Map<String, dynamic> drafts,
+
     @Default(<PracticeItem>[]) List<PracticeItem> items,
     @Default(<PracticeAnswerRecord>[]) List<PracticeAnswerRecord> answers,
   }) = _PracticeSessionSnapshot;

@@ -14,6 +14,8 @@
 //
 // 不负责：界面、导航、提示文案。
 
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:mianyang_quiz/utils/utils.dart';
 import 'package:mianyang_quiz/entity/entity.dart';
@@ -35,8 +37,10 @@ class PracticeRunner extends ChangeNotifier {
        _sessionId = snapshot.sessionId,
        _ended = snapshot.isActive ? null : snapshot,
        _runtimes = buildQuestionRuntimes(snapshot, shuffleOptions: shuffleOptions) {
-    // 续练时定位到第一道未作答的题；全答完则停在最后一题
-    final pending = _runtimes.indexWhere((r) => !r.isSubmitted);
+    // 续练时定位到第一道未作答的题；全答完则停在最后一题。
+    // **用 isAnswered 而不是 isSubmitted**：批量练习的草稿没有判定，
+    // 只看 isSubmitted 会把人送回第 1 题。
+    final pending = _runtimes.indexWhere((r) => !r.isAnswered);
     _index = pending < 0 ? 0 : pending;
   }
 
@@ -173,14 +177,68 @@ class PracticeRunner extends ChangeNotifier {
         _runtimes[questionIndex].copyWith(durationMs: elapsedMs);
   }
 
+  // ─────────────── 作答草稿同步（0144，跨设备续练） ───────────────
+  //
+  // 即时练习**不走这里**：每答一题 submit_practice_answer 已经把作答写进
+  // practice_answers 了。需要草稿的是批量练习（交卷前啥都不提交）与顺序讲练
+  // （0090 规定一个答案都不许提交）。
+  //
+  // 草稿只进 practice_sessions.draft_answers，**不进 practice_answers**，
+  // 所以统计口径一个字没变：进度能同步，错题本/正确率/遗忘曲线看不见它。
+
+  /// 还没送到服务端的草稿：question_id → {answer, is_correct, self_mastered}。
+  final Map<String, Map<String, dynamic>> _pendingDrafts = {};
+  Timer? _draftTimer;
+
+  void _scheduleDraftSave(QuestionRuntime runtime) {
+    if (mode == PracticeMode.instant) return;
+    // 空作答发空 Map：服务端据此把这道题从草稿里删掉。
+    // 发 {'answer': null} 会留下一条"答了但内容为空"的记录，续练时进度条会多算一格。
+    final empty = runtime.draft == null &&
+        runtime.verdict == null &&
+        runtime.selfMastered == null;
+    _pendingDrafts[runtime.item.questionId] = empty
+        ? const <String, dynamic>{}
+        : {
+            'answer': runtime.draft?.toJson(),
+            'is_correct': runtime.verdict,
+            'self_mastered': runtime.selfMastered,
+          };
+    _draftTimer?.cancel();
+    _draftTimer = Timer(const Duration(milliseconds: 800), _flushDrafts);
+  }
+
+  /// 把攒下的草稿推给服务端。失败就把它们放回队列，下次改动时一起重试。
+  void _flushDrafts() {
+    _draftTimer?.cancel();
+    _draftTimer = null;
+    if (_pendingDrafts.isEmpty) return;
+    final batch = Map<String, Map<String, dynamic>>.of(_pendingDrafts);
+    _pendingDrafts.clear();
+    unawaited(
+      _repository.saveProgress(sessionId: _sessionId, answers: batch).catchError(
+        (Object error) {
+          debugPrint('练习进度同步失败：$error');
+          _pendingDrafts.addAll(batch);
+        },
+      ),
+    );
+  }
+
+  /// 切后台 / 离开页面时立刻把节流窗口里的草稿送出去。
+  /// 硬杀进程不会走 dispose，所以页面在 onPause 时也要叫一次。
+  void flushDrafts() => _flushDrafts();
+
   void setDraft(SubmittedAnswer? answer) {
     _runtimes[_index] = current.copyWith(draft: answer, clearDraft: answer == null);
+    _scheduleDraftSave(_runtimes[_index]);
     _notify();
   }
 
   /// 主观题自评。root 题的掌握与否通过 p_self_mastered 传给服务端。
   void setSelfMastered(bool mastered) {
     _runtimes[_index] = current.copyWith(selfMastered: mastered, verdict: mastered);
+    _scheduleDraftSave(_runtimes[_index]);
     _notify();
   }
 
@@ -216,6 +274,9 @@ class PracticeRunner extends ChangeNotifier {
     // 那时退回服务端判一次——宁可让这一题进统计，也不能让学生看一句错的反馈。
     if (mode == PracticeMode.sequential && local != null) {
       _runtimes[index] = _runtimes[index].copyWith(submitting: false);
+      // 判定只在本机，但草稿要同步：换台设备/关掉软件再回来时，
+      // 继续讲练得知道哪几道已经过过、当时判得对不对。
+      _scheduleDraftSave(_runtimes[index]);
       _notify();
       return SubmitResult(isCorrect: local, grading: 'auto');
     }
@@ -337,6 +398,10 @@ class PracticeRunner extends ChangeNotifier {
   /// finish 把它关掉——不关就一直是"进行中"，下次开始练习时会弹出「上次的练习还没做完」，
   /// 记录页也会一直挂着一行进行中。两者用的是同一个 [elapsed]。
   Future<FinishSummary?> finish() async {
+    // 交卷之后草稿就没用了：先停掉节流，免得最后一批在交卷后才发出去
+    _draftTimer?.cancel();
+    _draftTimer = null;
+    _pendingDrafts.clear();
     if (mode == PracticeMode.batch) await submitAll();
     if (_ended != null) return null;
     if (mode == PracticeMode.sequential) {
@@ -384,6 +449,8 @@ class PracticeRunner extends ChangeNotifier {
 
   @override
   void dispose() {
+    // 离开页面时把节流窗口里还没送出的草稿立刻推一次（本机已经没有别的副本了）
+    _flushDrafts();
     // 只置标志，不撤销在途请求：提交已经发出去了，结果仍要写回 _runtimes。
     _disposed = true;
     super.dispose();

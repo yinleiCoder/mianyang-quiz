@@ -10,11 +10,11 @@ enum PracticeMode {
   /// **答对答错都停在原地**，由学生自己点「继续」（用户 2026-10-12 反馈，改回手动）。
   /// 中间有过一版"答对 2 秒后自动跳"，理由是答对的人不用看解析；实际用下来答对的人
   /// 也想核对解析，2 秒把页面抢走反而看不清。实现见 PracticeFeedbackBar。
-  instant('即时练习', '选完立刻出对错、标准答案与解析'),
+  instant('即时练习', '选完立刻出对错、标准答案与解析', 'instant'),
 
   /// 批量练习：先答完整卷再交卷。
   /// 答题过程中可自由翻页、改答案，交卷时才逐题提交。
-  batch('批量练习', '答完再交卷，中途可回看与修改'),
+  batch('批量练习', '答完再交卷，中途可回看与修改', 'batch'),
 
   /// 即时顺序练习（教师讲练）：按**题库列表的顺序**一题接一题地过（published_at 倒序，
   /// 见 0090 的 start_sequential_practice），不随机、不按遗忘曲线、也不跳过"今天已经练过的"。
@@ -23,12 +23,17 @@ enum PracticeMode {
   /// 今日已练 / 热力图全部派生自那张表，不写就等于自动不进任何统计。判定仍然即时
   /// （与 instant 同一条反馈链、同一套解析展示），只是结论用本地判分镜像，不回传服务端。
   /// 练习记录里会留一条，记录页按 scored 标「课堂讲练·不计分」。
-  sequential('即时顺序练习', '按题库顺序连着过题、即时报对错；教师讲练用，不计入统计');
+  sequential('即时顺序练习', '按题库顺序连着过题、即时报对错；教师讲练用，不计入统计', 'sequential');
 
-  const PracticeMode(this.label, this.description);
+  const PracticeMode(this.label, this.description, this.wire);
 
   final String label;
   final String description;
+
+  /// 存到服务端的线格式（practice_sessions.mode，见 0144）。
+  /// 续练必须按它重开：批量练习不能被当成即时练习逐题提交，
+  /// 顺序讲练更不能（0090 一个答案都不许提交）。
+  final String wire;
 
   /// 是否在选中后立即判题。两种"即时"模式都算——顺序练习只是挑题与排序不同，
   /// 判题时机与反馈链跟即时练习完全一致。
@@ -42,4 +47,14 @@ enum PracticeMode {
   /// false 时客户端**一次答案都不提交**：服务端那张表是整个学习统计的唯一来源，
   /// 不写就是干净（见 0090 的注释）。判定改由 utils/answer_grader.dart 的本地镜像给。
   bool get countsTowardStats => this != PracticeMode.sequential;
+}
+
+/// 线格式 → 枚举。认不出来返回 null（旧服务端没有 mode 字段时就是这样，
+/// 调用方再按 scored / 路由兜底）。**不要**默认成 instant：
+/// 那把一场批量练习续成即时练习，会把草稿当成已判定的作答逐题提交。
+PracticeMode? practiceModeFromWire(String? wire) {
+  for (final mode in PracticeMode.values) {
+    if (mode.wire == wire) return mode;
+  }
+  return null;
 }
