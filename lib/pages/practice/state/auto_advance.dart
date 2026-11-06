@@ -3,8 +3,10 @@
 // 从 practice_stage.dart 拆出来：那边已经顶到 200 行上限，而这段规则有自己的
 // 生命周期（监听题号、计时、取消），正好是一刀。
 //
-// 三条规则：
+// 四条规则：
 //   · 只有**即时练习**（PracticeMode.instant）且不是最后一题才自动跳；
+//   · **用户可以在开始练习页关掉**（PracticePrefsStore.autoAdvance，默认开）；
+//     关掉后答对也停在原地，等用户自己点「继续」；
 //   · 题号一变就取消——用户点答题卡回到刚答对的题看解析时，不能再被抢走；
 //   · 计时器触发时再核对一次"还停在刚答对那题、判定仍为对"，否则什么都不做。
 //
@@ -26,7 +28,10 @@ class AutoAdvanceController {
   late int _lastIndex;
 
   /// 答对后调用：安排 1 秒后的自动跳题。
-  void schedule(int answeredIndex) {
+  ///
+  /// [enabled] 是用户偏好（默认开）。关掉时直接不排队——调用方不必自己判。
+  void schedule(int answeredIndex, {bool enabled = true}) {
+    if (!enabled) return;
     if (_runner.mode != PracticeMode.instant || _runner.isLast) return;
     cancel();
     _timer = Timer(const Duration(seconds: 1), () {

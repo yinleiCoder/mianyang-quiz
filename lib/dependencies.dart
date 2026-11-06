@@ -70,6 +70,7 @@ class AppDependencies {
     deps.dashboardStore = DashboardStore(deps.statsRepository);
     deps.favoriteStore = FavoriteStore(deps.favoriteRepository);
     deps.practiceDraftStore = PracticeDraftStore();
+    deps.practicePrefsStore = PracticePrefsStore();
     deps.checkinStore = CheckinStore(deps.checkinRepository);
     deps.updateStore = UpdateStore(deps.appUpdateRepository);
     deps.themeStore = themeStore ?? ThemeStore();
@@ -121,6 +122,9 @@ class AppDependencies {
   late final FavoriteStore favoriteStore;
   late final PracticeDraftStore practiceDraftStore;
 
+  /// 练习偏好（答对后是否自动跳题）。存本机，跨会话记住。
+  late final PracticePrefsStore practicePrefsStore;
+
   /// 每日打卡（首页打卡区、今日目标）与版本更新（启动弹窗、我的页红点）。
   late final CheckinStore checkinStore;
   late final UpdateStore updateStore;
@@ -136,8 +140,9 @@ class AppDependencies {
     // 会话令牌在 Supabase.initialize 时已从本地恢复，RPC 自己会校验；
     // 首页 post-frame 的那次 refresh 与这里共享同一个 Future（见 DashboardStore）。
     dashboardStore.refresh(silent: true);
-    // 音效开关存本地，启动时恢复一次（失败保持默认开）
+    // 音效开关与练习偏好都存本地，启动时恢复一次（失败保持默认开）
     sfxService.load();
+    practicePrefsStore.load();
   }
 
   void dispose() {
@@ -145,6 +150,7 @@ class AppDependencies {
     dashboardStore.dispose();
     favoriteStore.dispose();
     practiceDraftStore.dispose();
+    practicePrefsStore.dispose();
     checkinStore.dispose();
     updateStore.dispose();
     themeStore.dispose();

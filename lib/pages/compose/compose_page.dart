@@ -109,10 +109,13 @@ class _ComposePageState extends State<ComposePage> {
                         limit: draft.limit,
                         shuffle: draft.shuffleOptions,
                         sound: context.watch<SfxService>().enabled,
+                        autoAdvance: context.watch<PracticePrefsStore>().autoAdvance,
                         onModeChanged: draft.setMode,
                         onLimitChanged: draft.setLimit,
                         onShuffleChanged: draft.setShuffleOptions,
                         onSoundChanged: context.read<SfxService>().setEnabled,
+                        onAutoAdvanceChanged:
+                            context.read<PracticePrefsStore>().setAutoAdvance,
                       ),
                       // 轮次只属于顺序讲练（0095）：其余模式按遗忘曲线抽题，没有"第几轮"。
                       if (draft.mode == PracticeMode.sequential) ...[

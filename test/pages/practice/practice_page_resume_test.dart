@@ -90,6 +90,10 @@ Future<void> _pumpPage(
           ChangeNotifierProvider<FavoriteStore>.value(
             value: FavoriteStore(FavoriteRepository(repo.client)),
           ),
+          // 答对后的自动跳题读它（默认开）
+          ChangeNotifierProvider<PracticePrefsStore>.value(
+            value: PracticePrefsStore(),
+          ),
         ],
         child: MaterialApp(
           theme: AppTheme.light(),

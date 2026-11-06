@@ -1,7 +1,8 @@
-// 即时练习的自动跳题规则（用户 2026-10-24）。
+// 即时练习的自动跳题规则（用户 2026-10-24，2026-11-06 加开关）。
 //
-// 钉住四条：
-//   · 答对后停 1 秒自动进下一题；
+// 钉住五条：
+//   · 答对后停 1 秒自动进下一题（默认开）；
+//   · 用户关掉开关后（enabled: false），答对也停在原地；
 //   · 答错不自动跳（由用户自己点「继续」）；
 //   · 用户手动切题后，计时器不再抢页面（回到刚答对的题看解析时尤其重要）；
 //   · 最后一题不自动跳（那里要交卷，不是翻页）。
@@ -31,6 +32,25 @@ void main() {
 
     await tester.pump(const Duration(milliseconds: 1));
     expect(runner.index, 1, reason: '1 秒后自动进入下一题');
+  });
+
+  testWidgets('用户关掉开关后，答对也停在原地', (tester) async {
+    final repo = _FakePracticeRepository(correct: true);
+    final runner = _runner(repo, itemCount: 2);
+    final auto = AutoAdvanceController(runner);
+    addTearDown(auto.dispose);
+
+    runner.setDraft(const ChoiceAnswer(['A']));
+    await runner.check();
+    // 舞台会从 PracticePrefsStore 取到 false 再传进来
+    auto.schedule(0, enabled: false);
+
+    await tester.pump(const Duration(seconds: 2));
+    expect(runner.index, 0, reason: '用户关掉了自动跳转，答对也要自己点「继续」');
+
+    // 再手动继续仍然照常可用
+    runner.advance();
+    expect(runner.index, 1);
   });
 
   testWidgets('答错不自动跳', (tester) async {

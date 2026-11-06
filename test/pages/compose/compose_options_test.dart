@@ -77,6 +77,21 @@ void main() {
 
     expect(picked, [PracticeMode.sequential]);
   });
+
+  testWidgets('答对后自动跳转：默认开，点一下回调关掉', (tester) async {
+    final changed = <bool>[];
+    await _pump(tester, limit: 20, onAutoAdvanceChanged: changed.add);
+
+    // 开关本身要有（默认值由 PracticePrefsStore 提供，这里传 true）
+    final tile = find.widgetWithText(SwitchListTile, '答对后自动跳转');
+    expect(tile, findsOneWidget);
+    expect(tester.widget<SwitchListTile>(tile).value, isTrue);
+
+    await tester.tap(tile);
+    await tester.pump();
+
+    expect(changed, [false], reason: '点一下 = 把自动跳转关掉');
+  });
 }
 
 Future<void> _pump(
@@ -85,6 +100,7 @@ Future<void> _pump(
   ValueChanged<int>? onChanged,
   PracticeMode mode = PracticeMode.instant,
   ValueChanged<PracticeMode>? onModeChanged,
+  ValueChanged<bool>? onAutoAdvanceChanged,
 }) async {
   tester.view.physicalSize = const Size(390, 844);
   tester.view.devicePixelRatio = 1.0;
@@ -103,10 +119,12 @@ Future<void> _pump(
               limit: limit,
               shuffle: true,
               sound: true,
+              autoAdvance: true,
               onModeChanged: onModeChanged ?? (_) {},
               onLimitChanged: onChanged ?? (_) {},
               onShuffleChanged: (_) {},
               onSoundChanged: (_) {},
+              onAutoAdvanceChanged: onAutoAdvanceChanged ?? (_) {},
             ),
           ),
         ),

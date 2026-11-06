@@ -13,5 +13,6 @@ export 'favorite_store.dart';
 export 'practice_draft_store.dart';
 export 'practice_entry.dart';
 export 'practice_mode.dart';
+export 'practice_prefs_store.dart';
 export 'theme_store.dart';
 export 'update_store.dart';

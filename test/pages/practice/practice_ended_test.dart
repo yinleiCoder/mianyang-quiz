@@ -167,9 +167,15 @@ Future<void> _pumpStage(
       enableScaleText: () => false,
       // 整个 App 必须在 builder 里搭：AppTheme 用了 .r（ScreenUtil），
       // 在 ScreenUtilInit 跑起来之前取主题会抛 LateInitializationError
-      builder: (context, _) => ChangeNotifierProvider<SfxService>.value(
-        // 舞台放音效要有 SfxService（测试环境没有音频通道，播放失败在服务里是静默的）
-        value: SfxService(),
+      builder: (context, _) => MultiProvider(
+        providers: [
+          // 舞台放音效要有 SfxService（测试环境没有音频通道，播放失败在服务里是静默的）
+          ChangeNotifierProvider<SfxService>.value(value: SfxService()),
+          // 答对后的自动跳题读它（默认开）
+          ChangeNotifierProvider<PracticePrefsStore>.value(
+            value: PracticePrefsStore(),
+          ),
+        ],
         // 交卷成功会 pushReplacement 去结果页，没有路由树会直接抛
         child: router
             ? MaterialApp.router(

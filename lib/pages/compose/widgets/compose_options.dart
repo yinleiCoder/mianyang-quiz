@@ -17,10 +17,12 @@ class ComposeOptions extends StatelessWidget {
     required this.limit,
     required this.shuffle,
     required this.sound,
+    required this.autoAdvance,
     required this.onModeChanged,
     required this.onLimitChanged,
     required this.onShuffleChanged,
     required this.onSoundChanged,
+    required this.onAutoAdvanceChanged,
   });
 
   final PracticeMode mode;
@@ -29,10 +31,14 @@ class ComposeOptions extends StatelessWidget {
 
   /// 答题音效开关（存在本地偏好里，跨会话记住）。
   final bool sound;
+
+  /// 答对后是否自动跳下一题（只影响即时练习；也存在本地偏好里，默认开）。
+  final bool autoAdvance;
   final ValueChanged<PracticeMode> onModeChanged;
   final ValueChanged<int> onLimitChanged;
   final ValueChanged<bool> onShuffleChanged;
   final ValueChanged<bool> onSoundChanged;
+  final ValueChanged<bool> onAutoAdvanceChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -81,6 +87,18 @@ class ComposeOptions extends StatelessWidget {
                   title: const Text('答题音效'),
                   subtitle: Text(
                     '答对、答错各有一记提示音（开关记在这台设备上）',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: autoAdvance,
+                  onChanged: onAutoAdvanceChanged,
+                  title: const Text('答对后自动跳转'),
+                  subtitle: Text(
+                    '即时练习答对后 1 秒进入下一题；关掉就停在本题看解析',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),

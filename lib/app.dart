@@ -101,6 +101,8 @@ class _MianyangQuizAppState extends State<MianyangQuizApp> {
                 ChangeNotifierProvider.value(value: deps.dashboardStore),
                 ChangeNotifierProvider.value(value: deps.favoriteStore),
                 ChangeNotifierProvider.value(value: deps.practiceDraftStore),
+                // 练习偏好（答对后自动跳题）：组卷页写、练习页读
+                ChangeNotifierProvider.value(value: deps.practicePrefsStore),
                 // 打卡（首页打卡区）与版本更新（启动弹窗 / 我的页红点）
                 ChangeNotifierProvider.value(value: deps.checkinStore),
                 ChangeNotifierProvider.value(value: deps.updateStore),

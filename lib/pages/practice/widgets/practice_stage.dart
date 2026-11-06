@@ -4,7 +4,8 @@
 //
 // 即时模式：
 //   · 单选/判断选完立即判题；多选/填空/主观点「检查」
-//   · **答对停 1 秒自动进下一题**（AutoAdvanceController）；答错停在原地等用户点「继续」
+//   · **答对停 1 秒自动进下一题**（AutoAdvanceController，可在开始练习页关掉）；
+//     答错停在原地等用户点「继续」
 // 批量模式：只记草稿，上一题/下一题/答题卡自由切换，交卷时才提交。
 
 import 'dart:async';
@@ -19,6 +20,7 @@ import 'package:mianyang_quiz/state/state.dart';
 import 'package:mianyang_quiz/pages/practice/state/auto_advance.dart';
 import 'package:mianyang_quiz/pages/practice/state/practice_runner.dart';
 import 'package:mianyang_quiz/pages/practice/widgets/practice_ended_view.dart';
+import 'package:mianyang_quiz/pages/practice/widgets/practice_error_toast.dart';
 import 'package:mianyang_quiz/pages/practice/widgets/practice_layout.dart';
 import 'package:mianyang_quiz/pages/practice/widgets/quit_confirm_sheet.dart';
 import 'package:provider/provider.dart';
@@ -107,21 +109,19 @@ class _PracticeStageState extends State<PracticeStage> {
       if (verdict == true) {
         unawaited(sfx.correct());
         // 答对才自动跳；答错/主观题/顺序练习都停在原地等用户。
-        if (_runner.index == answeredIndex) _autoAdvance.schedule(answeredIndex);
+        // 是否自动跳由用户在开始练习页的开关决定（默认开，见 PracticePrefsStore）。
+        if (_runner.index == answeredIndex) {
+          _autoAdvance.schedule(
+            answeredIndex,
+            enabled: context.read<PracticePrefsStore>().autoAdvance,
+          );
+        }
       } else if (verdict == false) {
         unawaited(sfx.wrong());
       }
     } catch (error) {
       if (!mounted) return;
-      // 失败了先问一句"这场练习还活着吗"：已经结束的话界面会换成结束态并说明原因，
-      // 再叠一句"提交失败：……"只会让人以为再点一次就能好（见 _runner.syncEndedState）
-      await _runner.syncEndedState();
-      if (!mounted || _runner.ended != null) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        // 用 mapError 取文案，不要插值原始异常：AppException.toString() 是
-        // '$runtimeType: $message'，用户会看到「ServerException: …」。
-        SnackBar(content: Text('提交失败：${mapError(error).message}')),
-      );
+      await showPracticeSubmitError(context, _runner, error, prefix: '提交失败');
     } finally {
       if (mounted) setState(() => _checking = false);
     }
@@ -154,12 +154,7 @@ class _PracticeStageState extends State<PracticeStage> {
       );
     } catch (error) {
       if (!mounted) return;
-      // 同 _check：会话已结束时界面自己会说明，不再叠一句"交卷失败"
-      await _runner.syncEndedState();
-      if (!mounted || _runner.ended != null) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('交卷失败：${mapError(error).message}')),
-      );
+      await showPracticeSubmitError(context, _runner, error, prefix: '交卷失败');
     } finally {
       if (mounted) setState(() => _finishing = false);
     }
