@@ -1,4 +1,4 @@
-// AI 答疑：把 duck.ai 嵌进应用内，学生遇到不会的题可以直接问。
+// AI 答疑：把秘塔 AI 搜索（metaso.cn）嵌进应用内，学生遇到不会的题可以直接问。
 //
 // **平台实现已换成 flutter_inappwebview**（原先的官方 webview_flutter 只有 Android/iOS
 // 实现，Windows 上没有任何官方 WebView，只能给一个"用浏览器打开"的降级入口）。
@@ -12,8 +12,8 @@
 //      没有的话安装器可以另带 bootstrapper）。缺了的话 WebView 起不来，
 //      此时给一块说明 + 出口，而不是一个永远转圈的白屏。
 //
-// 顶栏常驻"用浏览器打开"：duck.ai 有 Cloudflare 校验，撞上验证页、或 WebView2 缺失时，
-// 用户始终有出口。
+// 顶栏常驻"用浏览器打开"：秘塔 AI 是站外站点，可能需要登录或人机校验；
+// 撞上验证页、或 WebView2 缺失时，用户始终有出口。
 
 import 'dart:io';
 import 'dart:ui' show AppExitResponse;
@@ -26,7 +26,7 @@ import 'package:mianyang_quiz/values/values.dart';
 import 'package:mianyang_quiz/widgets/widgets.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-const _url = 'https://duck.ai/';
+const _url = 'https://metaso.cn/';
 
 class AiPage extends StatefulWidget {
   const AiPage({super.key});
@@ -190,7 +190,7 @@ class _AiPageState extends State<AiPage> {
               SizedBox(height: AppMetrics.gapSm.r),
               Text(
                 'Windows 上的内嵌浏览器需要 WebView2 运行时（Win11 自带，'
-                'Win10 装过 Edge 一般也有）。点下面的按钮会用系统浏览器打开 duck.ai，'
+                'Win10 装过 Edge 一般也有）。点下面的按钮会用系统浏览器打开秘塔 AI，'
                 '登录后体验与手机端一致。',
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodySmall?.copyWith(
@@ -199,7 +199,7 @@ class _AiPageState extends State<AiPage> {
               ),
               SizedBox(height: AppMetrics.gapXl.r),
               DuoButton(
-                label: '打开 duck.ai',
+                label: '打开秘塔AI',
                 icon: Icons.open_in_new,
                 onPressed: _openInBrowser,
               ),

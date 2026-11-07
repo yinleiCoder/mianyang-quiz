@@ -36,7 +36,7 @@ const List<NavDestination> kNavDestinations = [
     icon: Icons.auto_stories_outlined,
     activeIcon: Icons.auto_stories,
   ),
-  // AI 答疑：站外能力（duck.ai），放在题库旁边——学生查问题的手势就是"看完题顺手问一句"
+  // AI 答疑：站外能力（秘塔 AI 搜索 metaso.cn），放在题库旁边——学生查问题的手势就是"看完题顺手问一句"
   NavDestination(
     label: 'AI 答疑',
     icon: Icons.auto_awesome_outlined,
