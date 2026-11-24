@@ -649,6 +649,18 @@ Content-Disposition），清单里 APK 的 `url` 指向
 2026-10-29 实测）。Windows 仍用清单里的 OSS 直链。细节见网页端仓库的
 `AGENTS.md`「客户端下载」与 `components/download/apk-download.jsx`。
 
+### CI 的两个硬性配置（2026-11-24 发布踩到）
+
+- **Android job 的 JDK 必须 21+**：AGP 9.3.1 的 lint 用了 Java 21 才有的
+  `java.util.List.removeLast()`；JDK 17 上会以 `NoSuchMethodError` 崩在
+  `CommentDetector`，表现为 `:image_picker_android:lintVitalAnalyzeRelease` 失败
+  （`release.yml` 里是 `actions/setup-java` 的 `java-version: "21"`）。
+- **`PUB_HOSTED_URL` 必须与 `pubspec.lock` 的源一致**（本仓锁文件是
+  `https://pub.flutter-io.cn`）：锁文件里每个包都记着 `url`，GitHub runner 默认用
+  pub.dev 时 pub 会把它当成**另一个源**，静默重解整张依赖表——2026-11-24 实测
+  `Changed 205 dependencies`（pdfrx 2.6.5 → 2.13.1、build 4.x → 5.0.0 等），
+  发出去的包就不再是本地测试过的那套。`release.yml` 的顶层 `env` 已固定这个变量。
+
 ### Android 按 ABI 拆包（2026-09-28 起）
 
 CI 用的是 `flutter build apk --split-per-abi`，出三份而不是一个通用包。

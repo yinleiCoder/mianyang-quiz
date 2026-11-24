@@ -23,6 +23,11 @@ permissions:
 
 env:
   FLUTTER_VERSION: "3.50.1"
+  # pubspec.lock 里的依赖来自国内镜像（url 字段是 pub.flutter-io.cn）。
+  # GitHub runner 默认用 pub.dev，pub 把两者当成**不同的源**，会静默把锁文件
+  # 整表重解（2026-11-24 实测 Changed 205 dependencies：pdfrx 2.6.5 → 2.13.1 等）。
+  # 那样发出去的包就不再是本地测试过的那套依赖，所以这里固定成与锁文件一致的源。
+  PUB_HOSTED_URL: "https://pub.flutter-io.cn"
 
 jobs:
   # ---------- 质量门禁（两个构建都必须先过这里）----------
@@ -241,7 +246,12 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "17"
+          # **必须是 21+**：AGP 9.3.1 的 lint 用了 Java 21 才有的
+          # `java.util.List.removeLast()`；在 JDK 17 上会以
+          # NoSuchMethodError 崩在 CommentDetector，表现为
+          # `:image_picker_android:lintVitalAnalyzeRelease` 失败
+          #（2026-11-24 线上发布踩到）。Gradle 9.5 / AGP 9.3.1 都支持 21。
+          java-version: "21"
 
       - uses: subosito/flutter-action@v2
         with:
