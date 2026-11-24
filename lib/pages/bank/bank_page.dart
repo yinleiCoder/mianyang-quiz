@@ -10,6 +10,8 @@
 //
 // 本页由 AppShell 的 Scaffold 承载（题库是底部导航的一个 tab），所以不自己建 Scaffold。
 
+import 'dart:async';
+
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/utils/utils.dart';
@@ -41,6 +43,10 @@ class _BankPageState extends State<BankPage> {
   /// 全站作答统计（question_id → 作答/答对）。缺项 = 这道题还没人做过，不是错误。
   Map<String, QuestionAccuracy> _accuracy = const {};
 
+  /// 每发起一次取数就 +1。题目先到、统计后到是**并行**的，没有这个序号，
+  /// 快速翻页时上一页的统计会落到这一页的列表上。
+  int _loadId = 0;
+
   /// 参考数据（科目树、标签）：一次会话里几乎不变，进页面取一次（见 bank_reference.dart）。
   BankReference _ref = const BankReference();
 
@@ -69,27 +75,35 @@ class _BankPageState extends State<BankPage> {
     await _load();
   }
 
-  Future<(QuestionPage, Map<String, QuestionAccuracy>)> _fetchPage() =>
-      _loader.fetchPage(
-        filter: _filter,
-        page: _page,
-        pageSize: _pageSize,
-        nodes: _ref.nodes,
-      );
+  Future<QuestionPage> _fetchPage() => _loader.fetchPage(
+    filter: _filter,
+    page: _page,
+    pageSize: _pageSize,
+    nodes: _ref.nodes,
+  );
 
   Future<void> _load() async {
+    final id = ++_loadId;
     setState(() => _state = const AsyncLoading());
     try {
-      final (page, accuracy) = await _fetchPage();
-      if (!mounted) return;
-      setState(() {
-        _state = AsyncData(page);
-        _accuracy = accuracy;
-      });
+      final page = await _fetchPage();
+      if (!mounted || id != _loadId) return;
+      // 题目先摆出来，统计随后补（见 _loadAccuracy）：它只是标签上的附加信息。
+      // 旧统计**不清空**：它是按题目 id 存的全局数据，本页用不到的项自然不渲染；
+      // 清空只会让标签消失一下再出现（翻页/刷新时闪一次）。
+      setState(() => _state = AsyncData(page));
+      unawaited(_loadAccuracy(id, page));
     } on AppException catch (error) {
-      if (!mounted) return;
+      if (!mounted || id != _loadId) return;
       setState(() => _state = AsyncFailure(error));
     }
+  }
+
+  /// 补取当前这一页的全站统计。失败在仓储里已降级成空表，不会冒泡到这里。
+  Future<void> _loadAccuracy(int id, QuestionPage page) async {
+    final accuracy = await _loader.fetchAccuracy(page);
+    if (!mounted || id != _loadId) return;
+    setState(() => _accuracy = accuracy);
   }
 
   /// 下拉刷新：重查当前这一页，**不切到加载态**。
@@ -98,15 +112,14 @@ class _BankPageState extends State<BankPage> {
   /// 用户正看着的内容整块消失——下拉刷新最不该有的表现。
   /// 失败也只提示、保留原内容（与 PagedListState.loadMore 同一口径）。
   Future<void> _refresh() async {
+    final id = ++_loadId;
     try {
-      final (page, accuracy) = await _fetchPage();
-      if (!mounted) return;
-      setState(() {
-        _state = AsyncData(page);
-        _accuracy = accuracy;
-      });
+      final page = await _fetchPage();
+      if (!mounted || id != _loadId) return;
+      setState(() => _state = AsyncData(page));
+      unawaited(_loadAccuracy(id, page));
     } on AppException catch (error) {
-      if (!mounted) return;
+      if (!mounted || id != _loadId) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(error.message)));

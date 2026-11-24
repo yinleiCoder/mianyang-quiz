@@ -29,7 +29,7 @@ class ComposeOptions extends StatelessWidget {
   final int limit;
   final bool shuffle;
 
-  /// 答题音效开关（存在本地偏好里，跨会话记住）。
+  /// 练题音效开关（存在本地偏好里，跨会话记住）。
   final bool sound;
 
   /// 答对后是否自动跳下一题（只影响即时练习；也存在本地偏好里，默认开）。
@@ -84,7 +84,7 @@ class ComposeOptions extends StatelessWidget {
                   contentPadding: EdgeInsets.zero,
                   value: sound,
                   onChanged: onSoundChanged,
-                  title: const Text('答题音效'),
+                  title: const Text('练题音效'),
                   subtitle: Text(
                     '答对、答错各有一记提示音（开关记在这台设备上）',
                     style: theme.textTheme.bodySmall?.copyWith(

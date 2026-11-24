@@ -52,9 +52,20 @@ class PracticeRunner extends ChangeNotifier {
   final String _sessionId;
 
   /// 逐题的推荐依据（0137）。解释性数据，缺失时不影响作答。
-  final Map<String, PracticeReason> _reasons;
+  ///
+  /// 非 final：它**晚于会话到达**（见 [setReasons]）。等它一起再开练，等于让
+  /// 一个附加请求挡在"正在准备练习…"前面——跨境网络下一次就是 0.5~1.5s。
+  Map<String, PracticeReason> _reasons;
 
   PracticeReason? reasonFor(String questionId) => _reasons[questionId];
+
+  /// 补上推荐依据（页面在会话到达、练习已经可答之后才取到它）。
+  /// 空表没有可显示的东西，连通知都不发。
+  void setReasons(Map<String, PracticeReason> reasons) {
+    if (reasons.isEmpty) return;
+    _reasons = reasons;
+    _notify();
+  }
 
   /// 取"现在"的方式。默认 DateTime.now；测试注入假时钟才能断言
   /// 「暂停的那段时间既不算进显示、也不算进结算」。
@@ -230,8 +241,12 @@ class PracticeRunner extends ChangeNotifier {
   void flushDrafts() => _flushDrafts();
 
   void setDraft(SubmittedAnswer? answer) {
+    final before = current.draft;
     _runtimes[_index] = current.copyWith(draft: answer, clearDraft: answer == null);
     _scheduleDraftSave(_runtimes[_index]);
+    // 填空是**逐键**上抛的：输入框自己已经刷新，而进度、答题卡、按钮态
+    // 在第一次输入后就不再变化。不通知，整道题就不会每敲一个字重建一次。
+    if (isTypingOnlyEdit(before, answer)) return;
     _notify();
   }
 

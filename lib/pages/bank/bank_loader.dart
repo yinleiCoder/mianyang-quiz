@@ -29,25 +29,25 @@ class BankLoader {
   /// 参考数据一次会话里几乎不变，进页面取一次（见 bank_reference.dart）。
   Future<BankReference> loadReference() => BankReference.load(subjects);
 
-  /// 这一页的题目 + 全站作答统计。
+  /// 这一页的题目。
   ///
-  /// 两个请求**串行**：统计要用题目 id，绕不开。但统计是附加信息——
-  /// `fetchAccuracyOrEmpty` 取不到就退化空表，不会因此少掉整个列表。
-  Future<(QuestionPage, Map<String, QuestionAccuracy>)> fetchPage({
+  /// **统计不在这条路径上**：它要用题目 id，天然排在题目之后，但它只是附加信息——
+  /// 让列表等它，每次翻页都要多等一个网络往返（跨境网络下 0.5~1.5s）。
+  Future<QuestionPage> fetchPage({
     required QuestionFilter filter,
     required int page,
     required int pageSize,
     required List<SubjectNode> nodes,
-  }) async {
-    final result = await questions.listQuestions(
-      filter: filter,
-      page: page,
-      pageSize: pageSize,
-      nodes: nodes.isEmpty ? null : nodes,
-    );
-    final accuracy = await lists.fetchAccuracyOrEmpty(
-      result.rows.map((row) => row.questionId).toList(),
-    );
-    return (result, accuracy);
-  }
+  }) => questions.listQuestions(
+    filter: filter,
+    page: page,
+    pageSize: pageSize,
+    nodes: nodes.isEmpty ? null : nodes,
+  );
+
+  /// 全站作答统计（question_accuracy）。取不到就退化空表，绝不影响列表。
+  Future<Map<String, QuestionAccuracy>> fetchAccuracy(QuestionPage page) =>
+      lists.fetchAccuracyOrEmpty(
+        page.rows.map((row) => row.questionId).toList(),
+      );
 }

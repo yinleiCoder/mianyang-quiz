@@ -89,18 +89,13 @@ class _LoginPageState extends State<LoginPage> {
             // 输入框与校验规则与找回密码页共用（口径只有一份，见 identifier_field.dart）
             IdentifierField(controller: _identifier, enabled: !_busy),
             SizedBox(height: AppMetrics.gapLg.r),
-            TextFormField(
+            // 密码不做长度校验：老账号的密码规则由服务端说了算，
+            // 客户端拦长度只会把能登录的账号拦在门外。
+            PasswordField(
               controller: _password,
               enabled: !_busy,
-              obscureText: true,
               textInputAction: TextInputAction.done,
               autofillHints: const [AutofillHints.password],
-              decoration: const InputDecoration(
-                labelText: '密码',
-                prefixIcon: Icon(Icons.lock_outline_rounded),
-              ),
-              // 密码不做长度校验：老账号的密码规则由服务端说了算，
-              // 客户端拦长度只会把能登录的账号拦在门外。
               validator: (input) =>
                   (input == null || input.isEmpty) ? '请输入密码' : null,
               onFieldSubmitted: (_) => _submit(),

@@ -116,16 +116,20 @@ class AuthScaffold extends StatelessWidget {
 }
 
 /// 品牌区：图标 + 站名。与首页同一套图形，让"这是哪个 App"一眼可辨。
+///
+/// 图标与站名**同一行**（用户 2026-11-24 口径）：上下排列会让登录页顶部的
+/// 品牌区多占一行高度，窄屏 + 软键盘时表单要滚得更远。
 class _Brand extends StatelessWidget {
   const _Brand();
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return Row(
       mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
         const BrandMark(size: 44),
-        SizedBox(height: AppMetrics.gapMd.r),
+        SizedBox(width: AppMetrics.gapMd.r),
         Text(
           '职教高考联盟',
           textAlign: TextAlign.center,

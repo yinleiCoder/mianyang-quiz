@@ -5,7 +5,8 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.13.0
+  # Flutter 3.50.1 自带 Dart 3.14（CI 的 FLUTTER_VERSION 与之对齐）。
+  sdk: ^3.14.0
 
 dependencies:
   flutter:
@@ -13,11 +14,13 @@ dependencies:
 
   # UI：Material 已从 SDK 拆出为独立包（见 AGENTS.md 第一条）。
   # go_router 18 依赖的也是这个包，两者必须一致，否则路由转场静默失效。
-  material_ui: ^1.2.0
+  # 1.11.x 是与 Flutter 3.50 同期的版本；1.8.0 起 DropdownButtonFormField 的
+  # onChanged 变为可选（本项目的四处用法都显式传了 onChanged，不受影响）。
+  material_ui: ^1.11.1
   cupertino_icons: ^1.0.8
 
   # 路由与状态（不使用 MVVM）
-  go_router: ^18.0.1
+  go_router: ^18.1.4
   provider: ^6.1.5
 
   # 后端：Auth / PostgREST / RPC 走官方 SDK；
@@ -88,8 +91,9 @@ dependencies:
   #   · 8.14.2 把 Android 工具链钉在两年多前（AGP 7.4.2 / compileSdk 34 /
   #     languageVersion "1.6"）→ **Android 包编不出来**。
   # 10.0.0-rc.1 把 jni 放开成 >=1.0.0 <1.1.0、compileSdk 提到 36、删掉 languageVersion，
-  # 两个平台才同时编得过。**它是 RC**：等 10.0.0 转正后换成 ^10.0.0 即可。
-  sentry_flutter: 10.0.0-rc.1
+  # 两个平台才同时编得过。**2026-11-24 已转正**，改用 ^10.6.0（10.x 稳定版，
+  # 同时把 jni 放到 1.2.1、修掉被撤回的 objective_c 9.6.1）。
+  sentry_flutter: ^10.6.0
 
 dev_dependencies:
   flutter_test:

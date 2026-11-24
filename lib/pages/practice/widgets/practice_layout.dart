@@ -51,6 +51,7 @@ class PracticeLayout extends StatelessWidget {
     required this.onCheck,
     required this.onContinue,
     required this.onFinish,
+    this.onOpenSettings,
   });
 
   final PracticeRunner runner;
@@ -65,6 +66,9 @@ class PracticeLayout extends StatelessWidget {
   final VoidCallback onCheck;
   final VoidCallback onContinue;
   final VoidCallback onFinish;
+
+  /// 打开练习设置（练题音效）；不传则顶栏不出现设置入口。
+  final VoidCallback? onOpenSettings;
 
   @override
   Widget build(BuildContext context) {
@@ -84,6 +88,7 @@ class PracticeLayout extends StatelessWidget {
               progress: runner.progress,
               runner: runner,
               onExit: onExit,
+              onOpenSettings: onOpenSettings,
               onOpenAnswerSheet: wide
                   ? null
                   : () => _openAnswerSheet(context, runner),

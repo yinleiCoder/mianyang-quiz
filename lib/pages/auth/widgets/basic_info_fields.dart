@@ -14,6 +14,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/values/values.dart';
 import 'package:mianyang_quiz/utils/utils.dart';
+import 'package:mianyang_quiz/widgets/widgets.dart';
 
 class BasicInfoFields extends StatelessWidget {
   const BasicInfoFields({
@@ -63,13 +64,12 @@ class BasicInfoFields extends StatelessWidget {
               _validateIdentifier(input, isStudent: isStudent),
         ),
         SizedBox(height: AppMetrics.gapLg.r),
-        _field(
+        PasswordField(
           controller: passwordController,
+          enabled: enabled,
           label: '密码',
           hint: '至少 6 位',
-          icon: Icons.lock_outline_rounded,
-          obscure: true,
-          action: TextInputAction.done,
+          textInputAction: TextInputAction.done,
           validator: _validatePassword,
         ),
       ],
@@ -81,14 +81,12 @@ class BasicInfoFields extends StatelessWidget {
     required String label,
     required IconData icon,
     String? hint,
-    bool obscure = false,
     TextInputAction action = TextInputAction.next,
     TextInputType? keyboardType,
     String? Function(String?)? validator,
   }) => TextFormField(
     controller: controller,
     enabled: enabled,
-    obscureText: obscure,
     textInputAction: action,
     keyboardType: keyboardType,
     decoration: InputDecoration(

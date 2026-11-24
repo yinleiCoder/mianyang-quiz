@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mianyang_quiz/entity/entity.dart';
 import 'package:mianyang_quiz/apis/apis.dart';
 import 'package:mianyang_quiz/state/state.dart';
+import 'package:mianyang_quiz/utils/utils.dart';
 import 'package:mianyang_quiz/pages/practice/state/practice_runner.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -90,6 +91,50 @@ void main() {
 
     expect(await runner.finish(), isNull);
     expect(repository.finishedWith, isNull);
+  });
+
+  test('填空逐键输入不在每次击键时通知界面（只通知"从未答到已答"）', () {
+    final runner = PracticeRunner(
+      repository: _RecordingRepository(),
+      snapshot: const PracticeSessionSnapshot(
+        sessionId: 's1',
+        source: 'all',
+        status: 'active',
+        items: [
+          PracticeItem(
+            seq: 1,
+            questionId: 'q1',
+            versionId: 'v1',
+            qtype: 'fill_blank',
+            content: QuestionContent(stem: [Block.text(text: '第 1 题')]),
+          ),
+        ],
+      ),
+      mode: PracticeMode.instant,
+      shuffleOptions: false,
+    );
+    var notices = 0;
+    runner.addListener(() => notices++);
+
+    runner.setDraft(const BlankAnswer(['北']));
+    expect(notices, 1, reason: '第一次输入：作答状态从无到有，进度与按钮要更新');
+
+    runner.setDraft(const BlankAnswer(['北京']));
+    runner.setDraft(const BlankAnswer(['北京市']));
+    expect(notices, 1, reason: '后续击键只改文字，输入框自己会刷新');
+    expect((runner.current.draft! as BlankAnswer).values, ['北京市']);
+  });
+
+  test('选项改变仍会通知（选中态、答题卡都靠它重画）', () {
+    final runner = _runner(() => start);
+    var notices = 0;
+    runner.addListener(() => notices++);
+
+    runner.setDraft(const ChoiceAnswer(['A']));
+    runner.setDraft(const ChoiceAnswer(['B']));
+
+    expect(notices, 2);
+    expect((runner.current.draft! as ChoiceAnswer).keys, ['B']);
   });
 }
 

@@ -555,6 +555,22 @@ debug 下的数字官方明说不代表用户体感。
 `BackdropFilter` / `ImageFilter` / `Clip.antiAliasWithSaveLayer` 全库 0 处；
 列表该懒加载的都懒加载了；首页用 `context.select` 而不是 `watch`。
 
+### 三条"附加信息不挡主流程"（2026-11-24）
+
+改这三处之前先想清楚：它们都是**把附加信息从关键路径上拿开**，不是省掉。
+
+- **逐键输入不通知界面**：填空 / 考试主观题每敲一个字都会 `setDraft`，但输入框本身
+  就是真值来源；进度、答题卡、按钮态在第一次输入后都不再变化。两个 Runner 用
+  `utils/submitted_answer.dart` 的 `isTypingOnlyEdit()` 跳过 `notifyListeners`，
+  否则整个舞台（题干、选项、答题卡、底部条）会跟着每次击键重建。
+  **复合题刻意不走这条捷径**：`CompositeInputView` 用父级下发的旧 `answer` 拼新值，
+  不通知会丢掉别的子题刚填的内容；要优化它得先让复合题自己合并子作答。
+  "写了又删空"必须通知（作答状态真的变了，见 `ExamDraftBuffer.put`）。
+- **练习页不被"推荐依据"挡住**：`practice_session_reasons` 是解释性数据。
+  会话一到就开练，依据在后台取回后 `PracticeRunner.setReasons()` 再通知一次。
+- **题库页不被全站统计挡住**：题目先出，`BankLoader.fetchAccuracy` 并行补上；
+  `_loadId` 序号用来丢弃上一页迟到的结果（快速翻页时不至于把统计贴错页）。
+
 ---
 
 ## 六、运行
@@ -1075,7 +1091,8 @@ flutter test test/utils/error_handling_test.dart
 
 ### ⚠⚠ `sentry_flutter` 必须用 10.x（9.x 与 8.x 各废掉一个平台）
 
-`pubspec.yaml` 里是 `sentry_flutter: 10.0.0-rc.1`。**不要回退到 9.x 或 8.x。**
+`pubspec.yaml` 里是 `sentry_flutter: ^10.6.0`（2026-11-24 从 10.0.0-rc.1 转正）。
+**不要回退到 9.x 或 8.x。**
 
 这是按官方文档选的：`sentry` 包自己的 README 就写着「For Flutter consider
 sentry_flutter instead」，而 `sentry_flutter` 多给原生崩溃捕获（Android 的
@@ -1088,7 +1105,8 @@ Java/Kotlin/C/C++）、release health、离线缓存、以及自动挂 Flutter �
 |---|---|---|---|
 | 9.30.1 | ✗ | ✓ | 精确锁 `jni: 0.14.2`，那个版本的 `jni.h` 用 MSVC 不认的 `__attribute__` |
 | 8.14.2 | ✓ | ✗ | AGP 7.4.2 / compileSdk 34 / `languageVersion "1.6"`，与 Kotlin 2.4 + AGP 9.1 全对不上 |
-| **10.0.0-rc.1** | ✓ | ✓ | jni 放开成 `>=1.0.0 <1.1.0`、compileSdk 36、删掉 languageVersion |
+| 10.0.0-rc.1 | ✓ | ✓ | jni 放开成 `>=1.0.0 <1.1.0`、compileSdk 36、删掉 languageVersion |
+| **10.6.0（稳定）** | ✓ | ✓ | jni 1.2.1（不再被钉住）；顺带把被撤回的 `objective_c` 9.6.1 换到 9.6.2 |
 
 **9.x 的坑特别隐蔽**：本项目 `path_provider_android` 本来就把 `jni` 拉到 **1.0.3**
 （已修 MSVC），**是 sentry_flutter 9.x 把它降级回坏版本的**。所以别只看
@@ -1099,8 +1117,8 @@ Java/Kotlin/C/C++）、release health、离线缓存、以及自动挂 Flutter �
 `lib/src/native/java/*.dart` 是按 0.14.2 写的，于是 `JList.array`、`nullableType`、
 `JObjType` 全找不到。0.15.x 又仍然只有 `__attribute__`——**两头堵死**。
 
-**10.0.0-rc.1 是 RC**：等 10.0.0 转正后把约束换成 `^10.0.0` 即可。
-升完之后 **`flutter build apk --release` 与 `flutter build windows` 各跑一次**
+**10.0.0 已于 2026-11 转正**：现在约束是 `^10.6.0`。升完之后
+**`flutter build apk --release` 与 `flutter build windows` 各跑一次**
 ——`flutter analyze` 与 `flutter test` 这些问题**一个都测不出来**。
 
 ### minSdk 被抬到 26，是 sentry_flutter 逼的

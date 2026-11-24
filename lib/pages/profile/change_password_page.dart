@@ -94,24 +94,26 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
             children: [
               Text('为了确认是你本人，需要先输入当前密码。', style: muted),
               SizedBox(height: AppMetrics.gapXl.r),
-              _field(
+              PasswordField(
                 controller: _current,
+                enabled: !_saving,
                 label: '当前密码',
-                icon: Icons.lock_outline_rounded,
               ),
               SizedBox(height: AppMetrics.gapLg.r),
-              _field(
+              PasswordField(
                 controller: _next,
+                enabled: !_saving,
                 label: '新密码',
                 hint: '至少 6 位',
-                icon: Icons.lock_reset_rounded,
+                prefixIcon: Icons.lock_reset_rounded,
               ),
               SizedBox(height: AppMetrics.gapLg.r),
-              _field(
+              PasswordField(
                 controller: _confirm,
+                enabled: !_saving,
                 label: '确认新密码',
-                icon: Icons.lock_reset_rounded,
-                action: TextInputAction.done,
+                prefixIcon: Icons.lock_reset_rounded,
+                textInputAction: TextInputAction.done,
               ),
               SizedBox(height: AppMetrics.gapXl.r),
               DuoButton(label: '修改密码', loading: _saving, onPressed: _submit),
@@ -123,22 +125,4 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
       ),
     );
   }
-
-  Widget _field({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    String? hint,
-    TextInputAction action = TextInputAction.next,
-  }) => TextField(
-    controller: controller,
-    enabled: !_saving,
-    obscureText: true,
-    textInputAction: action,
-    decoration: InputDecoration(
-      labelText: label,
-      hintText: hint,
-      prefixIcon: Icon(icon),
-    ),
-  );
 }

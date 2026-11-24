@@ -22,7 +22,7 @@ permissions:
   contents: write # 创建 Release 需要
 
 env:
-  FLUTTER_VERSION: "3.47.0"
+  FLUTTER_VERSION: "3.50.1"
 
 jobs:
   # ---------- 质量门禁（两个构建都必须先过这里）----------
@@ -46,10 +46,10 @@ jobs:
       - name: 单元/组件测试
         run: flutter test
 
-      - name: 架构守卫（已知 5 项历史基线，暂不阻塞发布）
-        # `tool/check_architecture.dart` 目前仍判红 5 个历史超限文件。
+      - name: 架构守卫（已知 7 项历史基线，暂不阻塞发布）
+        # `tool/check_architecture.dart` 目前仍判红 7 项历史基线（6 个超限文件 + 1 处跨模块 import）。
         # analyze / test 是硬门槛，不放 continue-on-error；架构检查先保持可见，
-        # 等 P2 把 5 个文件拆完再改成阻塞。
+        # 等 P2 把这些文件拆完再改成阻塞。
         continue-on-error: true
         run: dart run tool/check_architecture.dart
 

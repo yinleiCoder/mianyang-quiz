@@ -117,7 +117,12 @@ class ExamRunner extends ChangeNotifier {
 
   /// 记下当前题的作答（空答案按未作答处理，见 ExamDraftBuffer.put）。
   void setDraft(SubmittedAnswer? answer) {
+    final before = _drafts.of(current.id);
     _drafts.put(current.id, answer);
+    // 填空与主观题是逐键上抛的：只改文字时输入框自己会刷新，而"已答 N 题"、
+    // 答题卡格子都没变。跳过通知，整页不会每敲一个字重建一次。
+    // 按 **put 之后**的形态判断：写了又删空会被 buffer 移除，那是真的状态变化。
+    if (isTypingOnlyEdit(before, _drafts.of(current.id))) return;
     _notify();
   }
 

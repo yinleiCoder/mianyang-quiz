@@ -25,6 +25,7 @@ class PracticeTopBar extends StatelessWidget {
     required this.runner,
     required this.onExit,
     this.onOpenAnswerSheet,
+    this.onOpenSettings,
   });
 
   /// 当前题号，**从 1 开始**（界面不显示 0/20 这种）。
@@ -44,6 +45,9 @@ class PracticeTopBar extends StatelessWidget {
 
   /// 打开答题卡（窄屏传；宽屏为 null，因为答题卡常驻在右侧）。
   final VoidCallback? onOpenAnswerSheet;
+
+  /// 打开练习设置（练题音效）。为 null 时不显示入口，测试里可以只测顶栏本身。
+  final VoidCallback? onOpenSettings;
 
   @override
   Widget build(BuildContext context) {
@@ -91,6 +95,13 @@ class PracticeTopBar extends StatelessWidget {
           padding: const EdgeInsets.only(right: AppMetrics.gapMd),
           child: PracticeTimer(runner: runner),
         ),
+        if (onOpenSettings != null)
+          IconButton(
+            onPressed: onOpenSettings,
+            icon: Icon(Icons.tune_rounded, size: 20.r),
+            color: theme.colorScheme.onSurfaceVariant,
+            tooltip: '练习设置',
+          ),
         if (onOpenAnswerSheet != null)
           IconButton(
             onPressed: onOpenAnswerSheet,

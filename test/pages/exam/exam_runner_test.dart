@@ -77,6 +77,35 @@ void main() {
       expect(runner.draftAt(0), isNull);
       expect(runner.progress, closeTo(1 / 3, 0.001));
     });
+
+    test('主观题逐键输入只通知第一次；删空后恢复未作答并重新通知', () {
+      final runner = _runner(snapshot: _snapshot());
+      runner.jumpTo(2); // 第三题是简答题
+      var notices = 0;
+      runner.addListener(() => notices++);
+
+      runner.setDraft(const EssayAnswer('答'));
+      expect(notices, 1, reason: '第一次输入：已答数从 0 变 1，底部提示要更新');
+
+      runner.setDraft(const EssayAnswer('答案'));
+      expect(notices, 1, reason: '只改文字，输入框自己会刷新');
+
+      runner.setDraft(const EssayAnswer('   '));
+      expect(notices, 2, reason: '删空 = 回到未作答，答题卡与"还差几题"都要变');
+      expect(runner.answeredCount, 0);
+      expect(runner.draftAt(2), isNull);
+    });
+
+    test('选项改变仍会通知（选中态要重画）', () {
+      final runner = _runner(snapshot: _snapshot());
+      var notices = 0;
+      runner.addListener(() => notices++);
+
+      runner.setDraft(const ChoiceAnswer(['A']));
+      runner.setDraft(const ChoiceAnswer(['B']));
+
+      expect(notices, 2);
+    });
   });
 
   group('交卷', () {

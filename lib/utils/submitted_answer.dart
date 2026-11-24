@@ -142,6 +142,23 @@ SubmittedAnswer? submittedAnswerFrom(Map<String, dynamic>? wire) {
   };
 }
 
+/// 这次作答变化是否**只改了文字**（填空的各空 / 考试主观题的正文）。
+///
+/// 填空与考试主观题是**逐键上抛**的；文字以外的状态——「是否已作答」、选项选了
+/// 哪些——在这些变化里一个都没变。输入框本身已经显示最新内容，所以调用方
+/// （PracticeRunner / ExamRunner）可以跳过 notifyListeners，不必让整道题
+/// （题干、选项、答题卡、底部按钮）跟着每一次击键重建一次。
+///
+/// **复合题刻意不在内**：`CompositeInputView` 是用父级下发的 `answer` 拼新值的，
+/// 不通知父级就等于让它拿着旧快照去替换别的子题——先填 A 空再改 B 空时，
+/// A 的文字会被旧值覆盖。要优化那一条，得先让复合题自己合并子作答。
+///
+/// 注意 [ExamDraftBuffer] 会把"写了又删空"的主观题按未作答处理：那种情况下
+/// `after` 是 null，本函数返回 false —— 作答状态真的变了，必须通知界面。
+bool isTypingOnlyEdit(SubmittedAnswer? before, SubmittedAnswer? after) =>
+    (before is BlankAnswer && after is BlankAnswer) ||
+    (before is EssayAnswer && after is EssayAnswer);
+
 List<String> _strings(Object? raw) {
   if (raw is! List) return const [];
   return raw.map((e) => '$e').toList();

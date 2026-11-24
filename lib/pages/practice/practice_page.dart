@@ -6,6 +6,8 @@
 //
 // 单屏单题：一屏一道题，底部固定操作区，题干过长时只在题干区滚动。
 
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:mianyang_quiz/utils/utils.dart';
 import 'package:mianyang_quiz/entity/entity.dart';
@@ -61,20 +63,33 @@ class _PracticePageState extends State<PracticePage> with WidgetsBindingObserver
     try {
       final repository = context.read<PracticeRepository>();
       final snapshot = await repository.fetchSession(widget.sessionId);
-      // 解释性数据：取不到就空表，绝不因为"为什么推这题"取不到而让孩子进不去练习。
-      final reasons = await repository.fetchSessionReasons(widget.sessionId);
       if (!mounted) return;
+      // 推荐依据是**解释性数据**，晚一步到不影响作答：先建 Runner 让题面出来，
+      // 再在后台补。等它一起回来，等于多等一个网络往返才离开"正在准备练习…"。
       _runner = PracticeRunner(
         repository: repository,
         snapshot: snapshot,
         mode: _modeFor(snapshot),
         shuffleOptions: widget.shuffleOptions,
-        reasons: reasons,
       );
       setState(() => _load = const AsyncData(null));
+      unawaited(_loadReasons(repository));
     } catch (error) {
       if (!mounted) return;
       setState(() => _load = AsyncFailure(mapError(error)));
+    }
+  }
+
+  /// 补取"为什么推这道题"（0137）。取不到就没有那张卡，不影响练习。
+  Future<void> _loadReasons(PracticeRepository repository) async {
+    // 锁住发起时那个 Runner：重试会换一个新的，旧请求不该写到新会话上。
+    final runner = _runner;
+    try {
+      final reasons = await repository.fetchSessionReasons(widget.sessionId);
+      if (!mounted || runner == null || _runner != runner) return;
+      runner.setReasons(reasons);
+    } catch (_) {
+      // 解释性数据：仓储已经兜过一层，这里再兜一层是为了将来换实现也不冒泡
     }
   }
 

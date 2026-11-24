@@ -121,17 +121,19 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             SizedBox(height: AppMetrics.gapLg.r),
             _nameField(),
             SizedBox(height: AppMetrics.gapLg.r),
-            _passwordField(
+            PasswordField(
               controller: _password,
+              enabled: !_busy,
               label: '新密码',
               hint: '至少 6 位',
               validator: _validateNewPassword,
             ),
             SizedBox(height: AppMetrics.gapLg.r),
-            _passwordField(
+            PasswordField(
               controller: _confirm,
+              enabled: !_busy,
               label: '确认新密码',
-              action: TextInputAction.done,
+              textInputAction: TextInputAction.done,
               validator: (input) =>
                   input != _password.text ? '两次输入的密码不一致' : null,
             ),
@@ -154,25 +156,6 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       prefixIcon: Icon(Icons.badge_outlined),
     ),
     validator: (input) => (input ?? '').trim().isEmpty ? '请输入姓名' : null,
-  );
-
-  Widget _passwordField({
-    required TextEditingController controller,
-    required String label,
-    required String? Function(String?) validator,
-    String? hint,
-    TextInputAction action = TextInputAction.next,
-  }) => TextFormField(
-    controller: controller,
-    enabled: !_busy,
-    obscureText: true,
-    textInputAction: action,
-    decoration: InputDecoration(
-      labelText: label,
-      hintText: hint,
-      prefixIcon: const Icon(Icons.lock_outline_rounded),
-    ),
-    validator: validator,
   );
 }
 

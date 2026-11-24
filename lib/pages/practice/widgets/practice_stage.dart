@@ -22,6 +22,7 @@ import 'package:mianyang_quiz/pages/practice/state/practice_runner.dart';
 import 'package:mianyang_quiz/pages/practice/widgets/practice_ended_view.dart';
 import 'package:mianyang_quiz/pages/practice/widgets/practice_error_toast.dart';
 import 'package:mianyang_quiz/pages/practice/widgets/practice_layout.dart';
+import 'package:mianyang_quiz/pages/practice/widgets/practice_settings_sheet.dart';
 import 'package:mianyang_quiz/pages/practice/widgets/quit_confirm_sheet.dart';
 import 'package:provider/provider.dart';
 
@@ -187,6 +188,7 @@ class _PracticeStageState extends State<PracticeStage> {
           onCheck: _check,
           onContinue: _continue,
           onFinish: _finish,
+          onOpenSettings: () => openPracticeSettings(context),
         );
       },
     );
